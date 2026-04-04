@@ -71,7 +71,7 @@ function computeGroupBounds(memberNodes, padding = 56) {
   return { x: minX - padding, y: minY - padding, width: maxX - minX + padding * 2, height: maxY - minY + padding * 2 };
 }
 
-export default function Canvas({ apiKey, onCardsGenerated, importedState, showDebug, showCSS }) {
+export default function Canvas({ apiKey, onCardsGenerated, importedState, showDebug, showCSS, onRegisterAddNote, onUsageChange }) {
   const saved = importedState || loadCanvas();
   const [nodes, setNodes, onNodesChange] = useNodesState(saved.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
@@ -89,6 +89,16 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
 
   // Persist on change
   useEffect(() => { saveCanvas(nodes, edges); }, [nodes, edges]);
+
+  // Register the "add note" trigger for the sidebar button
+  useEffect(() => {
+    if (onRegisterAddNote) {
+      onRegisterAddNote(() => {
+        setAddForm({ title: '', body: '', flowPos: null });
+        setAddDialog(true);
+      });
+    }
+  }, [onRegisterAddNote]);
 
   // ── Callback factories ───────────────────────────────────────────────────
   function makeAnchorCallbacks(id) {
@@ -140,6 +150,7 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
       const newUsage = { date: currentUsage.date, count: currentUsage.count + 1 };
       saveUsage(newUsage);
       setUsage(newUsage);
+      onUsageChange?.(newUsage.count);
 
       const positions = radialPositions(anchor.position, results.length, 320);
       const contextNodeIds = [];
@@ -545,22 +556,6 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
         </div>
       )}
 
-      {/* Floating add button */}
-      <button
-        className="btn btn-primary"
-        style={{ position: 'absolute', bottom: 24, right: 24, zIndex: 10 }}
-        onClick={() => { setAddForm({ title: '', body: '', flowPos: null }); setAddDialog(true); }}
-      >
-        + Add note
-      </button>
-
-      {/* Usage indicator */}
-      <div
-        className={`usage-counter${limitReached ? ' low' : ''}`}
-        style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}
-      >
-        {limitReached ? 'Daily limit reached' : `${usage.count}/10 expansions today`}
-      </div>
 
       {/* CSS Inspector */}
       {showCSS && <CSSInspector onClose={() => {}} />}
