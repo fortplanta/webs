@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\")",
+      "Bash(npm install:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Read(//opt/homebrew/Cellar/node/25.9.0_1/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//opt/homebrew/**)",
+      "Read(//Users/anton/Documents/**)",
+      "Bash(unzip -l /Users/anton/Documents/aeonik.zip)",
+      "Read(//private/tmp/**)",
+      "Bash(unzip -o /Users/anton/Documents/aeonik.zip)",
+      "Bash(cp \"New Aeonik Trials/AeonikTRIAL-Regular.otf\" \"New Aeonik Trials/AeonikTRIAL-Light.otf\" \"New Aeonik Trials/AeonikTRIAL-Bold.otf\" \"New Aeonik Trials/AeonikTRIAL-RegularItalic.otf\" \"New Aeonik Trials/AeonikTRIAL-LightItalic.otf\" \"New Aeonik Trials/AeonikTRIAL-BoldItalic.otf\" /Users/anton/Downloads/webs-main/public/fonts/)",
+      "Bash(export PATH=\"/opt/homebrew/bin:$PATH\")",
+      "Bash(npm run:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "webs-dev",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["/Users/anton/Downloads/webs-main/node_modules/.bin/vite"],
+      "port": 5173
+    }
+  ]
+}
