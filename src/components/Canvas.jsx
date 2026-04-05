@@ -13,19 +13,22 @@ import {
 import '@xyflow/react/dist/style.css';
 import { v4 as uuidv4 } from 'uuid';
 
-import AnchorNode from './nodes/AnchorNode';
-import ContextNode from './nodes/ContextNode';
-import GroupFrameNode from './nodes/GroupFrameNode';
-import CSSInspector from './CSSInspector';
-import DebugPanel from './DebugPanel';
+import AnchorNode       from './nodes/AnchorNode';
+import ContextNode      from './nodes/ContextNode';
+import GroupFrameNode   from './nodes/GroupFrameNode';
+import MediaNode        from './nodes/MediaNode';
+import CSSInspector     from './CSSInspector';
+import DebugPanel       from './DebugPanel';
+import FloatingToolbar  from './FloatingToolbar';
 import { CATEGORY_BY_KEY, STORAGE_KEYS } from '../constants';
 import { expandAnchor, radialPositions, generateCards } from '../lib/expand';
 import { explainTerms } from '../lib/explainTerms';
 
 const nodeTypes = {
-  anchorNode: AnchorNode,
+  anchorNode:  AnchorNode,
   contextNode: ContextNode,
-  groupFrame: GroupFrameNode,
+  groupFrame:  GroupFrameNode,
+  mediaNode:   MediaNode,
 };
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
@@ -42,8 +45,8 @@ function saveCanvas(nodes, edges) {
 }
 function getUsage() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.USAGE);
-    const today = new Date().toISOString().slice(0, 10);
+    const raw    = localStorage.getItem(STORAGE_KEYS.USAGE);
+    const today  = new Date().toISOString().slice(0, 10);
     if (!raw) return { date: today, count: 0 };
     const parsed = JSON.parse(raw);
     return parsed.date !== today ? { date: today, count: 0 } : parsed;
@@ -61,7 +64,7 @@ function edgeWidth(s) { return s === 'strong' ? 2.5 : s === 'moderate' ? 2 : 1.5
 function computeGroupBounds(memberNodes, padding = 56) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   memberNodes.forEach(n => {
-    const w = n.measured?.width ?? (n.type === 'anchorNode' ? 240 : 180);
+    const w = n.measured?.width  ?? (n.type === 'anchorNode' ? 240 : 180);
     const h = n.measured?.height ?? (n.type === 'anchorNode' ? 120 : 100);
     minX = Math.min(minX, n.position.x);
     minY = Math.min(minY, n.position.y);
@@ -71,21 +74,39 @@ function computeGroupBounds(memberNodes, padding = 56) {
   return { x: minX - padding, y: minY - padding, width: maxX - minX + padding * 2, height: maxY - minY + padding * 2 };
 }
 
-export default function Canvas({ apiKey, onCardsGenerated, importedState, showDebug, showCSS, onRegisterAddNote, onUsageChange }) {
+export default function Canvas({
+  apiKey,
+  onCardsGenerated,
+  importedState,
+  activePanel,
+  onPanelClose,
+  onRegisterAddNote,
+  onUsageChange,
+}) {
   const saved = importedState || loadCanvas();
   const [nodes, setNodes, onNodesChange] = useNodesState(saved.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
-  const [contextMenu, setContextMenu] = useState(null); // { x, y, nodeId, nodeType, flowPos? }
-  const [addDialog, setAddDialog] = useState(false);
-  const [addForm, setAddForm] = useState({ title: '', body: '', flowPos: null });
-  const [usage, setUsage] = useState(getUsage);
+  const [contextMenu, setContextMenu]   = useState(null);
+  const [addDialog, setAddDialog]       = useState(false);
+  const [addForm, setAddForm]           = useState({ title: '', body: '', flowPos: null });
+  const [usage, setUsage]               = useState(getUsage);
+
+  // ── Toolbar state ────────────────────────────────────────────────────────
+  const [edgeType,    setEdgeType]    = useState('default');
+  const [bgVariant,   setBgVariant]   = useState(BackgroundVariant.Dots);
+  const [snapToGrid,  setSnapToGrid]  = useState(false);
+  const [showMiniMap, setShowMiniMap] = useState(true);
+
+  const edgeTypeRef = useRef(edgeType);
+  useEffect(() => { edgeTypeRef.current = edgeType; }, [edgeType]);
+
   const reactFlowWrapper = useRef(null);
-  const [rfInstance, setRfInstance] = useState(null);
+  const [rfInstance, setRfInstance]   = useState(null);
   const nodesRef = useRef(nodes);
   useEffect(() => { nodesRef.current = nodes; }, [nodes]);
-  const clipboardRef = useRef([]);
-  const copySelectedRef = useRef(null);
-  const pasteNodesRef = useRef(null);
+  const clipboardRef     = useRef([]);
+  const copySelectedRef  = useRef(null);
+  const pasteNodesRef    = useRef(null);
 
   // Persist on change
   useEffect(() => { saveCanvas(nodes, edges); }, [nodes, edges]);
@@ -100,19 +121,35 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
     }
   }, [onRegisterAddNote]);
 
+  // ── Click-away to close active panel ─────────────────────────────────────
+  useEffect(() => {
+    if (!activePanel) return;
+    function handleMouseDown(e) {
+      const panel   = document.querySelector('[data-panel]');
+      const sidebar = document.querySelector('.sidebar');
+      if (panel && !panel.contains(e.target) && (!sidebar || !sidebar.contains(e.target))) {
+        // Don't close if clicking the CSS picker overlay or highlight
+        if (e.target.classList.contains('css-picker-overlay') || e.target.closest('.css-picker-highlight')) return;
+        onPanelClose?.();
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [activePanel, onPanelClose]);
+
   // ── Callback factories ───────────────────────────────────────────────────
   function makeAnchorCallbacks(id) {
     return {
-      onExpand: () => expandNode(id),
+      onExpand:      () => expandNode(id),
       onContextMenu: (e) => { e.preventDefault(); openContextMenu(e, id, 'anchorNode'); },
-      onToggleStar: () => toggleStar(id),
+      onToggleStar:  () => toggleStar(id),
     };
   }
   function makeContextCallbacks(id, anchorId, item) {
     return {
-      onReveal: () => revealContextNode(id, anchorId, item),
+      onReveal:      () => revealContextNode(id, anchorId, item),
       onContextMenu: (e) => { e.preventDefault(); openContextMenu(e, id, 'contextNode'); },
-      onToggleStar: () => toggleStar(id),
+      onToggleStar:  () => toggleStar(id),
     };
   }
 
@@ -146,41 +183,42 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
       const anchor = nodesRef.current.find(n => n.id === anchorId);
       if (!anchor) return;
 
-      const results = await expandAnchor(apiKey, anchor.data.title, anchor.data.body);
+      const results  = await expandAnchor(apiKey, anchor.data.title, anchor.data.body);
       const newUsage = { date: currentUsage.date, count: currentUsage.count + 1 };
       saveUsage(newUsage);
       setUsage(newUsage);
       onUsageChange?.(newUsage.count);
 
-      const positions = radialPositions(anchor.position, results.length, 320);
+      const positions     = radialPositions(anchor.position, results.length, 320);
       const contextNodeIds = [];
-      const newNodes = [];
-      const newEdges = [];
+      const newNodes      = [];
+      const newEdges      = [];
 
       results.forEach((item, i) => {
         const contextId = uuidv4();
         contextNodeIds.push(contextId);
         newNodes.push({
-          id: contextId,
+          id:   contextId,
           type: 'contextNode',
           position: positions[i],
           data: {
-            category: item.key,
-            title: item.title,
-            summary: item.summary,
+            category:         item.key,
+            title:            item.title,
+            summary:          item.summary,
             connectionStrength: item.connectionStrength,
-            revealed: false,
+            revealed:         false,
             anchorId,
-            starred: false,
-            termDefinitions: {},
+            starred:          false,
+            termDefinitions:  {},
             ...makeContextCallbacks(contextId, anchorId, item),
           },
         });
         newEdges.push({
-          id: `${anchorId}->${contextId}`,
+          id:     `${anchorId}->${contextId}`,
           source: anchorId,
           target: contextId,
-          style: { stroke: edgeColor(item.connectionStrength), strokeWidth: edgeWidth(item.connectionStrength), opacity: 0.5 },
+          type:   edgeTypeRef.current,
+          style:  { stroke: edgeColor(item.connectionStrength), strokeWidth: edgeWidth(item.connectionStrength), opacity: 0.5 },
         });
       });
 
@@ -191,17 +229,17 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
         allMemberPositions.map((p, i) => ({ position: p, type: i === 0 ? 'anchorNode' : 'contextNode', measured: null }))
       );
       const groupNode = {
-        id: groupId,
-        type: 'groupFrame',
-        position: { x: estBounds.x, y: estBounds.y },
-        style: { width: estBounds.width, height: estBounds.height },
+        id:        groupId,
+        type:      'groupFrame',
+        position:  { x: estBounds.x, y: estBounds.y },
+        style:     { width: estBounds.width, height: estBounds.height },
         selectable: false,
-        draggable: false,
-        zIndex: -1,
+        draggable:  false,
+        zIndex:    -1,
         data: {
-          label: anchor.data.title,
-          memberIds: [anchorId, ...contextNodeIds],
-          collapsed: false,
+          label:            anchor.data.title,
+          memberIds:        [anchorId, ...contextNodeIds],
+          collapsed:        false,
           onToggleCollapse: () => toggleGroupCollapse(groupId),
         },
       };
@@ -240,7 +278,6 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
     const anchor = nodesRef.current.find(n => n.id === anchorId);
     if (anchor && apiKey) {
       const cat = CATEGORY_BY_KEY[item.key];
-      // Card generation + term explanation in parallel, both silent fail
       Promise.all([
         generateCards(apiKey, anchor.data.title, item.title, item.summary, cat?.label || item.key),
         explainTerms(apiKey, item.summary),
@@ -253,11 +290,11 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
         if (cards.length > 0) {
           onCardsGenerated?.(cards.map(c => ({
             ...c, id: uuidv4(),
-            anchorTitle: anchor.data.title,
-            category: item.key,
+            anchorTitle:   anchor.data.title,
+            category:      item.key,
             categoryLabel: cat?.label || item.key,
-            dueDate: new Date().toISOString(),
-            interval: 0,
+            dueDate:       new Date().toISOString(),
+            interval:      0,
           })));
         }
       }).catch(() => {});
@@ -278,7 +315,7 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
       const group = ns.find(n => n.id === groupId);
       if (!group) return ns;
       const nowCollapsed = !group.data.collapsed;
-      const memberIds = new Set(group.data.memberIds);
+      const memberIds    = new Set(group.data.memberIds);
       return ns.map(n => {
         if (n.id === groupId) return { ...n, data: { ...n.data, collapsed: nowCollapsed } };
         if (memberIds.has(n.id) && n.type === 'contextNode') return { ...n, hidden: nowCollapsed };
@@ -293,9 +330,8 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
   }
 
   function deleteNode(nodeId) {
-    const node = nodesRef.current.find(n => n.id === nodeId);
+    const node     = nodesRef.current.find(n => n.id === nodeId);
     const toDelete = new Set([nodeId]);
-    // If deleting an anchor, also delete its context nodes and group frame
     if (node?.data?.contextNodes) node.data.contextNodes.forEach(id => toDelete.add(id));
     const groupFrame = nodesRef.current.find(n => n.type === 'groupFrame' && n.data.memberIds?.includes(nodeId));
     if (groupFrame) toDelete.add(groupFrame.id);
@@ -334,7 +370,6 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
         return overlap;
       });
       if (colliding.length === 0) return ns;
-
       let px = draggedNode.position.x, py = draggedNode.position.y;
       colliding.forEach(other => {
         const dw = draggedNode.measured?.width ?? 200, dh = draggedNode.measured?.height ?? 110;
@@ -375,15 +410,15 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
     const selected = nodesRef.current.filter(n => n.selected && n.type === 'anchorNode');
     if (selected.length === 0) return;
     clipboardRef.current = selected.map(n => ({
-      title: n.data.title,
-      body: n.data.body,
+      title:    n.data.title,
+      body:     n.data.body,
       position: { ...n.position },
     }));
   }
 
   function pasteNodes() {
     if (clipboardRef.current.length === 0) return;
-    const offset = 40;
+    const offset   = 40;
     const newNodes = clipboardRef.current.map(cn => {
       const id = uuidv4();
       return {
@@ -396,9 +431,8 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
     setNodes(ns => [...ns, ...newNodes]);
   }
 
-  // Keep refs current so the keyboard listener always calls the latest version
   copySelectedRef.current = copySelected;
-  pasteNodesRef.current = pasteNodes;
+  pasteNodesRef.current   = pasteNodes;
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
@@ -411,18 +445,69 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // ── Edge connect ──────────────────────────────────────────────────────────
   const onConnect = useCallback(params => {
     setEdges(es => addEdge({
       ...params,
+      type:  edgeTypeRef.current,
       style: { stroke: edgeColor('weak'), strokeWidth: edgeWidth('weak') },
     }, es));
   }, []);
 
-  const limitReached = usage.count >= 10;
+  // ── Update all existing edges when edge type changes ──────────────────────
+  function applyEdgeTypeToAll(type) {
+    setEdgeType(type);
+    setEdges(es => es.map(e => ({ ...e, type })));
+  }
+
+  // ── Drag-and-drop media onto canvas ──────────────────────────────────────
+  const onDragOver = useCallback((e) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes('Files')) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, []);
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault();
+    if (!rfInstance) return;
+    const files = Array.from(e.dataTransfer.files).filter(f =>
+      f.type.startsWith('image/') || f.type.startsWith('video/')
+    );
+    if (files.length === 0) return;
+    const dropPos = rfInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    files.forEach((file, i) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const id      = uuidv4();
+        const isVideo = file.type.startsWith('video/');
+        setNodes(ns => [...ns, {
+          id,
+          type:     'mediaNode',
+          position: { x: dropPos.x + i * 24, y: dropPos.y + i * 24 },
+          style:    { width: 320, height: isVideo ? 200 : undefined },
+          data: {
+            src:       ev.target.result,
+            name:      file.name,
+            mediaType: isVideo ? 'video' : 'image',
+            onDelete:  () => setNodes(n => n.filter(nd => nd.id !== id)),
+          },
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  }, [rfInstance]);
+
+  const limitReached  = usage.count >= 10;
   const selectedNodes = nodes.filter(n => n.selected && n.type !== 'groupFrame');
 
   return (
-    <div className="canvas-wrapper" ref={reactFlowWrapper}>
+    <div
+      className="canvas-wrapper"
+      ref={reactFlowWrapper}
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -447,12 +532,37 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
         selectionMode={SelectionMode.Partial}
         selectionKeyCode="Shift"
         multiSelectionKeyCode="Shift"
+        snapToGrid={snapToGrid}
+        snapGrid={[16, 16]}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(255,255,255,0.04)" />
+        {bgVariant !== null && (
+          <Background
+            variant={bgVariant}
+            gap={24}
+            size={bgVariant === BackgroundVariant.Dots ? 1.5 : 1}
+            color={bgVariant === BackgroundVariant.Dots ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.07)'}
+          />
+        )}
         <Controls />
-        <MiniMap
-          nodeStrokeWidth={0}
-          nodeColor={n => n.type === 'anchorNode' ? 'rgba(59,130,246,0.5)' : n.type === 'groupFrame' ? 'transparent' : 'rgba(255,255,255,0.1)'}
+        {showMiniMap && (
+          <MiniMap
+            nodeStrokeWidth={0}
+            nodeColor={n =>
+              n.type === 'anchorNode'  ? 'rgba(29,111,216,0.4)'  :
+              n.type === 'groupFrame'  ? 'transparent'           :
+              n.type === 'mediaNode'   ? 'rgba(100,100,100,0.3)' :
+              'rgba(100,100,100,0.2)'
+            }
+          />
+        )}
+
+        {/* Floating customization toolbar */}
+        <FloatingToolbar
+          edgeType={edgeType}          onEdgeTypeChange={applyEdgeTypeToAll}
+          bgVariant={bgVariant}        onBgVariantChange={setBgVariant}
+          snapToGrid={snapToGrid}      onSnapToggle={() => setSnapToGrid(v => !v)}
+          showMiniMap={showMiniMap}    onMiniMapToggle={() => setShowMiniMap(v => !v)}
+          onFitView={() => rfInstance?.fitView({ padding: 0.3 })}
         />
       </ReactFlow>
 
@@ -524,7 +634,7 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
             <>
               <div className="context-header">Node</div>
               {(() => {
-                const node = nodesRef.current.find(n => n.id === contextMenu.nodeId);
+                const node      = nodesRef.current.find(n => n.id === contextMenu.nodeId);
                 const isStarred = node?.data?.starred;
                 return (
                   <>
@@ -556,19 +666,25 @@ export default function Canvas({ apiKey, onCardsGenerated, importedState, showDe
         </div>
       )}
 
-
       {/* CSS Inspector */}
-      {showCSS && <CSSInspector onClose={() => {}} />}
+      {activePanel === 'css' && (
+        <CSSInspector onClose={onPanelClose} />
+      )}
 
       {/* Debug Panel */}
-      {showDebug && (
+      {activePanel === 'debug' && (
         <DebugPanel
           nodes={nodes}
           edges={edges}
           selectedNodes={selectedNodes}
-          onClose={() => {}}
+          onClose={onPanelClose}
         />
       )}
+
+      {/* Drop hint overlay */}
+      <div className="canvas-drop-hint" aria-hidden="true">
+        Drop images or videos here
+      </div>
     </div>
   );
 }

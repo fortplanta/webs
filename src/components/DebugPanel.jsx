@@ -29,7 +29,7 @@ export default function DebugPanel({ nodes, edges, selectedNodes, onClose }) {
   }, [displayNodes]);
 
   return (
-    <div className="debug-panel">
+    <div className="debug-panel" data-panel="debug">
       <div className="debug-panel__header">
         <span className="debug-panel__title">Debug</span>
         <button className="btn btn-tool" onClick={onClose}>✕</button>

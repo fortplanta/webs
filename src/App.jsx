@@ -17,13 +17,14 @@ function getUsageCount() {
 }
 
 export default function App() {
-  const [apiKey, setApiKey] = useState(loadApiKey);
-  const [mode, setMode] = useState('explore');
-  const [newCards, setNewCards] = useState([]);
+  const [apiKey, setApiKey]         = useState(loadApiKey);
+  const [mode, setMode]             = useState('explore');
+  const [newCards, setNewCards]     = useState([]);
   const [importedState, setImportedState] = useState(null);
-  const [showDebug, setShowDebug] = useState(false);
-  const [showCSS, setShowCSS] = useState(false);
   const [usageCount, setUsageCount] = useState(getUsageCount);
+
+  // null | 'css' | 'debug' — only one panel open at a time
+  const [activePanel, setActivePanel] = useState(null);
 
   // Imperative handle to open the "Add Note" dialog from the sidebar
   const addNoteRef = useRef(null);
@@ -37,6 +38,10 @@ export default function App() {
     setNewCards(prev => [...prev, ...cards]);
   }
 
+  function togglePanel(panel) {
+    setActivePanel(p => (p === panel ? null : panel));
+  }
+
   // ── Save (export JSON) ──────────────────────────────────────────────────
   function exportSession() {
     try {
@@ -46,12 +51,12 @@ export default function App() {
         version: 1,
         exportedAt: new Date().toISOString(),
         canvas: JSON.parse(canvas),
-        cards: JSON.parse(cards),
+        cards:  JSON.parse(cards),
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
       a.download = `webs-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
@@ -60,9 +65,9 @@ export default function App() {
 
   // ── Open (import JSON) ──────────────────────────────────────────────────
   function importSession() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
+    const input    = document.createElement('input');
+    input.type     = 'file';
+    input.accept   = '.json';
     input.onchange = e => {
       const file = e.target.files[0];
       if (!file) return;
@@ -106,6 +111,7 @@ export default function App() {
 
   return (
     <div className="app">
+
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
       <nav className="sidebar" aria-label="Application controls">
 
@@ -115,35 +121,34 @@ export default function App() {
           <span className="sidebar-logo-sub" aria-hidden="true">AI canvas</span>
         </div>
 
-        {/* Mode switcher */}
+        {/* ── Mode switcher ── */}
         <div className="sidebar-section">
-          <div
-            className="sidebar-modes"
-            role="radiogroup"
-            aria-label="Canvas mode"
-          >
+          <span className="sidebar-label">Mode</span>
+          <div className="sidebar-modes" role="radiogroup" aria-label="Canvas mode">
             <button
-              className="mode-option"
+              className={`mode-option${mode === 'explore' ? ' active' : ''}`}
               role="radio"
               aria-checked={mode === 'explore'}
               onClick={() => setMode('explore')}
             >
-              <span className="sidebar-item__icon" aria-hidden="true">⬡</span>
-              Explore
+              <span className="mode-option__icon" aria-hidden="true">⬡</span>
+              <span>Explore</span>
+              <span className="mode-option__hint">Build webs</span>
             </button>
             <button
-              className="mode-option"
+              className={`mode-option${mode === 'remember' ? ' active' : ''}`}
               role="radio"
               aria-checked={mode === 'remember'}
               onClick={() => setMode('remember')}
             >
-              <span className="sidebar-item__icon" aria-hidden="true">◇</span>
-              Remember
+              <span className="mode-option__icon" aria-hidden="true">◇</span>
+              <span>Remember</span>
+              <span className="mode-option__hint">Flashcards</span>
             </button>
           </div>
         </div>
 
-        {/* Add note (only in Explore mode) */}
+        {/* ── Add note (Explore only) ── */}
         {mode === 'explore' && (
           <div className="sidebar-section">
             <button
@@ -151,14 +156,15 @@ export default function App() {
               onClick={() => addNoteRef.current?.()}
               aria-label="Add a new note to the canvas"
             >
-              + Add note
+              <span aria-hidden="true">+</span>
+              Add note
             </button>
           </div>
         )}
 
-        {/* Session */}
-        <div className="sidebar-section" aria-label="File operations">
-          <span className="sidebar-label" aria-hidden="true">Session</span>
+        {/* ── Session ── */}
+        <div className="sidebar-section">
+          <span className="sidebar-label">Session</span>
           <button
             className="sidebar-item"
             onClick={exportSession}
@@ -167,7 +173,7 @@ export default function App() {
           >
             <span className="sidebar-item__icon" aria-hidden="true">↓</span>
             Save session
-            <span className="sidebar-item__shortcut" aria-hidden="true">⌘S</span>
+            <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘S</kbd>
           </button>
           <button
             className="sidebar-item"
@@ -177,34 +183,38 @@ export default function App() {
           >
             <span className="sidebar-item__icon" aria-hidden="true">↑</span>
             Open session
-            <span className="sidebar-item__shortcut" aria-hidden="true">⌘O</span>
+            <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘O</kbd>
           </button>
         </div>
 
-        {/* View tools */}
+        {/* ── View panels ── */}
         <div className="sidebar-section">
-          <span className="sidebar-label" aria-hidden="true">View</span>
+          <span className="sidebar-label">View</span>
           <button
-            className={`sidebar-item${showCSS ? ' active' : ''}`}
+            className={`sidebar-item${activePanel === 'css' ? ' active' : ''}`}
             role="switch"
-            aria-checked={showCSS}
-            onClick={() => setShowCSS(v => !v)}
+            aria-checked={activePanel === 'css'}
+            onClick={() => togglePanel('css')}
+            title="CSS element inspector — click to pick and inspect UI elements"
           >
             <span className="sidebar-item__icon" aria-hidden="true">#</span>
-            CSS Styles
+            CSS Inspector
+            {activePanel === 'css' && <span className="sidebar-item__badge">On</span>}
           </button>
           <button
-            className={`sidebar-item${showDebug ? ' active' : ''}`}
+            className={`sidebar-item${activePanel === 'debug' ? ' active' : ''}`}
             role="switch"
-            aria-checked={showDebug}
-            onClick={() => setShowDebug(v => !v)}
+            aria-checked={activePanel === 'debug'}
+            onClick={() => togglePanel('debug')}
+            title="Debug panel — inspect selected node JSON"
           >
             <span className="sidebar-item__icon" aria-hidden="true">⊞</span>
             Debug info
+            {activePanel === 'debug' && <span className="sidebar-item__badge">On</span>}
           </button>
         </div>
 
-        {/* Footer: API key */}
+        {/* ── Footer: API key ── */}
         <div className="sidebar-footer">
           <button
             className="sidebar-item danger"
@@ -223,14 +233,17 @@ export default function App() {
 
       {/* ── Main area ───────────────────────────────────────────────── */}
       <div className="main-area">
-        <main id="main-content" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <main
+          id="main-content"
+          style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+        >
           {mode === 'explore' ? (
             <Canvas
               apiKey={apiKey}
               onCardsGenerated={handleCardsGenerated}
               importedState={importedState}
-              showDebug={showDebug}
-              showCSS={showCSS}
+              activePanel={activePanel}
+              onPanelClose={() => setActivePanel(null)}
               onRegisterAddNote={fn => { addNoteRef.current = fn; }}
               onUsageChange={setUsageCount}
             />
