@@ -1333,6 +1333,49 @@ video.media-node__media { pointer-events: all; }
 }
 .canvas-wrapper:has(:is(drag, .canvas-drop-hint:hover)) .canvas-drop-hint { opacity: 1; }
 
+/* ── ANT DESIGN INTEGRATION OVERRIDES ── */
+
+/* Ensure antd components inherit our font */
+.ant-btn,
+.ant-input,
+.ant-input-password,
+.ant-input-textarea,
+.ant-segmented,
+.ant-modal,
+.ant-modal-content,
+.ant-typography {
+  font-family: var(--font-body) !important;
+}
+
+/* Modal backdrop matches our overlay style */
+.ant-modal-mask { background: rgba(0,0,0,0.28) !important; }
+
+/* Modal content card uses our surface */
+.ant-modal-content {
+  border: 1px solid var(--color-border-strong) !important;
+  box-shadow: var(--shadow-panel) !important;
+}
+
+/* Input inside Modal: consistent background */
+.ant-modal .ant-input,
+.ant-modal .ant-input-affix-wrapper {
+  background: var(--color-surface-2) !important;
+}
+
+/* Segmented inside floating toolbar: tighter fit */
+.floating-toolbar .ant-segmented {
+  background: var(--color-surface-2) !important;
+}
+.floating-toolbar .ant-segmented-item-label {
+  font-size: 11px !important;
+  padding: 0 8px !important;
+}
+
+/* Onboarding password input */
+.onboarding-card .ant-input-affix-wrapper {
+  background: var(--color-surface-2) !important;
+}
+
 /* ── SCROLLBARS ── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

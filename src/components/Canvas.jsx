@@ -11,6 +11,9 @@ import {
   SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Modal, Input, Typography } from 'antd';
+
+const { Text } = Typography;
 import { v4 as uuidv4 } from 'uuid';
 
 import AnchorNode       from './nodes/AnchorNode';
@@ -567,46 +570,54 @@ export default function Canvas({
       </ReactFlow>
 
       {/* Add note dialog */}
-      {addDialog && (
-        <div className="add-node-overlay" onClick={() => setAddDialog(false)}>
-          <div className="add-node-dialog" onClick={e => e.stopPropagation()}>
-            <h2>Add a note</h2>
-            <p>Write about anything — a concept, question, person, event. Webs will expand it across 14 dimensions of context.</p>
-            <input
-              placeholder="What are you curious about?"
-              value={addForm.title}
-              onChange={e => setAddForm(f => ({ ...f, title: e.target.value }))}
-              autoFocus
-              onKeyDown={e => {
-                if (e.key === 'Enter' && addForm.title.trim()) {
-                  addAnchorNode(addForm.title.trim(), addForm.body.trim(), addForm.flowPos);
-                  setAddDialog(false);
-                  setAddForm({ title: '', body: '', flowPos: null });
-                }
-              }}
-            />
-            <textarea
-              placeholder="Optional context — what you already know, what you're wondering…"
-              value={addForm.body}
-              onChange={e => setAddForm(f => ({ ...f, body: e.target.value }))}
-            />
-            <div className="add-node-dialog__actions">
-              <button className="btn" onClick={() => setAddDialog(false)}>Cancel</button>
-              <button
-                className="btn btn-primary"
-                disabled={!addForm.title.trim()}
-                onClick={() => {
-                  addAnchorNode(addForm.title.trim(), addForm.body.trim(), addForm.flowPos);
-                  setAddDialog(false);
-                  setAddForm({ title: '', body: '', flowPos: null });
-                }}
-              >
-                Add note
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        title="Add a note"
+        open={addDialog}
+        onCancel={() => {
+          setAddDialog(false);
+          setAddForm({ title: '', body: '', flowPos: null });
+        }}
+        onOk={() => {
+          if (!addForm.title.trim()) return;
+          addAnchorNode(addForm.title.trim(), addForm.body.trim(), addForm.flowPos);
+          setAddDialog(false);
+          setAddForm({ title: '', body: '', flowPos: null });
+        }}
+        okText="Add note"
+        cancelText="Cancel"
+        okButtonProps={{ disabled: !addForm.title.trim() }}
+        width={440}
+        destroyOnClose
+        afterClose={() => setAddForm({ title: '', body: '', flowPos: null })}
+      >
+        <Text
+          type="secondary"
+          style={{ display: 'block', marginBottom: 16, fontSize: 12, lineHeight: 1.55 }}
+        >
+          Write about anything — a concept, question, person, event. Webs will
+          expand it across 14 dimensions of context.
+        </Text>
+        <Input
+          placeholder="What are you curious about?"
+          value={addForm.title}
+          onChange={e => setAddForm(f => ({ ...f, title: e.target.value }))}
+          autoFocus
+          onPressEnter={() => {
+            if (addForm.title.trim()) {
+              addAnchorNode(addForm.title.trim(), addForm.body.trim(), addForm.flowPos);
+              setAddDialog(false);
+              setAddForm({ title: '', body: '', flowPos: null });
+            }
+          }}
+          style={{ marginBottom: 12 }}
+        />
+        <Input.TextArea
+          placeholder="Optional context — what you already know, what you're wondering…"
+          value={addForm.body}
+          onChange={e => setAddForm(f => ({ ...f, body: e.target.value }))}
+          autoSize={{ minRows: 3, maxRows: 6 }}
+        />
+      </Modal>
 
       {/* Context menu */}
       {contextMenu && (

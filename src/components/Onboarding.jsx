@@ -1,50 +1,72 @@
 import { useState } from 'react';
+import { Input, Button, Typography } from 'antd';
+
+const { Text, Link } = Typography;
 
 export default function Onboarding({ onSave }) {
   const [key, setKey] = useState('');
+  const valid = key.trim().startsWith('sk-ant-');
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  function handleSubmit() {
     const trimmed = key.trim();
-    if (!trimmed.startsWith('sk-ant-')) return;
+    if (!valid) return;
     onSave(trimmed);
   }
 
-  const valid = key.trim().startsWith('sk-ant-');
-
   return (
     <div className="onboarding-overlay">
-      <form className="onboarding-card" onSubmit={handleSubmit}>
+      <div className="onboarding-card">
         <div className="onboarding-logo">Webs</div>
-        <p className="onboarding-tagline">
+
+        <Text
+          type="secondary"
+          style={{ display: 'block', marginBottom: 24, lineHeight: 1.55, fontSize: 13 }}
+        >
           A non-linear canvas for exploring ideas — every note you add unfolds
           into its historical, political, cultural, and technological context.
-        </p>
+        </Text>
 
-        <div className="onboarding-label">Anthropic API Key</div>
-        <input
-          className="onboarding-input"
-          type="password"
+        <Text
+          style={{
+            display: 'block',
+            marginBottom: 8,
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            color: 'var(--color-text-dim)',
+          }}
+        >
+          Anthropic API Key
+        </Text>
+
+        <Input.Password
           placeholder="sk-ant-api03-…"
           value={key}
           onChange={e => setKey(e.target.value)}
+          onPressEnter={handleSubmit}
           autoFocus
           spellCheck={false}
+          style={{ marginBottom: 8 }}
         />
-        <p className="onboarding-hint">
+
+        <Text
+          type="secondary"
+          style={{ display: 'block', fontSize: 12, marginBottom: 24, lineHeight: 1.55 }}
+        >
           Your key is stored only in this browser and never sent anywhere except
           directly to Anthropic.{' '}
-          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
+          <Link href="https://console.anthropic.com/settings/keys" target="_blank">
             Get a key →
-          </a>
-        </p>
+          </Link>
+        </Text>
 
-        <div className="onboarding-actions">
-          <button className="btn btn-primary" type="submit" disabled={!valid}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="primary" disabled={!valid} onClick={handleSubmit}>
             Start exploring
-          </button>
+          </Button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
