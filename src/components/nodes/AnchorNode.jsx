@@ -3,10 +3,10 @@ import { Handle, Position, NodeResizer } from '@xyflow/react';
 
 const AnchorNode = memo(({ data, selected }) => {
   const revealedCount = data.contextNodes?.filter(n => n.revealed).length ?? 0;
-  const totalCount = data.contextNodes?.length ?? 0;
-  const isExpanded = totalCount > 0;
-  const isLoading = data.loading ?? false;
-  const isStarred = data.starred ?? false;
+  const totalCount    = data.contextNodes?.length ?? 0;
+  const isExpanded    = totalCount > 0;
+  const isLoading     = data.loading  ?? false;
+  const isStarred     = data.starred  ?? false;
 
   return (
     <div
@@ -18,35 +18,40 @@ const AnchorNode = memo(({ data, selected }) => {
         minWidth={180}
         minHeight={80}
         lineStyle={{ borderColor: 'var(--color-accent)', opacity: 0.3 }}
-        handleStyle={{
-          width: 8, height: 8,
-          background: 'var(--color-accent)',
-          opacity: 0.5, border: 'none', borderRadius: '2px',
-        }}
+        handleStyle={{ width: 8, height: 8, background: 'var(--color-accent)', opacity: 0.5, border: 'none', borderRadius: '2px' }}
       />
 
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
-      <Handle type="target" position={Position.Top} id="top" />
+      {/* Handles on all 4 sides for easy connect */}
+      <Handle type="target" position={Position.Left}   id="left"   />
+      <Handle type="source" position={Position.Right}  id="right"  />
+      <Handle type="target" position={Position.Top}    id="top"    />
       <Handle type="source" position={Position.Bottom} id="bottom" />
 
       <div className="anchor-node__bar" />
 
-      {/* Star badge */}
+      {/* Star — stops ALL pointer events to prevent ReactFlow drag interception */}
       <span
+        role="button"
+        tabIndex={0}
         className={`node-star${isStarred ? ' active' : ''}`}
         title={isStarred ? 'Unstar' : 'Star'}
+        onPointerDown={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); data.onToggleStar?.(); }}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); data.onToggleStar?.(); } }}
       >
         {isStarred ? '★' : '☆'}
       </span>
 
       <div className="anchor-node__body">
+        {data.nodeImage && (
+          <div className="node-image-banner">
+            <img src={data.nodeImage} alt={data.title} className="node-image-banner__img" />
+          </div>
+        )}
         <div className="anchor-node__label">Note</div>
         <div className="anchor-node__title">{data.title || 'Untitled'}</div>
-        {data.body && (
-          <div className="anchor-node__desc">{data.body}</div>
-        )}
+        {data.body && <div className="anchor-node__desc">{data.body}</div>}
       </div>
 
       <div className="anchor-node__footer">
@@ -58,6 +63,7 @@ const AnchorNode = memo(({ data, selected }) => {
         ) : !isExpanded ? (
           <button
             className="anchor-node__expand"
+            onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); data.onExpand?.(); }}
           >
             + Expand

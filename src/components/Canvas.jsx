@@ -9,23 +9,28 @@ import {
   useEdgesState,
   BackgroundVariant,
   SelectionMode,
+  ConnectionMode,
+  MarkerType,
+  EdgeLabelRenderer,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { v4 as uuidv4 } from 'uuid';
 import { Modal, Input, Typography } from 'antd';
 
-const { Text } = Typography;
-import { v4 as uuidv4 } from 'uuid';
-
-import AnchorNode       from './nodes/AnchorNode';
-import ContextNode      from './nodes/ContextNode';
-import GroupFrameNode   from './nodes/GroupFrameNode';
-import MediaNode        from './nodes/MediaNode';
-import CSSInspector     from './CSSInspector';
-import DebugPanel       from './DebugPanel';
-import FloatingToolbar  from './FloatingToolbar';
+import AnchorNode      from './nodes/AnchorNode';
+import ContextNode     from './nodes/ContextNode';
+import GroupFrameNode  from './nodes/GroupFrameNode';
+import MediaNode       from './nodes/MediaNode';
+import FloatingEdge    from './edges/FloatingEdge';
+import CSSInspector    from './CSSInspector';
+import DebugPanel      from './DebugPanel';
+import FloatingToolbar from './FloatingToolbar';
 import { CATEGORY_BY_KEY, STORAGE_KEYS } from '../constants';
 import { expandAnchor, radialPositions, generateCards } from '../lib/expand';
 import { explainTerms } from '../lib/explainTerms';
+import { fetchNodeImage } from '../lib/fetchNodeImage';
+
+const { Text } = Typography;
 
 const nodeTypes = {
   anchorNode:  AnchorNode,
@@ -33,6 +38,12 @@ const nodeTypes = {
   groupFrame:  GroupFrameNode,
   mediaNode:   MediaNode,
 };
+
+const edgeTypes = {
+  floating: FloatingEdge,
+};
+
+const PROXIMITY_THRESHOLD = 80; // px, flow coordinates
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
 function loadCanvas() {
@@ -42,26 +53,34 @@ function loadCanvas() {
   } catch { return { nodes: [], edges: [] }; }
 }
 function saveCanvas(nodes, edges) {
-  try {
-    localStorage.setItem(STORAGE_KEYS.CANVAS, JSON.stringify({ nodes, edges }));
-  } catch (e) { console.warn('Canvas save failed:', e); }
+  try { localStorage.setItem(STORAGE_KEYS.CANVAS, JSON.stringify({ nodes, edges })); }
+  catch (e) { console.warn('Canvas save failed:', e); }
 }
 function getUsage() {
   try {
-    const raw    = localStorage.getItem(STORAGE_KEYS.USAGE);
-    const today  = new Date().toISOString().slice(0, 10);
+    const raw   = localStorage.getItem(STORAGE_KEYS.USAGE);
+    const today = new Date().toISOString().slice(0, 10);
     if (!raw) return { date: today, count: 0 };
-    const parsed = JSON.parse(raw);
-    return parsed.date !== today ? { date: today, count: 0 } : parsed;
+    const p     = JSON.parse(raw);
+    return p.date !== today ? { date: today, count: 0 } : p;
   } catch { return { date: new Date().toISOString().slice(0, 10), count: 0 }; }
 }
-function saveUsage(usage) { localStorage.setItem(STORAGE_KEYS.USAGE, JSON.stringify(usage)); }
+function saveUsage(u) { localStorage.setItem(STORAGE_KEYS.USAGE, JSON.stringify(u)); }
 
-// ── Edge style helpers ───────────────────────────────────────────────────────
+// ── Edge helpers ─────────────────────────────────────────────────────────────
 function edgeColor(s) {
   return s === 'strong' ? 'var(--color-strong)' : s === 'moderate' ? 'var(--color-moderate)' : 'var(--color-weak)';
 }
 function edgeWidth(s) { return s === 'strong' ? 2.5 : s === 'moderate' ? 2 : 1.5; }
+
+function buildMarker(markerKey) {
+  if (markerKey === 'none') return undefined;
+  return {
+    type:  markerKey === 'arrowclosed' ? MarkerType.ArrowClosed : MarkerType.Arrow,
+    width: 16, height: 16,
+    color: 'var(--color-weak)',
+  };
+}
 
 // ── Group bounds ─────────────────────────────────────────────────────────────
 function computeGroupBounds(memberNodes, padding = 56) {
@@ -69,109 +88,163 @@ function computeGroupBounds(memberNodes, padding = 56) {
   memberNodes.forEach(n => {
     const w = n.measured?.width  ?? (n.type === 'anchorNode' ? 240 : 180);
     const h = n.measured?.height ?? (n.type === 'anchorNode' ? 120 : 100);
-    minX = Math.min(minX, n.position.x);
-    minY = Math.min(minY, n.position.y);
-    maxX = Math.max(maxX, n.position.x + w);
-    maxY = Math.max(maxY, n.position.y + h);
+    minX = Math.min(minX, n.position.x);       minY = Math.min(minY, n.position.y);
+    maxX = Math.max(maxX, n.position.x + w);   maxY = Math.max(maxY, n.position.y + h);
   });
   return { x: minX - padding, y: minY - padding, width: maxX - minX + padding * 2, height: maxY - minY + padding * 2 };
 }
 
 export default function Canvas({
-  apiKey,
-  onCardsGenerated,
-  importedState,
-  activePanel,
-  onPanelClose,
-  onRegisterAddNote,
-  onUsageChange,
+  apiKey, onCardsGenerated, importedState,
+  activePanel, onPanelClose, onRegisterAddNote, onUsageChange,
 }) {
   const saved = importedState || loadCanvas();
   const [nodes, setNodes, onNodesChange] = useNodesState(saved.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
+
   const [contextMenu, setContextMenu]   = useState(null);
   const [addDialog, setAddDialog]       = useState(false);
   const [addForm, setAddForm]           = useState({ title: '', body: '', flowPos: null });
   const [usage, setUsage]               = useState(getUsage);
 
-  // ── Toolbar state ────────────────────────────────────────────────────────
-  const [edgeType,    setEdgeType]    = useState('default');
-  const [bgVariant,   setBgVariant]   = useState(BackgroundVariant.Dots);
-  const [snapToGrid,  setSnapToGrid]  = useState(false);
-  const [showMiniMap, setShowMiniMap] = useState(true);
+  // Edge / canvas config
+  const [edgeType,     setEdgeType]     = useState('default');
+  const [markerType,   setMarkerType]   = useState('arrowclosed');
+  const [animateEdges, setAnimateEdges] = useState(false);
+  const [bgVariant,    setBgVariant]    = useState(BackgroundVariant.Dots);
+  const [snapToGrid,   setSnapToGrid]   = useState(false);
+  const [showMiniMap,  setShowMiniMap]  = useState(true);
 
-  const edgeTypeRef = useRef(edgeType);
-  useEffect(() => { edgeTypeRef.current = edgeType; }, [edgeType]);
+  // Proximity connect
+  const [proximityTargetId, setProximityTargetId] = useState(null);
+
+  // Add-node-on-edge-drop
+  const [dropConnect, setDropConnect] = useState(null); // { flowPos, fromNodeId, fromHandle }
+
+  // Edge label editing
+  const [editingEdge, setEditingEdge] = useState(null); // { id, label }
 
   const reactFlowWrapper = useRef(null);
   const [rfInstance, setRfInstance]   = useState(null);
-  const nodesRef = useRef(nodes);
+  const nodesRef     = useRef(nodes);
+  const edgesRef     = useRef(edges);
   useEffect(() => { nodesRef.current = nodes; }, [nodes]);
-  const clipboardRef     = useRef([]);
-  const copySelectedRef  = useRef(null);
-  const pasteNodesRef    = useRef(null);
+  useEffect(() => { edgesRef.current = edges; }, [edges]);
+
+  // Stable refs — updated each render so stale closures in node.data always call current versions
+  const toggleStarRef         = useRef(null);
+  const expandNodeRef         = useRef(null);
+  const openContextMenuRef    = useRef(null);
+  const revealContextNodeRef  = useRef(null);
+  const edgeTypeRef           = useRef(edgeType);
+  const markerTypeRef         = useRef(markerType);
+  const animateEdgesRef       = useRef(animateEdges);
+  const proximityTargetIdRef  = useRef(proximityTargetId);
+  const clipboardRef          = useRef([]);
+  const copySelectedRef       = useRef(null);
+  const pasteNodesRef         = useRef(null);
+
+  useEffect(() => { edgeTypeRef.current          = edgeType;          }, [edgeType]);
+  useEffect(() => { markerTypeRef.current         = markerType;        }, [markerType]);
+  useEffect(() => { animateEdgesRef.current       = animateEdges;      }, [animateEdges]);
+  useEffect(() => { proximityTargetIdRef.current  = proximityTargetId; }, [proximityTargetId]);
 
   // Persist on change
   useEffect(() => { saveCanvas(nodes, edges); }, [nodes, edges]);
 
-  // Register the "add note" trigger for the sidebar button
+  // Register add-note trigger for sidebar
   useEffect(() => {
-    if (onRegisterAddNote) {
-      onRegisterAddNote(() => {
-        setAddForm({ title: '', body: '', flowPos: null });
-        setAddDialog(true);
-      });
-    }
+    onRegisterAddNote?.(() => {
+      setAddForm({ title: '', body: '', flowPos: null });
+      setAddDialog(true);
+    });
   }, [onRegisterAddNote]);
 
-  // ── Click-away to close active panel ─────────────────────────────────────
+  // Click-away to close active panel
   useEffect(() => {
     if (!activePanel) return;
-    function handleMouseDown(e) {
+    function onDown(e) {
       const panel   = document.querySelector('[data-panel]');
       const sidebar = document.querySelector('.sidebar');
       if (panel && !panel.contains(e.target) && (!sidebar || !sidebar.contains(e.target))) {
-        // Don't close if clicking the CSS picker overlay or highlight
-        if (e.target.classList.contains('css-picker-overlay') || e.target.closest('.css-picker-highlight')) return;
+        if (e.target.classList.contains('css-picker-overlay')) return;
         onPanelClose?.();
       }
     }
-    document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
   }, [activePanel, onPanelClose]);
 
-  // ── Callback factories ───────────────────────────────────────────────────
+  // Apply proximity-target CSS class to proximity node
+  useEffect(() => {
+    setNodes(ns => ns.map(n => {
+      if (n.type === 'groupFrame') return n;
+      const want = n.id === proximityTargetId ? 'proximity-target' : '';
+      if ((n.className ?? '') === want) return n;
+      return { ...n, className: want };
+    }));
+  }, [proximityTargetId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Edge factory ─────────────────────────────────────────────────────────
+  function makeEdge(sourceId, targetId, strength = 'weak') {
+    const et    = edgeTypeRef.current;
+    const mk    = markerTypeRef.current;
+    const anim  = animateEdgesRef.current;
+    const marker = buildMarker(mk);
+    return {
+      id:        `${sourceId}->${targetId}`,
+      source:    sourceId,
+      target:    targetId,
+      type:      et,
+      animated:  anim,
+      markerEnd: marker,
+      label:     '',
+      style: {
+        stroke:      edgeColor(strength),
+        strokeWidth: edgeWidth(strength),
+        opacity:     0.5,
+      },
+    };
+  }
+
+  // ── Callback factories (via stable refs so stale closures call current fns) ──
   function makeAnchorCallbacks(id) {
     return {
-      onExpand:      () => expandNode(id),
-      onContextMenu: (e) => { e.preventDefault(); openContextMenu(e, id, 'anchorNode'); },
-      onToggleStar:  () => toggleStar(id),
+      onExpand:      () => expandNodeRef.current?.(id),
+      onContextMenu: (e) => { e.preventDefault(); openContextMenuRef.current?.(e, id, 'anchorNode'); },
+      onToggleStar:  () => toggleStarRef.current?.(id),
     };
   }
   function makeContextCallbacks(id, anchorId, item) {
     return {
-      onReveal:      () => revealContextNode(id, anchorId, item),
-      onContextMenu: (e) => { e.preventDefault(); openContextMenu(e, id, 'contextNode'); },
-      onToggleStar:  () => toggleStar(id),
+      onReveal:      () => revealContextNodeRef.current?.(id, anchorId, item),
+      onContextMenu: (e) => { e.preventDefault(); openContextMenuRef.current?.(e, id, 'contextNode'); },
+      onToggleStar:  () => toggleStarRef.current?.(id),
     };
   }
 
-  // ── Add anchor node ───────────────────────────────────────────────────────
-  function addAnchorNode(title, body, flowPos) {
-    const id = uuidv4();
+  // ── Add anchor node ──────────────────────────────────────────────────────
+  function addAnchorNode(title, body, flowPos, autoConnectFromId = null) {
+    const id       = uuidv4();
     const position = flowPos ?? (rfInstance
       ? rfInstance.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
       : { x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 });
 
-    setNodes(ns => [...ns, {
+    const newNode = {
       id,
       type: 'anchorNode',
       position,
       data: { title, body, contextNodes: [], loading: false, starred: false, ...makeAnchorCallbacks(id) },
-    }]);
+    };
+
+    setNodes(ns => [...ns, newNode]);
+
+    if (autoConnectFromId) {
+      setEdges(es => [...es, makeEdge(autoConnectFromId, id, 'weak')]);
+    }
   }
 
-  // ── Expand anchor via AI ──────────────────────────────────────────────────
+  // ── Expand anchor via AI ─────────────────────────────────────────────────
   async function expandNode(anchorId) {
     const currentUsage = getUsage();
     if (currentUsage.count >= 10) {
@@ -192,53 +265,48 @@ export default function Canvas({
       setUsage(newUsage);
       onUsageChange?.(newUsage.count);
 
-      const positions     = radialPositions(anchor.position, results.length, 320);
+      const positions      = radialPositions(anchor.position, results.length, 320);
       const contextNodeIds = [];
-      const newNodes      = [];
-      const newEdges      = [];
+      const newNodes       = [];
+      const newEdges       = [];
 
       results.forEach((item, i) => {
-        const contextId = uuidv4();
-        contextNodeIds.push(contextId);
+        const ctxId = uuidv4();
+        contextNodeIds.push(ctxId);
         newNodes.push({
-          id:   contextId,
+          id:   ctxId,
           type: 'contextNode',
           position: positions[i],
           data: {
-            category:         item.key,
-            title:            item.title,
-            summary:          item.summary,
+            category:           item.key,
+            title:              item.title,
+            summary:            item.summary,
             connectionStrength: item.connectionStrength,
-            revealed:         false,
+            revealed:           false,
             anchorId,
-            starred:          false,
-            termDefinitions:  {},
-            ...makeContextCallbacks(contextId, anchorId, item),
+            starred:            false,
+            termDefinitions:    {},
+            nodeImage:          null,
+            ...makeContextCallbacks(ctxId, anchorId, item),
           },
         });
-        newEdges.push({
-          id:     `${anchorId}->${contextId}`,
-          source: anchorId,
-          target: contextId,
-          type:   edgeTypeRef.current,
-          style:  { stroke: edgeColor(item.connectionStrength), strokeWidth: edgeWidth(item.connectionStrength), opacity: 0.5 },
-        });
+        newEdges.push(makeEdge(anchorId, ctxId, item.connectionStrength));
       });
 
-      // Build group frame around anchor + context nodes
-      const groupId = uuidv4();
-      const allMemberPositions = [anchor.position, ...positions];
-      const estBounds = computeGroupBounds(
-        allMemberPositions.map((p, i) => ({ position: p, type: i === 0 ? 'anchorNode' : 'contextNode', measured: null }))
+      // Group frame
+      const groupId    = uuidv4();
+      const allMembers = [anchor.position, ...positions];
+      const bounds     = computeGroupBounds(
+        allMembers.map((p, i) => ({ position: p, type: i === 0 ? 'anchorNode' : 'contextNode', measured: null }))
       );
       const groupNode = {
-        id:        groupId,
-        type:      'groupFrame',
-        position:  { x: estBounds.x, y: estBounds.y },
-        style:     { width: estBounds.width, height: estBounds.height },
+        id:         groupId,
+        type:       'groupFrame',
+        position:   { x: bounds.x, y: bounds.y },
+        style:      { width: bounds.width, height: bounds.height },
         selectable: false,
         draggable:  false,
-        zIndex:    -1,
+        zIndex:     -1,
         data: {
           label:            anchor.data.title,
           memberIds:        [anchorId, ...contextNodeIds],
@@ -267,7 +335,7 @@ export default function Canvas({
     }
   }
 
-  // ── Reveal context node ────────────────────────────────────────────────────
+  // ── Reveal context node ──────────────────────────────────────────────────
   async function revealContextNode(contextId, anchorId, item) {
     setNodes(ns => ns.map(n =>
       n.id === contextId ? { ...n, data: { ...n.data, revealed: true } } : n
@@ -279,8 +347,18 @@ export default function Canvas({
     ));
 
     const anchor = nodesRef.current.find(n => n.id === anchorId);
+    const cat    = CATEGORY_BY_KEY[item.key];
+
+    // Fetch Wikipedia image for node title (non-blocking)
+    fetchNodeImage(item.title).then(src => {
+      if (src) {
+        setNodes(ns => ns.map(n =>
+          n.id === contextId ? { ...n, data: { ...n.data, nodeImage: src } } : n
+        ));
+      }
+    });
+
     if (anchor && apiKey) {
-      const cat = CATEGORY_BY_KEY[item.key];
       Promise.all([
         generateCards(apiKey, anchor.data.title, item.title, item.summary, cat?.label || item.key),
         explainTerms(apiKey, item.summary),
@@ -304,7 +382,7 @@ export default function Canvas({
     }
   }
 
-  // ── Toggle star ────────────────────────────────────────────────────────────
+  // ── Toggle star ──────────────────────────────────────────────────────────
   function toggleStar(nodeId) {
     setNodes(ns => ns.map(n =>
       n.id === nodeId ? { ...n, data: { ...n.data, starred: !n.data.starred } } : n
@@ -312,7 +390,7 @@ export default function Canvas({
     setContextMenu(null);
   }
 
-  // ── Toggle group collapse ─────────────────────────────────────────────────
+  // ── Toggle group collapse ────────────────────────────────────────────────
   function toggleGroupCollapse(groupId) {
     setNodes(ns => {
       const group = ns.find(n => n.id === groupId);
@@ -327,7 +405,7 @@ export default function Canvas({
     });
   }
 
-  // ── Context menu ───────────────────────────────────────────────────────────
+  // ── Context menu ─────────────────────────────────────────────────────────
   function openContextMenu(e, nodeId, nodeType) {
     setContextMenu({ x: e.clientX, y: e.clientY, nodeId, nodeType });
   }
@@ -336,8 +414,8 @@ export default function Canvas({
     const node     = nodesRef.current.find(n => n.id === nodeId);
     const toDelete = new Set([nodeId]);
     if (node?.data?.contextNodes) node.data.contextNodes.forEach(id => toDelete.add(id));
-    const groupFrame = nodesRef.current.find(n => n.type === 'groupFrame' && n.data.memberIds?.includes(nodeId));
-    if (groupFrame) toDelete.add(groupFrame.id);
+    const gf = nodesRef.current.find(n => n.type === 'groupFrame' && n.data.memberIds?.includes(nodeId));
+    if (gf) toDelete.add(gf.id);
     setNodes(ns => ns.filter(n => !toDelete.has(n.id)));
     setEdges(es => es.filter(e => !toDelete.has(e.source) && !toDelete.has(e.target)));
     setContextMenu(null);
@@ -356,46 +434,51 @@ export default function Canvas({
     setContextMenu(null);
   }
 
-  // ── Collision detection ───────────────────────────────────────────────────
-  const handleCollision = useCallback((draggedNode) => {
-    if (draggedNode.type === 'groupFrame') return;
+  // ── Collision detection (reads from ns, not stale param) ─────────────────
+  const handleCollision = useCallback((draggedId) => {
     setNodes(ns => {
+      const dragged = ns.find(n => n.id === draggedId);
+      if (!dragged || dragged.type === 'groupFrame') return ns;
+
+      const dw = dragged.measured?.width  ?? 220;
+      const dh = dragged.measured?.height ?? 110;
+
       const colliding = ns.filter(n => {
-        if (n.id === draggedNode.id || n.type === 'groupFrame' || n.hidden) return false;
-        const dw = draggedNode.measured?.width ?? 200, dh = draggedNode.measured?.height ?? 110;
-        const nw = n.measured?.width ?? 200, nh = n.measured?.height ?? 110;
-        const overlap = !(
-          draggedNode.position.x + dw + 4 < n.position.x ||
-          draggedNode.position.x > n.position.x + nw + 4 ||
-          draggedNode.position.y + dh + 4 < n.position.y ||
-          draggedNode.position.y > n.position.y + nh + 4
+        if (n.id === draggedId || n.type === 'groupFrame' || n.hidden) return false;
+        const nw = n.measured?.width  ?? 220;
+        const nh = n.measured?.height ?? 110;
+        return !(
+          dragged.position.x + dw + 8 < n.position.x ||
+          dragged.position.x          > n.position.x + nw + 8 ||
+          dragged.position.y + dh + 8 < n.position.y ||
+          dragged.position.y          > n.position.y + nh + 8
         );
-        return overlap;
       });
       if (colliding.length === 0) return ns;
-      let px = draggedNode.position.x, py = draggedNode.position.y;
+
+      let px = dragged.position.x, py = dragged.position.y;
       colliding.forEach(other => {
-        const dw = draggedNode.measured?.width ?? 200, dh = draggedNode.measured?.height ?? 110;
-        const nw = other.measured?.width ?? 200, nh = other.measured?.height ?? 110;
+        const nw = other.measured?.width  ?? 220;
+        const nh = other.measured?.height ?? 110;
         const cx1 = px + dw / 2, cy1 = py + dh / 2;
         const cx2 = other.position.x + nw / 2, cy2 = other.position.y + nh / 2;
-        const dx = cx1 - cx2, dy = cy1 - cy2;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        px += (dx / dist) * 24;
-        py += (dy / dist) * 24;
+        const dx  = cx1 - cx2, dy = cy1 - cy2;
+        const mag = Math.sqrt(dx * dx + dy * dy) || 1;
+        px += (dx / mag) * 36;
+        py += (dy / mag) * 36;
       });
-      return ns.map(n => n.id === draggedNode.id ? { ...n, position: { x: px, y: py } } : n);
+      return ns.map(n => n.id === draggedId ? { ...n, position: { x: px, y: py } } : n);
     });
   }, []);
 
-  // ── Update group frame bounds after drag ──────────────────────────────────
-  const updateGroupBounds = useCallback((movedNodeId) => {
+  // ── Group bounds update ──────────────────────────────────────────────────
+  const updateGroupBounds = useCallback((movedId) => {
     setNodes(ns => {
-      const group = ns.find(n => n.type === 'groupFrame' && n.data.memberIds?.includes(movedNodeId));
+      const group   = ns.find(n => n.type === 'groupFrame' && n.data.memberIds?.includes(movedId));
       if (!group) return ns;
       const members = ns.filter(n => group.data.memberIds.includes(n.id) && n.type !== 'groupFrame');
       if (members.length === 0) return ns;
-      const bounds = computeGroupBounds(members);
+      const bounds  = computeGroupBounds(members);
       return ns.map(n => n.id === group.id
         ? { ...n, position: { x: bounds.x, y: bounds.y }, style: { width: bounds.width, height: bounds.height } }
         : n
@@ -403,41 +486,69 @@ export default function Canvas({
     });
   }, []);
 
+  // ── Proximity connect ────────────────────────────────────────────────────
+  const onNodeDrag = useCallback((e, draggedNode) => {
+    if (draggedNode.type === 'groupFrame') return;
+    const dw = draggedNode.measured?.width  ?? 220;
+    const dh = draggedNode.measured?.height ?? 110;
+    const dc = { x: draggedNode.position.x + dw / 2, y: draggedNode.position.y + dh / 2 };
+
+    let closestId   = null;
+    let closestDist = PROXIMITY_THRESHOLD;
+
+    nodesRef.current.forEach(n => {
+      if (n.id === draggedNode.id || n.type === 'groupFrame' || n.hidden) return;
+      const nw = n.measured?.width  ?? 220;
+      const nh = n.measured?.height ?? 110;
+      const nc = { x: n.position.x + nw / 2, y: n.position.y + nh / 2 };
+      const d  = Math.hypot(dc.x - nc.x, dc.y - nc.y);
+      if (d < closestDist) { closestDist = d; closestId = n.id; }
+    });
+
+    if (closestId !== proximityTargetIdRef.current) {
+      setProximityTargetId(closestId);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onNodeDragStop = useCallback((e, draggedNode) => {
-    handleCollision(draggedNode);
+    handleCollision(draggedNode.id);
     updateGroupBounds(draggedNode.id);
-  }, [handleCollision, updateGroupBounds]);
 
-  // ── Copy / Paste ──────────────────────────────────────────────────────────
+    // Auto-connect on proximity
+    const targetId = proximityTargetIdRef.current;
+    if (targetId && draggedNode.type !== 'groupFrame') {
+      const alreadyConnected = edgesRef.current.some(
+        ed => (ed.source === draggedNode.id && ed.target === targetId) ||
+              (ed.source === targetId && ed.target === draggedNode.id)
+      );
+      if (!alreadyConnected) {
+        setEdges(es => [...es, makeEdge(draggedNode.id, targetId, 'weak')]);
+      }
+    }
+    setProximityTargetId(null);
+  }, [handleCollision, updateGroupBounds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Copy / Paste ─────────────────────────────────────────────────────────
   function copySelected() {
-    const selected = nodesRef.current.filter(n => n.selected && n.type === 'anchorNode');
-    if (selected.length === 0) return;
-    clipboardRef.current = selected.map(n => ({
-      title:    n.data.title,
-      body:     n.data.body,
-      position: { ...n.position },
-    }));
+    const sel = nodesRef.current.filter(n => n.selected && n.type === 'anchorNode');
+    if (sel.length === 0) return;
+    clipboardRef.current = sel.map(n => ({ title: n.data.title, body: n.data.body, position: { ...n.position } }));
   }
-
   function pasteNodes() {
     if (clipboardRef.current.length === 0) return;
-    const offset   = 40;
-    const newNodes = clipboardRef.current.map(cn => {
+    setNodes(ns => [...ns, ...clipboardRef.current.map(cn => {
       const id = uuidv4();
       return {
-        id,
-        type: 'anchorNode',
-        position: { x: cn.position.x + offset, y: cn.position.y + offset },
+        id, type: 'anchorNode',
+        position: { x: cn.position.x + 40, y: cn.position.y + 40 },
         data: { title: cn.title, body: cn.body, contextNodes: [], loading: false, starred: false, ...makeAnchorCallbacks(id) },
       };
-    });
-    setNodes(ns => [...ns, ...newNodes]);
+    })]);
   }
-
   copySelectedRef.current = copySelected;
   pasteNodesRef.current   = pasteNodes;
 
-  // ── Keyboard shortcuts ────────────────────────────────────────────────────
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────
   useEffect(() => {
     function onKey(e) {
       const meta = e.metaKey || e.ctrlKey;
@@ -448,29 +559,83 @@ export default function Canvas({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // ── Edge connect ──────────────────────────────────────────────────────────
+  // ── Connect ──────────────────────────────────────────────────────────────
   const onConnect = useCallback(params => {
-    setEdges(es => addEdge({
-      ...params,
-      type:  edgeTypeRef.current,
-      style: { stroke: edgeColor('weak'), strokeWidth: edgeWidth('weak') },
-    }, es));
-  }, []);
+    setEdges(es => addEdge(makeEdge(params.source, params.target, 'weak'), es));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Update all existing edges when edge type changes ──────────────────────
+  // ── Add-node on edge drop ────────────────────────────────────────────────
+  const onConnectEnd = useCallback((event, connectionState) => {
+    if (connectionState.isValid || !rfInstance) return;
+    const { clientX, clientY } = 'touches' in event ? event.touches[0] : event;
+    const flowPos = rfInstance.screenToFlowPosition({ x: clientX, y: clientY });
+    setDropConnect({
+      flowPos,
+      fromNodeId: connectionState.fromNode?.id ?? null,
+    });
+    setAddForm({ title: '', body: '', flowPos });
+    setAddDialog(true);
+  }, [rfInstance]);
+
+  // ── Edge type / animate apply-to-all ────────────────────────────────────
   function applyEdgeTypeToAll(type) {
     setEdgeType(type);
     setEdges(es => es.map(e => ({ ...e, type })));
   }
+  function applyMarkerToAll(mk) {
+    setMarkerType(mk);
+    const marker = buildMarker(mk);
+    setEdges(es => es.map(e => ({ ...e, markerEnd: marker })));
+  }
+  function applyAnimateToAll(anim) {
+    setAnimateEdges(anim);
+    setEdges(es => es.map(e => ({ ...e, animated: anim })));
+  }
 
-  // ── Drag-and-drop media onto canvas ──────────────────────────────────────
+  // ── Edge label editing ───────────────────────────────────────────────────
+  function onEdgeDoubleClick(e, edge) {
+    e.stopPropagation();
+    setEditingEdge({ id: edge.id, label: edge.label ?? '' });
+  }
+  function saveEdgeLabel(label) {
+    if (!editingEdge) return;
+    setEdges(es => es.map(e =>
+      e.id === editingEdge.id ? { ...e, label } : e
+    ));
+    setEditingEdge(null);
+  }
+
+  // ── Edge label renderer for non-floating edges ──────────────────────────
+  // Render labels on standard edges via EdgeLabelRenderer
+  function EdgeLabels() {
+    return (
+      <EdgeLabelRenderer>
+        {edges.filter(e => e.label && e.type !== 'floating').map(edge => {
+          // Find approximate midpoint from source/target positions
+          const src = nodesRef.current.find(n => n.id === edge.source);
+          const tgt = nodesRef.current.find(n => n.id === edge.target);
+          if (!src || !tgt) return null;
+          const x = (src.position.x + (src.measured?.width ?? 200) / 2 + tgt.position.x + (tgt.measured?.width ?? 200) / 2) / 2;
+          const y = (src.position.y + (src.measured?.height ?? 100) / 2 + tgt.position.y + (tgt.measured?.height ?? 100) / 2) / 2;
+          return (
+            <div
+              key={edge.id}
+              className="edge-label nodrag nopan"
+              style={{ transform: `translate(-50%,-50%) translate(${x}px,${y}px)` }}
+            >
+              {edge.label}
+            </div>
+          );
+        })}
+      </EdgeLabelRenderer>
+    );
+  }
+
+  // ── File drag-and-drop ───────────────────────────────────────────────────
   const onDragOver = useCallback((e) => {
     e.preventDefault();
-    if (e.dataTransfer.types.includes('Files')) {
-      e.dataTransfer.dropEffect = 'copy';
-    }
+    if (e.dataTransfer.types.includes('Files')) e.dataTransfer.dropEffect = 'copy';
   }, []);
-
   const onDrop = useCallback((e) => {
     e.preventDefault();
     if (!rfInstance) return;
@@ -485,15 +650,13 @@ export default function Canvas({
         const id      = uuidv4();
         const isVideo = file.type.startsWith('video/');
         setNodes(ns => [...ns, {
-          id,
-          type:     'mediaNode',
+          id, type: 'mediaNode',
           position: { x: dropPos.x + i * 24, y: dropPos.y + i * 24 },
           style:    { width: 320, height: isVideo ? 200 : undefined },
           data: {
-            src:       ev.target.result,
-            name:      file.name,
+            src: ev.target.result, name: file.name,
             mediaType: isVideo ? 'video' : 'image',
-            onDelete:  () => setNodes(n => n.filter(nd => nd.id !== id)),
+            onDelete: () => setNodes(n => n.filter(nd => nd.id !== id)),
           },
         }]);
       };
@@ -501,7 +664,12 @@ export default function Canvas({
     });
   }, [rfInstance]);
 
-  const limitReached  = usage.count >= 10;
+  // ── Keep stable-refs current each render ────────────────────────────────
+  toggleStarRef.current        = toggleStar;
+  expandNodeRef.current        = expandNode;
+  openContextMenuRef.current   = openContextMenu;
+  revealContextNodeRef.current = revealContextNode;
+
   const selectedNodes = nodes.filter(n => n.selected && n.type !== 'groupFrame');
 
   return (
@@ -514,19 +682,23 @@ export default function Canvas({
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onConnectEnd={onConnectEnd}
         onInit={setRfInstance}
-        onPaneClick={() => setContextMenu(null)}
+        onPaneClick={() => { setContextMenu(null); setProximityTargetId(null); }}
         onPaneContextMenu={e => {
           e.preventDefault();
           if (!rfInstance) return;
           const flowPos = rfInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
           setContextMenu({ x: e.clientX, y: e.clientY, nodeId: null, nodeType: 'pane', flowPos });
         }}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
-        nodeTypes={nodeTypes}
+        onEdgeDoubleClick={onEdgeDoubleClick}
         fitView
         fitViewOptions={{ padding: 0.3 }}
         minZoom={0.08}
@@ -535,6 +707,8 @@ export default function Canvas({
         selectionMode={SelectionMode.Partial}
         selectionKeyCode="Shift"
         multiSelectionKeyCode="Shift"
+        connectionMode={ConnectionMode.Loose}
+        connectionRadius={40}
         snapToGrid={snapToGrid}
         snapGrid={[16, 16]}
       >
@@ -558,29 +732,32 @@ export default function Canvas({
             }
           />
         )}
-
-        {/* Floating customization toolbar */}
         <FloatingToolbar
-          edgeType={edgeType}          onEdgeTypeChange={applyEdgeTypeToAll}
-          bgVariant={bgVariant}        onBgVariantChange={setBgVariant}
-          snapToGrid={snapToGrid}      onSnapToggle={() => setSnapToGrid(v => !v)}
-          showMiniMap={showMiniMap}    onMiniMapToggle={() => setShowMiniMap(v => !v)}
+          edgeType={edgeType}        onEdgeTypeChange={applyEdgeTypeToAll}
+          markerType={markerType}    onMarkerTypeChange={applyMarkerToAll}
+          animateEdges={animateEdges} onAnimateToggle={() => applyAnimateToAll(!animateEdges)}
+          bgVariant={bgVariant}      onBgVariantChange={setBgVariant}
+          snapToGrid={snapToGrid}    onSnapToggle={() => setSnapToGrid(v => !v)}
+          showMiniMap={showMiniMap}  onMiniMapToggle={() => setShowMiniMap(v => !v)}
           onFitView={() => rfInstance?.fitView({ padding: 0.3 })}
         />
+        <EdgeLabels />
       </ReactFlow>
 
-      {/* Add note dialog */}
+      {/* ── Add note dialog ── */}
       <Modal
         title="Add a note"
         open={addDialog}
         onCancel={() => {
           setAddDialog(false);
+          setDropConnect(null);
           setAddForm({ title: '', body: '', flowPos: null });
         }}
         onOk={() => {
           if (!addForm.title.trim()) return;
-          addAnchorNode(addForm.title.trim(), addForm.body.trim(), addForm.flowPos);
+          addAnchorNode(addForm.title.trim(), addForm.body.trim(), addForm.flowPos, dropConnect?.fromNodeId ?? null);
           setAddDialog(false);
+          setDropConnect(null);
           setAddForm({ title: '', body: '', flowPos: null });
         }}
         okText="Add note"
@@ -588,12 +765,13 @@ export default function Canvas({
         okButtonProps={{ disabled: !addForm.title.trim() }}
         width={440}
         destroyOnClose
-        afterClose={() => setAddForm({ title: '', body: '', flowPos: null })}
       >
-        <Text
-          type="secondary"
-          style={{ display: 'block', marginBottom: 16, fontSize: 12, lineHeight: 1.55 }}
-        >
+        {dropConnect?.fromNodeId && (
+          <Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 11 }}>
+            ⤷ Will auto-connect from the source node
+          </Text>
+        )}
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 12, lineHeight: 1.55 }}>
           Write about anything — a concept, question, person, event. Webs will
           expand it across 14 dimensions of context.
         </Text>
@@ -603,11 +781,11 @@ export default function Canvas({
           onChange={e => setAddForm(f => ({ ...f, title: e.target.value }))}
           autoFocus
           onPressEnter={() => {
-            if (addForm.title.trim()) {
-              addAnchorNode(addForm.title.trim(), addForm.body.trim(), addForm.flowPos);
-              setAddDialog(false);
-              setAddForm({ title: '', body: '', flowPos: null });
-            }
+            if (!addForm.title.trim()) return;
+            addAnchorNode(addForm.title.trim(), addForm.body.trim(), addForm.flowPos, dropConnect?.fromNodeId ?? null);
+            setAddDialog(false);
+            setDropConnect(null);
+            setAddForm({ title: '', body: '', flowPos: null });
           }}
           style={{ marginBottom: 12 }}
         />
@@ -619,7 +797,26 @@ export default function Canvas({
         />
       </Modal>
 
-      {/* Context menu */}
+      {/* ── Edge label edit dialog ── */}
+      <Modal
+        title="Edge label"
+        open={!!editingEdge}
+        onCancel={() => setEditingEdge(null)}
+        onOk={() => saveEdgeLabel(editingEdge?.label ?? '')}
+        okText="Save"
+        width={320}
+        destroyOnClose
+      >
+        <Input
+          value={editingEdge?.label ?? ''}
+          onChange={e => setEditingEdge(prev => prev ? { ...prev, label: e.target.value } : null)}
+          onPressEnter={() => saveEdgeLabel(editingEdge?.label ?? '')}
+          placeholder="Label this edge…"
+          autoFocus
+        />
+      </Modal>
+
+      {/* ── Context menu ── */}
       {contextMenu && (
         <div
           className="context-menu"
@@ -677,25 +874,13 @@ export default function Canvas({
         </div>
       )}
 
-      {/* CSS Inspector */}
-      {activePanel === 'css' && (
-        <CSSInspector onClose={onPanelClose} />
-      )}
+      {/* ── CSS Inspector ── */}
+      {activePanel === 'css' && <CSSInspector onClose={onPanelClose} />}
 
-      {/* Debug Panel */}
+      {/* ── Debug Panel ── */}
       {activePanel === 'debug' && (
-        <DebugPanel
-          nodes={nodes}
-          edges={edges}
-          selectedNodes={selectedNodes}
-          onClose={onPanelClose}
-        />
+        <DebugPanel nodes={nodes} edges={edges} selectedNodes={selectedNodes} onClose={onPanelClose} />
       )}
-
-      {/* Drop hint overlay */}
-      <div className="canvas-drop-hint" aria-hidden="true">
-        Drop images or videos here
-      </div>
     </div>
   );
 }

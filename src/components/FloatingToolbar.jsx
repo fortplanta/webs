@@ -3,10 +3,17 @@ import { Panel, BackgroundVariant } from '@xyflow/react';
 import { Segmented, Button, Divider } from 'antd';
 
 const EDGE_OPTIONS = [
-  { value: 'default',    label: 'Curved'   },
+  { value: 'default',    label: 'Bezier'   },
   { value: 'straight',   label: 'Straight' },
   { value: 'step',       label: 'Step'     },
   { value: 'smoothstep', label: 'Smooth'   },
+  { value: 'floating',   label: 'Floating' },
+];
+
+const MARKER_OPTIONS = [
+  { value: 'none',        label: '—'   },
+  { value: 'arrow',       label: '→'   },
+  { value: 'arrowclosed', label: '▶'   },
 ];
 
 const BG_OPTIONS = [
@@ -16,20 +23,22 @@ const BG_OPTIONS = [
   { value: 'none',                  label: 'None'  },
 ];
 
-const DIVIDER = <Divider type="vertical" style={{ height: 36, margin: '0 6px' }} />;
+const SEP = <Divider type="vertical" style={{ height: 36, margin: '0 6px' }} />;
 
 export default memo(function FloatingToolbar({
-  edgeType,    onEdgeTypeChange,
-  bgVariant,   onBgVariantChange,
-  snapToGrid,  onSnapToggle,
-  showMiniMap, onMiniMapToggle,
+  edgeType,     onEdgeTypeChange,
+  markerType,   onMarkerTypeChange,
+  animateEdges, onAnimateToggle,
+  bgVariant,    onBgVariantChange,
+  snapToGrid,   onSnapToggle,
+  showMiniMap,  onMiniMapToggle,
   onFitView,
 }) {
   return (
     <Panel position="bottom-center">
       <div className="floating-toolbar" role="toolbar" aria-label="Canvas tools">
 
-        {/* ── Edge style ── */}
+        {/* ── Edge type ── */}
         <div className="toolbar-group">
           <span className="toolbar-group__label">Edge</span>
           <Segmented
@@ -40,7 +49,20 @@ export default memo(function FloatingToolbar({
           />
         </div>
 
-        {DIVIDER}
+        {SEP}
+
+        {/* ── Markers ── */}
+        <div className="toolbar-group">
+          <span className="toolbar-group__label">Marker</span>
+          <Segmented
+            size="small"
+            options={MARKER_OPTIONS}
+            value={markerType}
+            onChange={onMarkerTypeChange}
+          />
+        </div>
+
+        {SEP}
 
         {/* ── Background ── */}
         <div className="toolbar-group">
@@ -53,17 +75,25 @@ export default memo(function FloatingToolbar({
           />
         </div>
 
-        {DIVIDER}
+        {SEP}
 
-        {/* ── Canvas controls ── */}
+        {/* ── Canvas toggles ── */}
         <div className="toolbar-group">
           <span className="toolbar-group__label">Canvas</span>
           <div style={{ display: 'flex', gap: 4 }}>
             <Button
               size="small"
+              type={animateEdges ? 'primary' : 'default'}
+              onClick={onAnimateToggle}
+              title="Animate all edges"
+            >
+              Animate
+            </Button>
+            <Button
+              size="small"
               type={snapToGrid ? 'primary' : 'default'}
               onClick={onSnapToggle}
-              title="Snap nodes to a 16px grid"
+              title="Snap to 16px grid"
             >
               Snap
             </Button>
@@ -73,14 +103,14 @@ export default memo(function FloatingToolbar({
               onClick={onMiniMapToggle}
               title="Toggle minimap"
             >
-              Minimap
+              Map
             </Button>
             <Button
               size="small"
               onClick={onFitView}
               title="Fit all nodes in view"
             >
-              Fit view
+              Fit
             </Button>
           </div>
         </div>

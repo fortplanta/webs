@@ -1333,6 +1333,52 @@ video.media-node__media { pointer-events: all; }
 }
 .canvas-wrapper:has(:is(drag, .canvas-drop-hint:hover)) .canvas-drop-hint { opacity: 1; }
 
+/* ── NODE IMAGE BANNER ── */
+.node-image-banner {
+  width: calc(100% + calc(var(--space-3) * 2));
+  margin: calc(var(--space-2) * -1) calc(var(--space-3) * -1) var(--space-2);
+  height: 80px;
+  overflow: hidden;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--color-surface-2);
+  flex-shrink: 0;
+}
+.node-image-banner__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── PROXIMITY CONNECT TARGET ── */
+.react-flow__node.proximity-target .anchor-node,
+.react-flow__node.proximity-target .context-node {
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 3px var(--color-accent-border), 0 0 16px rgba(29,111,216,0.18) !important;
+}
+
+/* ── EDGE LABELS ── */
+.edge-label {
+  position: absolute;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  color: var(--color-text-muted);
+  pointer-events: all;
+  cursor: default;
+  box-shadow: var(--shadow-node);
+  white-space: nowrap;
+  user-select: none;
+}
+.edge-label:hover { border-color: var(--color-accent-border); color: var(--color-accent); }
+
 /* ── ANT DESIGN INTEGRATION OVERRIDES ── */
 
 /* Ensure antd components inherit our font */
