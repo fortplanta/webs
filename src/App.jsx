@@ -117,13 +117,13 @@ export default function App() {
 
         {/* Logo */}
         <div className="sidebar-header">
-          <span className="sidebar-logo">Webs</span>
-          <span className="sidebar-logo-sub" aria-hidden="true">AI canvas</span>
+          <span className="sidebar-logo">webs</span>
+          <span className="sidebar-logo-sub" aria-hidden="true">ai canvas</span>
         </div>
 
         {/* ── Mode switcher ── */}
         <div className="sidebar-section">
-          <span className="sidebar-label">Mode</span>
+          <span className="sidebar-label">mode</span>
           <div className="sidebar-modes" role="radiogroup" aria-label="Canvas mode">
             <button
               className={`mode-option${mode === 'explore' ? ' active' : ''}`}
@@ -132,8 +132,8 @@ export default function App() {
               onClick={() => setMode('explore')}
             >
               <span className="mode-option__icon" aria-hidden="true">⬡</span>
-              <span>Explore</span>
-              <span className="mode-option__hint">Build webs</span>
+              <span>explore</span>
+              <span className="mode-option__hint">build webs</span>
             </button>
             <button
               className={`mode-option${mode === 'remember' ? ' active' : ''}`}
@@ -142,8 +142,8 @@ export default function App() {
               onClick={() => setMode('remember')}
             >
               <span className="mode-option__icon" aria-hidden="true">◇</span>
-              <span>Remember</span>
-              <span className="mode-option__hint">Flashcards</span>
+              <span>remember</span>
+              <span className="mode-option__hint">flashcards</span>
             </button>
           </div>
         </div>
@@ -157,60 +157,60 @@ export default function App() {
               aria-label="Add a new note to the canvas"
             >
               <span aria-hidden="true">+</span>
-              Add note
+              add note
             </button>
           </div>
         )}
 
         {/* ── Session ── */}
         <div className="sidebar-section">
-          <span className="sidebar-label">Session</span>
+          <span className="sidebar-label">session</span>
           <button
             className="sidebar-item"
             onClick={exportSession}
             aria-keyshortcuts="Meta+S"
-            title="Save session as JSON (⌘S)"
+            title="save session as JSON (⌘S)"
           >
             <span className="sidebar-item__icon" aria-hidden="true">↓</span>
-            Save session
+            save session
             <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘S</kbd>
           </button>
           <button
             className="sidebar-item"
             onClick={importSession}
             aria-keyshortcuts="Meta+O"
-            title="Open a saved session (⌘O)"
+            title="open a saved session (⌘O)"
           >
             <span className="sidebar-item__icon" aria-hidden="true">↑</span>
-            Open session
+            open session
             <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘O</kbd>
           </button>
         </div>
 
         {/* ── View panels ── */}
         <div className="sidebar-section">
-          <span className="sidebar-label">View</span>
+          <span className="sidebar-label">view</span>
           <button
             className={`sidebar-item${activePanel === 'css' ? ' active' : ''}`}
             role="switch"
             aria-checked={activePanel === 'css'}
             onClick={() => togglePanel('css')}
-            title="CSS element inspector — click to pick and inspect UI elements"
+            title="CSS element inspector"
           >
             <span className="sidebar-item__icon" aria-hidden="true">#</span>
-            CSS Inspector
-            {activePanel === 'css' && <span className="sidebar-item__badge">On</span>}
+            css inspector
+            {activePanel === 'css' && <span className="sidebar-item__badge">on</span>}
           </button>
           <button
             className={`sidebar-item${activePanel === 'debug' ? ' active' : ''}`}
             role="switch"
             aria-checked={activePanel === 'debug'}
             onClick={() => togglePanel('debug')}
-            title="Debug panel — inspect selected node JSON"
+            title="debug panel — inspect selected node"
           >
             <span className="sidebar-item__icon" aria-hidden="true">⊞</span>
-            Debug info
-            {activePanel === 'debug' && <span className="sidebar-item__badge">On</span>}
+            debug info
+            {activePanel === 'debug' && <span className="sidebar-item__badge">on</span>}
           </button>
         </div>
 
@@ -226,7 +226,7 @@ export default function App() {
             }}
           >
             <span className="sidebar-item__icon" aria-hidden="true">⚷</span>
-            API key
+            api key
           </button>
         </div>
       </nav>
@@ -256,7 +256,7 @@ export default function App() {
         <footer className="status-bar">
           <span className="status-bar__item">
             <span className="status-bar__dot" aria-hidden="true" />
-            {mode === 'explore' ? 'Explore' : 'Remember'} mode
+            {mode === 'explore' ? 'explore' : 'remember'} mode
           </span>
           <span
             role="status"
@@ -264,7 +264,7 @@ export default function App() {
             className={`status-bar__item${limitReached ? ' low' : ''}`}
           >
             <span className="status-bar__dot" aria-hidden="true" />
-            {limitReached ? 'Daily limit reached' : `${usageCount}/10 expansions today`}
+            {limitReached ? 'daily limit reached' : `${usageCount}/10 expansions today`}
           </span>
         </footer>
       </div>

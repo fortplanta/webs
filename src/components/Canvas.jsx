@@ -24,7 +24,7 @@ import MediaNode       from './nodes/MediaNode';
 import FloatingEdge    from './edges/FloatingEdge';
 import CSSInspector    from './CSSInspector';
 import DebugPanel      from './DebugPanel';
-import FloatingToolbar from './FloatingToolbar';
+import ViewPanel from './ViewPanel';
 import { CATEGORY_BY_KEY, STORAGE_KEYS } from '../constants';
 import { expandAnchor, radialPositions, generateCards } from '../lib/expand';
 import { explainTerms } from '../lib/explainTerms';
@@ -174,6 +174,26 @@ export default function Canvas({
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [activePanel, onPanelClose]);
+
+  // ── Re-attach callbacks to nodes loaded from localStorage ────────────────
+  // Functions are stripped when serialised to JSON; re-inject them on mount.
+  useEffect(() => {
+    setNodes(ns => ns.map(n => {
+      if (n.type === 'anchorNode') {
+        return { ...n, data: { ...n.data, ...makeAnchorCallbacks(n.id) } };
+      }
+      if (n.type === 'contextNode') {
+        const item = {
+          key:                n.data.category,
+          title:              n.data.title,
+          summary:            n.data.summary,
+          connectionStrength: n.data.connectionStrength,
+        };
+        return { ...n, data: { ...n.data, ...makeContextCallbacks(n.id, n.data.anchorId, item) } };
+      }
+      return n;
+    }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply proximity-target CSS class to proximity node
   useEffect(() => {
@@ -690,6 +710,12 @@ export default function Canvas({
         onConnectEnd={onConnectEnd}
         onInit={setRfInstance}
         onPaneClick={() => { setContextMenu(null); setProximityTargetId(null); }}
+        onPaneDoubleClick={e => {
+          if (!rfInstance) return;
+          const flowPos = rfInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+          setAddForm({ title: '', body: '', flowPos });
+          setAddDialog(true);
+        }}
         onPaneContextMenu={e => {
           e.preventDefault();
           if (!rfInstance) return;
@@ -732,13 +758,12 @@ export default function Canvas({
             }
           />
         )}
-        <FloatingToolbar
-          edgeType={edgeType}        onEdgeTypeChange={applyEdgeTypeToAll}
-          markerType={markerType}    onMarkerTypeChange={applyMarkerToAll}
+        <ViewPanel
+          edgeType={edgeType}         onEdgeTypeChange={applyEdgeTypeToAll}
           animateEdges={animateEdges} onAnimateToggle={() => applyAnimateToAll(!animateEdges)}
-          bgVariant={bgVariant}      onBgVariantChange={setBgVariant}
-          snapToGrid={snapToGrid}    onSnapToggle={() => setSnapToGrid(v => !v)}
-          showMiniMap={showMiniMap}  onMiniMapToggle={() => setShowMiniMap(v => !v)}
+          bgVariant={bgVariant}       onBgVariantChange={setBgVariant}
+          snapToGrid={snapToGrid}     onSnapToggle={() => setSnapToGrid(v => !v)}
+          showMiniMap={showMiniMap}   onMiniMapToggle={() => setShowMiniMap(v => !v)}
           onFitView={() => rfInstance?.fitView({ padding: 0.3 })}
         />
         <EdgeLabels />

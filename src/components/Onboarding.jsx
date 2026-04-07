@@ -16,7 +16,7 @@ export default function Onboarding({ onSave }) {
   return (
     <div className="onboarding-overlay">
       <div className="onboarding-card">
-        <div className="onboarding-logo">Webs</div>
+        <div className="onboarding-logo">webs</div>
 
         <Text
           type="secondary"
@@ -31,13 +31,12 @@ export default function Onboarding({ onSave }) {
             display: 'block',
             marginBottom: 8,
             fontSize: 11,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
+            fontWeight: 500,
+            letterSpacing: '0.02em',
             color: 'var(--color-text-dim)',
           }}
         >
-          Anthropic API Key
+          anthropic api key
         </Text>
 
         <Input.Password
@@ -63,7 +62,7 @@ export default function Onboarding({ onSave }) {
 
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Button type="primary" disabled={!valid} onClick={handleSubmit}>
-            Start exploring
+            start exploring
           </Button>
         </div>
       </div>

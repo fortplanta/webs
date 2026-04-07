@@ -1,49 +1,48 @@
 /* ─────────────────────────────────────────────
-   WEBS — Design Tokens (Light Mode)
-   All visual decisions live here.
+   WEBS — Design Tokens
+   Teenage Engineering–inspired: precise, functional, warm.
 ───────────────────────────────────────────── */
 
 :root {
   /* ── Color: Backgrounds ── */
-  --color-bg:           #EDECEA;   /* canvas surface */
-  --color-surface:      #FFFFFF;   /* sidebar, panels, cards */
-  --color-surface-2:    #F3F2F0;   /* inputs, secondary panels */
-  --color-surface-3:    #ECEAE7;   /* hover states */
+  --color-bg:           #EDECEA;   /* canvas surface — warm off-white */
+  --color-surface:      #FAFAF9;   /* sidebar, panels, cards */
+  --color-surface-2:    #F2F0ED;   /* inputs, secondary panels */
+  --color-surface-3:    #E8E5E1;   /* hover states */
 
   /* ── Color: Borders ── */
   --color-border:        rgba(0, 0, 0, 0.08);
-  --color-border-strong: rgba(0, 0, 0, 0.14);
+  --color-border-strong: rgba(0, 0, 0, 0.15);
 
   /* ── Color: Text ──
-     All ratios verified against --color-surface (#FFFFFF):
-     text    #1A1A1A → 16.8:1 ✅
-     muted   #5A5A5A → 7.0:1  ✅
-     dim     #8A8A8A → 3.5:1  (decorative only) */
-  --color-text:          #1A1A1A;
-  --color-text-muted:    #5A5A5A;
-  --color-text-dim:      #8A8A8A;
+     text    #1C1A18 → high contrast ✅
+     muted   #5C5753 → readable ✅
+     dim     #9A948D → decorative only */
+  --color-text:          #1C1A18;
+  --color-text-muted:    #5C5753;
+  --color-text-dim:      #9A948D;
 
   /* ── Color: Accent ── */
-  --color-accent:        #1D6FD8;   /* 4.7:1 on white ✅ */
-  --color-accent-dim:    rgba(29, 111, 216, 0.08);
-  --color-accent-border: rgba(29, 111, 216, 0.28);
+  --color-accent:        #1A6BD4;
+  --color-accent-dim:    rgba(26, 107, 212, 0.07);
+  --color-accent-border: rgba(26, 107, 212, 0.25);
 
   /* ── Color: Semantic ── */
-  --color-danger:        #C0392B;   /* 5.1:1 on white ✅ */
-  --color-success:       #16A34A;   /* 4.6:1 on white ✅ */
-  --color-warning:       #B45309;   /* 4.6:1 on white ✅ */
+  --color-danger:        #C0392B;
+  --color-success:       #16A34A;
+  --color-warning:       #B45309;
 
   /* ── Color: Focus ring ── */
-  --color-focus:         #1D6FD8;
+  --color-focus:         #1A6BD4;
 
   /* ── Color: Star/Pin ── */
   --color-star:          #B45309;
-  --color-star-glow:     rgba(180, 83, 9, 0.15);
-  --color-star-border:   rgba(180, 83, 9, 0.35);
+  --color-star-glow:     rgba(180, 83, 9, 0.12);
+  --color-star-border:   rgba(180, 83, 9, 0.30);
 
   /* ── Color: Group frame ── */
-  --color-group-bg:      rgba(0, 0, 0, 0.015);
-  --color-group-border:  rgba(0, 0, 0, 0.07);
+  --color-group-bg:      rgba(0, 0, 0, 0.012);
+  --color-group-border:  rgba(0, 0, 0, 0.06);
 
   /* ── Color: Context categories ── */
   --color-technology:    #0891B2;
@@ -58,7 +57,7 @@
   --color-ideology:      #9333EA;
   --color-geography:     #0D9488;
   --color-culture:       #E11D48;
-  --color-science:       #1D6FD8;
+  --color-science:       #1A6BD4;
   --color-media:         #B45309;
 
   /* ── Color: Connection strength ── */
@@ -67,8 +66,8 @@
   --color-weak:          #6B7280;
 
   /* ── Typography ── */
-  --font-body:           'Aeonik', 'Helvetica Neue', Arial, sans-serif;
-  --font-size-xs:        11px;   /* minimum floor — labels/metadata only */
+  --font-body: 'Neue Haas Unica', 'Helvetica Neue', Arial, sans-serif;
+  --font-size-xs:        11px;
   --font-size-sm:        12px;
   --font-size-base:      13px;
   --font-size-md:        15px;
@@ -91,22 +90,22 @@
   --space-8:  32px;
   --space-10: 40px;
 
-  /* ── Border radius ── */
-  --radius-sm:   3px;
-  --radius-md:   6px;
-  --radius-lg:   10px;
+  /* ── Border radius — TE: more angular, precision-machined ── */
+  --radius-sm:   2px;
+  --radius-md:   4px;
+  --radius-lg:   8px;
   --radius-pill: 9999px;
 
-  /* ── Shadow (light mode — subtle, card-like) ── */
-  --shadow-node:   0 1px 3px rgba(0,0,0,0.09), 0 0 0 1px rgba(0,0,0,0.07);
-  --shadow-panel:  0 4px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.07);
-  --shadow-popup:  0 8px 32px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.09);
+  /* ── Shadow — crisp, not diffuse ── */
+  --shadow-node:   0 1px 2px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-panel:  0 4px 20px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-popup:  0 8px 28px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.08);
 
   /* ── Motion ── */
   --ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-fast:  100ms;
-  --duration-base:  160ms;
-  --duration-slow:  300ms;
+  --duration-fast:  80ms;
+  --duration-base:  140ms;
+  --duration-slow:  280ms;
 
   /* ── Z-index ── */
   --z-canvas:   0;

@@ -21,7 +21,11 @@
       "Bash(git remote:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(mkdir -p ~/.ssh)",
+      "Bash(ssh-keyscan github.com)",
+      "Bash(~/.ssh/known_hosts)",
+      "Bash(node -e \"const p = require\\(''./node_modules/antd/package.json''\\); console.log\\(p.version\\)\")"
     ]
   }
 }

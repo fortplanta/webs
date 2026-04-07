@@ -22,44 +22,49 @@ const ContextNode = memo(({ data, selected }) => {
           minWidth={160}
           minHeight={72}
           lineStyle={{ borderColor: cat.color, opacity: 0.3 }}
-          handleStyle={{ width: 8, height: 8, background: cat.color, opacity: 0.5, border: 'none', borderRadius: '2px' }}
+          handleStyle={{ width: 6, height: 6, background: cat.color, opacity: 0.5, border: 'none', borderRadius: '1px' }}
         />
       )}
 
+      {/* Handles on all 4 sides — outside overflow so never clipped */}
       <Handle type="target" position={Position.Left}   id="left"   />
       <Handle type="source" position={Position.Right}  id="right"  />
       <Handle type="target" position={Position.Top}    id="top"    />
       <Handle type="source" position={Position.Bottom} id="bottom" />
 
+      {/* Star — stops ALL pointer events to prevent ReactFlow drag interception */}
+      {revealed && (
+        <span
+          role="button"
+          tabIndex={0}
+          className={`node-star${isStarred ? ' active' : ''}`}
+          title={isStarred ? 'unstar' : 'star'}
+          onPointerDown={e => { e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation?.(); }}
+          onMouseDown={e => { e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation?.(); }}
+          onClick={e => { e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation?.(); data.onToggleStar?.(); }}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); data.onToggleStar?.(); } }}
+        >
+          {isStarred ? '★' : '☆'}
+        </span>
+      )}
+
       {revealed ? (
-        <>
+        /* Inner clip wrapper — clips image + bar to border-radius without clipping handles */
+        <div className="context-node__inner-clip">
           <div className="context-node__bar" />
 
-          {/* Star — stop pointer events to prevent drag interception */}
-          <span
-            role="button"
-            tabIndex={0}
-            className={`node-star${isStarred ? ' active' : ''}`}
-            title={isStarred ? 'Unstar' : 'Star'}
-            onPointerDown={e => e.stopPropagation()}
-            onMouseDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); data.onToggleStar?.(); }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); data.onToggleStar?.(); } }}
-          >
-            {isStarred ? '★' : '☆'}
-          </span>
+          {/* Wikipedia image banner */}
+          {data.nodeImage && (
+            <div className="node-image-banner">
+              <img src={data.nodeImage} alt={data.title} className="node-image-banner__img" />
+            </div>
+          )}
 
           <div className="context-node__body">
-            {/* Wikipedia image banner */}
-            {data.nodeImage && (
-              <div className="node-image-banner">
-                <img src={data.nodeImage} alt={data.title} className="node-image-banner__img" />
-              </div>
-            )}
             <div className="context-node__category">
               <span>{cat.icon}</span>
               {cat.label}
-              <span className="context-node__ai-badge">AI</span>
+              <span className="context-node__ai-badge">ai</span>
             </div>
             <div className="context-node__title">{data.title || cat.label}</div>
             {data.summary && (
@@ -68,12 +73,12 @@ const ContextNode = memo(({ data, selected }) => {
               </div>
             )}
           </div>
-        </>
+        </div>
       ) : (
         <div className="context-node__locked-inner">
           <div className="context-node__locked-icon">{cat.icon}</div>
           <div className="context-node__locked-category">{cat.label}</div>
-          <div className="context-node__locked-hint">Click to reveal</div>
+          <div className="context-node__locked-hint">click to reveal</div>
         </div>
       )}
     </div>

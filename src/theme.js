@@ -6,11 +6,11 @@
 export const theme = {
   token: {
     // ── Brand ──────────────────────────────────────────────────────────
-    colorPrimary:          '#1D6FD8',
-    colorPrimaryBg:        'rgba(29, 111, 216, 0.08)',
-    colorPrimaryBorder:    'rgba(29, 111, 216, 0.28)',
-    colorPrimaryHover:     '#1560bf',
-    colorPrimaryActive:    '#1252a8',
+    colorPrimary:          '#1A6BD4',
+    colorPrimaryBg:        'rgba(26, 107, 212, 0.07)',
+    colorPrimaryBorder:    'rgba(26, 107, 212, 0.25)',
+    colorPrimaryHover:     '#155dbe',
+    colorPrimaryActive:    '#1250a8',
 
     // ── Backgrounds ────────────────────────────────────────────────────
     colorBgBase:           '#FFFFFF',
@@ -44,13 +44,13 @@ export const theme = {
     colorLinkActive:       '#1252a8',
 
     // ── Shape ──────────────────────────────────────────────────────────
-    borderRadius:          6,
-    borderRadiusSM:        3,
-    borderRadiusLG:        10,
+    borderRadius:          4,
+    borderRadiusSM:        2,
+    borderRadiusLG:        8,
     borderRadiusXS:        2,
 
     // ── Typography ─────────────────────────────────────────────────────
-    fontFamily:    "'Aeonik', 'Helvetica Neue', Arial, sans-serif",
+    fontFamily:    "'Neue Haas Unica', 'Helvetica Neue', Arial, sans-serif",
     fontSize:      13,
     fontSizeSM:    11,
     fontSizeLG:    15,
