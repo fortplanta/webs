@@ -1,11 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
-import Onboarding from './components/Onboarding';
+import PasswordGate from './components/PasswordGate';
 import Canvas from './components/Canvas';
 import RememberMode from './components/RememberMode';
 import { STORAGE_KEYS } from './constants';
 import './styles/index.css';
 
-function loadApiKey() { return localStorage.getItem(STORAGE_KEYS.API_KEY) || ''; }
+// API key lives in the environment — never exposed to users
+const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY ?? '';
+
+const AUTH_KEY = 'webs-auth';
+
+function loadAuth() {
+  return localStorage.getItem(AUTH_KEY) === 'true';
+}
+
 function getUsageCount() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.USAGE);
@@ -17,21 +25,17 @@ function getUsageCount() {
 }
 
 export default function App() {
-  const [apiKey, setApiKey]         = useState(loadApiKey);
-  const [mode, setMode]             = useState('explore');
-  const [newCards, setNewCards]     = useState([]);
+  const [authed, setAuthed]           = useState(loadAuth);
+  const [mode, setMode]               = useState('explore');
+  const [newCards, setNewCards]       = useState([]);
   const [importedState, setImportedState] = useState(null);
-  const [usageCount, setUsageCount] = useState(getUsageCount);
-
-  // null | 'css' | 'debug' — only one panel open at a time
+  const [usageCount, setUsageCount]   = useState(getUsageCount);
   const [activePanel, setActivePanel] = useState(null);
-
-  // Imperative handle to open the "Add Note" dialog from the sidebar
   const addNoteRef = useRef(null);
 
-  function saveApiKey(key) {
-    localStorage.setItem(STORAGE_KEYS.API_KEY, key);
-    setApiKey(key);
+  function unlock() {
+    localStorage.setItem(AUTH_KEY, 'true');
+    setAuthed(true);
   }
 
   function handleCardsGenerated(cards) {
@@ -105,7 +109,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  if (!apiKey) return <Onboarding onSave={saveApiKey} />;
+  if (!authed) return <PasswordGate onUnlock={unlock} />;
 
   const limitReached = usageCount >= 10;
 
@@ -115,13 +119,12 @@ export default function App() {
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
       <nav className="sidebar" aria-label="Application controls">
 
-        {/* Logo */}
         <div className="sidebar-header">
           <span className="sidebar-logo">webs</span>
           <span className="sidebar-logo-sub" aria-hidden="true">ai canvas</span>
         </div>
 
-        {/* ── Mode switcher ── */}
+        {/* Mode switcher */}
         <div className="sidebar-section">
           <span className="sidebar-label">mode</span>
           <div className="sidebar-modes" role="radiogroup" aria-label="Canvas mode">
@@ -148,7 +151,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* ── Add note (Explore only) ── */}
+        {/* Add note (Explore only) */}
         {mode === 'explore' && (
           <div className="sidebar-section">
             <button
@@ -162,32 +165,22 @@ export default function App() {
           </div>
         )}
 
-        {/* ── Session ── */}
+        {/* Session */}
         <div className="sidebar-section">
           <span className="sidebar-label">session</span>
-          <button
-            className="sidebar-item"
-            onClick={exportSession}
-            aria-keyshortcuts="Meta+S"
-            title="save session as JSON (⌘S)"
-          >
+          <button className="sidebar-item" onClick={exportSession} title="save session (⌘S)">
             <span className="sidebar-item__icon" aria-hidden="true">↓</span>
             save session
             <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘S</kbd>
           </button>
-          <button
-            className="sidebar-item"
-            onClick={importSession}
-            aria-keyshortcuts="Meta+O"
-            title="open a saved session (⌘O)"
-          >
+          <button className="sidebar-item" onClick={importSession} title="open session (⌘O)">
             <span className="sidebar-item__icon" aria-hidden="true">↑</span>
             open session
             <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘O</kbd>
           </button>
         </div>
 
-        {/* ── View panels ── */}
+        {/* View panels */}
         <div className="sidebar-section">
           <span className="sidebar-label">view</span>
           <button
@@ -195,7 +188,6 @@ export default function App() {
             role="switch"
             aria-checked={activePanel === 'css'}
             onClick={() => togglePanel('css')}
-            title="CSS element inspector"
           >
             <span className="sidebar-item__icon" aria-hidden="true">#</span>
             css inspector
@@ -206,7 +198,6 @@ export default function App() {
             role="switch"
             aria-checked={activePanel === 'debug'}
             onClick={() => togglePanel('debug')}
-            title="debug panel — inspect selected node"
           >
             <span className="sidebar-item__icon" aria-hidden="true">⊞</span>
             debug info
@@ -214,32 +205,29 @@ export default function App() {
           </button>
         </div>
 
-        {/* ── Footer: API key ── */}
+        {/* Footer: lock */}
         <div className="sidebar-footer">
           <button
             className="sidebar-item danger"
             onClick={() => {
-              if (confirm('Clear API key and return to setup?')) {
-                localStorage.removeItem(STORAGE_KEYS.API_KEY);
-                setApiKey('');
+              if (confirm('lock and return to password screen?')) {
+                localStorage.removeItem(AUTH_KEY);
+                setAuthed(false);
               }
             }}
           >
             <span className="sidebar-item__icon" aria-hidden="true">⚷</span>
-            api key
+            lock
           </button>
         </div>
       </nav>
 
       {/* ── Main area ───────────────────────────────────────────────── */}
       <div className="main-area">
-        <main
-          id="main-content"
-          style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-        >
+        <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {mode === 'explore' ? (
             <Canvas
-              apiKey={apiKey}
+              apiKey={API_KEY}
               onCardsGenerated={handleCardsGenerated}
               importedState={importedState}
               activePanel={activePanel}
@@ -252,7 +240,6 @@ export default function App() {
           )}
         </main>
 
-        {/* Status bar */}
         <footer className="status-bar">
           <span className="status-bar__item">
             <span className="status-bar__dot" aria-hidden="true" />

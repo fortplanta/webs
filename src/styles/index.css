@@ -1231,6 +1231,91 @@ html, body, #root {
   box-shadow: 0 0 0 2px var(--color-accent-border), 0 0 14px rgba(26,107,212,0.15) !important;
 }
 
+/* ── PASSWORD GATE ── */
+.password-gate {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+.password-gate__card {
+  width: 340px;
+  max-width: 92vw;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.password-gate__card.shake {
+  animation: gate-shake 0.4s var(--ease-out);
+}
+@keyframes gate-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-8px); }
+  40%       { transform: translateX(8px); }
+  60%       { transform: translateX(-5px); }
+  80%       { transform: translateX(5px); }
+}
+.password-gate__logo {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+.password-gate__desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dim);
+  line-height: var(--line-height-base);
+  margin-bottom: var(--space-1);
+}
+.password-gate__input {
+  width: 100%;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.password-gate__input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-dim);
+}
+.password-gate__input.error {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px rgba(224,82,82,0.15);
+}
+.password-gate__input::placeholder { color: var(--color-text-dim); }
+.password-gate__error {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  margin-top: -4px;
+}
+.password-gate__btn {
+  align-self: flex-end;
+  padding: 6px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-accent-border);
+  background: var(--color-accent-dim);
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+.password-gate__btn:hover { background: rgba(232,82,10,0.2); }
+
 /* ── EDGE LABELS ── */
 .edge-label {
   position: absolute;
