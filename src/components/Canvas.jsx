@@ -346,6 +346,18 @@ export default function Canvas({
       ]);
       setEdges(es => [...es, ...newEdges]);
 
+      // Pre-fetch images in the background so they're cached before the user reveals nodes
+      results.forEach((item, i) => {
+        const ctxId = contextNodeIds[i];
+        fetchNodeImage(item.title).then(src => {
+          if (src) {
+            setNodes(ns => ns.map(n =>
+              n.id === ctxId ? { ...n, data: { ...n.data, nodeImage: src } } : n
+            ));
+          }
+        }).catch(() => {});
+      });
+
     } catch (err) {
       console.error('Expand failed:', err);
       alert(`Expansion failed: ${err.message}`);
@@ -368,15 +380,6 @@ export default function Canvas({
 
     const anchor = nodesRef.current.find(n => n.id === anchorId);
     const cat    = CATEGORY_BY_KEY[item.key];
-
-    // Fetch Wikipedia image for node title (non-blocking)
-    fetchNodeImage(item.title).then(src => {
-      if (src) {
-        setNodes(ns => ns.map(n =>
-          n.id === contextId ? { ...n, data: { ...n.data, nodeImage: src } } : n
-        ));
-      }
-    });
 
     if (anchor && apiKey) {
       Promise.all([

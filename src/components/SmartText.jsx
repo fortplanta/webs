@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * Renders text with hoverable tooltips for technical terms and hard words.
@@ -46,14 +47,15 @@ export default function SmartText({ text, termMap = {} }) {
         return part;
       })}
 
-      {tooltip && (
+      {tooltip && createPortal(
         <div
           className="smart-tooltip"
           style={{ left: tooltip.x, top: tooltip.y }}
         >
           <div className="smart-tooltip__term">{tooltip.term}</div>
           <div className="smart-tooltip__def">{tooltip.def}</div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
