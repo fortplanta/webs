@@ -1,0 +1,8 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # VITE_ vars are intentionally bundled into the client JS.
+  # The password gate provides access control; the API key is not a user-facing secret.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_ANTHROPIC_API_KEY,VITE_SITE_PASSWORD"
