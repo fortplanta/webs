@@ -69,9 +69,9 @@ function saveUsage(u) { localStorage.setItem(STORAGE_KEYS.USAGE, JSON.stringify(
 
 // ── Edge helpers ─────────────────────────────────────────────────────────────
 function edgeColor(s) {
-  return s === 'strong' ? 'var(--color-strong)' : s === 'moderate' ? 'var(--color-moderate)' : 'var(--color-weak)';
+  return s === 'strong' ? 'rgba(255,255,255,0.40)' : s === 'moderate' ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.10)';
 }
-function edgeWidth(s) { return s === 'strong' ? 2.5 : s === 'moderate' ? 2 : 1.5; }
+function edgeWidth(s) { return s === 'strong' ? 1.5 : s === 'moderate' ? 1 : 1; }
 
 function buildMarker(markerKey) {
   if (markerKey === 'none') return undefined;
@@ -108,8 +108,8 @@ export default function Canvas({
   const [usage, setUsage]               = useState(getUsage);
 
   // Edge / canvas config
-  const [edgeType,     setEdgeType]     = useState('default');
-  const [markerType,   setMarkerType]   = useState('arrowclosed');
+  const [edgeType,     setEdgeType]     = useState('smoothstep');
+  const [markerType,   setMarkerType]   = useState('none');
   const [animateEdges, setAnimateEdges] = useState(false);
   const [bgVariant,    setBgVariant]    = useState(BackgroundVariant.Dots);
   const [snapToGrid,   setSnapToGrid]   = useState(false);
@@ -698,6 +698,13 @@ export default function Canvas({
       ref={reactFlowWrapper}
       onDrop={onDrop}
       onDragOver={onDragOver}
+      onDoubleClick={e => {
+        // Only trigger on bare canvas clicks — not on nodes or UI elements
+        if (!rfInstance || e.target.closest('.react-flow__node, .react-flow__controls, .view-panel, .ant-modal')) return;
+        const flowPos = rfInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        setAddForm({ title: '', body: '', flowPos });
+        setAddDialog(true);
+      }}
     >
       <ReactFlow
         nodes={nodes}
@@ -710,12 +717,6 @@ export default function Canvas({
         onConnectEnd={onConnectEnd}
         onInit={setRfInstance}
         onPaneClick={() => { setContextMenu(null); setProximityTargetId(null); }}
-        onPaneDoubleClick={e => {
-          if (!rfInstance) return;
-          const flowPos = rfInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-          setAddForm({ title: '', body: '', flowPos });
-          setAddDialog(true);
-        }}
         onPaneContextMenu={e => {
           e.preventDefault();
           if (!rfInstance) return;
@@ -789,7 +790,7 @@ export default function Canvas({
         cancelText="Cancel"
         okButtonProps={{ disabled: !addForm.title.trim() }}
         width={440}
-        destroyOnClose
+        destroyOnHidden
       >
         {dropConnect?.fromNodeId && (
           <Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 11 }}>
@@ -830,7 +831,7 @@ export default function Canvas({
         onOk={() => saveEdgeLabel(editingEdge?.label ?? '')}
         okText="Save"
         width={320}
-        destroyOnClose
+        destroyOnHidden
       >
         <Input
           value={editingEdge?.label ?? ''}

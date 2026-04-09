@@ -1,75 +1,78 @@
 /* ─────────────────────────────────────────────
    WEBS — Design Tokens
-   Teenage Engineering–inspired: precise, functional, warm.
+   Dark. Precise. Teenage Engineering.
 ───────────────────────────────────────────── */
 
 :root {
   /* ── Color: Backgrounds ── */
-  --color-bg:           #EDECEA;   /* canvas surface — warm off-white */
-  --color-surface:      #FAFAF9;   /* sidebar, panels, cards */
-  --color-surface-2:    #F2F0ED;   /* inputs, secondary panels */
-  --color-surface-3:    #E8E5E1;   /* hover states */
+  --color-bg:           #161614;
+  --color-surface:      #1e1d1b;
+  --color-surface-2:    #1e1d1b;
+  --color-surface-3:    #242424;
 
   /* ── Color: Borders ── */
-  --color-border:        rgba(0, 0, 0, 0.08);
-  --color-border-strong: rgba(0, 0, 0, 0.15);
+  --color-border:        rgba(255, 255, 255, 0.07);
+  --color-border-strong: rgba(255, 255, 255, 0.10);
 
-  /* ── Color: Text ──
-     text    #1C1A18 → high contrast ✅
-     muted   #5C5753 → readable ✅
-     dim     #9A948D → decorative only */
-  --color-text:          #1C1A18;
-  --color-text-muted:    #5C5753;
-  --color-text-dim:      #9A948D;
+  /* ── Color: Text ── */
+  --color-text:          #F0EFE8;
+  --color-text-muted:    rgba(240, 239, 232, 0.58);
+  --color-text-dim:      rgba(240, 239, 232, 0.28);
 
-  /* ── Color: Accent ── */
-  --color-accent:        #1A6BD4;
-  --color-accent-dim:    rgba(26, 107, 212, 0.07);
-  --color-accent-border: rgba(26, 107, 212, 0.25);
+  /* ── Color: Node cards ── */
+  --color-card:          #242424;
+  --color-card-border:   rgba(255, 255, 255, 0.05);
+  --color-card-text:     #F0EFE8;
+  --color-card-muted:    rgba(240, 239, 232, 0.58);
+
+  /* ── Color: Accent (TE orange) ── */
+  --color-accent:        #FFAB2B;
+  --color-accent-dim:    rgba(255, 171, 43, 0.10);
+  --color-accent-border: rgba(255, 171, 43, 0.25);
 
   /* ── Color: Semantic ── */
-  --color-danger:        #C0392B;
-  --color-success:       #16A34A;
-  --color-warning:       #B45309;
+  --color-danger:        #E05252;
+  --color-success:       #4CAF7D;
+  --color-warning:       #E09B3D;
 
   /* ── Color: Focus ring ── */
-  --color-focus:         #1A6BD4;
+  --color-focus:         #3c3c3c;
 
   /* ── Color: Star/Pin ── */
-  --color-star:          #B45309;
-  --color-star-glow:     rgba(180, 83, 9, 0.12);
-  --color-star-border:   rgba(180, 83, 9, 0.30);
+  --color-star:          #FFAB2B;
+  --color-star-glow:     rgba(255, 171, 43, 0.15);
+  --color-star-border:   rgba(255, 171, 43, 0.30);
 
   /* ── Color: Group frame ── */
-  --color-group-bg:      rgba(0, 0, 0, 0.012);
-  --color-group-border:  rgba(0, 0, 0, 0.06);
+  --color-group-bg:      rgba(255, 255, 255, 0.02);
+  --color-group-border:  rgba(255, 255, 255, 0.06);
 
   /* ── Color: Context categories ── */
-  --color-technology:    #0891B2;
-  --color-political:     #4B5563;
-  --color-market:        #EA580C;
-  --color-supply-chain:  #65A30D;
-  --color-people:        #CA8A04;
-  --color-law:           #4F46E5;
-  --color-business:      #059669;
-  --color-conflict:      #DC2626;
-  --color-companies:     #DB2777;
-  --color-ideology:      #9333EA;
-  --color-geography:     #0D9488;
-  --color-culture:       #E11D48;
-  --color-science:       #1A6BD4;
-  --color-media:         #B45309;
+  --color-technology:    #60A5FA;
+  --color-political:     #9CA3AF;
+  --color-market:        #FFAB2B;
+  --color-supply-chain:  #86EFAC;
+  --color-people:        #FCD34D;
+  --color-law:           #A78BFA;
+  --color-business:      #6EE7B7;
+  --color-conflict:      #FCA5A5;
+  --color-companies:     #F9A8D4;
+  --color-ideology:      #C4B5FD;
+  --color-geography:     #5EEAD4;
+  --color-culture:       #FDA4AF;
+  --color-science:       #93C5FD;
+  --color-media:         #FFAB2B;
 
   /* ── Color: Connection strength ── */
-  --color-strong:        #16A34A;
-  --color-moderate:      #D97706;
-  --color-weak:          #6B7280;
+  --color-strong:        rgba(255, 255, 255, 0.40);
+  --color-moderate:      rgba(255, 255, 255, 0.20);
+  --color-weak:          rgba(255, 255, 255, 0.10);
 
   /* ── Typography ── */
   --font-body: 'Neue Haas Unica', 'Helvetica Neue', Arial, sans-serif;
   --font-size-xs:        11px;
-  --font-size-sm:        12px;
-  --font-size-base:      13px;
+  --font-size-sm:        13px;
+  --font-size-base:      15px;
   --font-size-md:        15px;
   --font-size-lg:        18px;
   --font-size-xl:        24px;
@@ -77,8 +80,8 @@
   --font-weight-regular: 400;
   --font-weight-medium:  500;
   --font-weight-bold:    700;
-  --line-height-tight:   1.25;
-  --line-height-base:    1.55;
+  --line-height-tight:   1.30;
+  --line-height-base:    1.50;
 
   /* ── Spacing ── */
   --space-1:  4px;
@@ -90,16 +93,16 @@
   --space-8:  32px;
   --space-10: 40px;
 
-  /* ── Border radius — TE: more angular, precision-machined ── */
+  /* ── Border radius ── */
   --radius-sm:   2px;
-  --radius-md:   4px;
+  --radius-md:   5px;
   --radius-lg:   8px;
   --radius-pill: 9999px;
 
-  /* ── Shadow — crisp, not diffuse ── */
-  --shadow-node:   0 1px 2px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06);
-  --shadow-panel:  0 4px 20px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.06);
-  --shadow-popup:  0 8px 28px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.08);
+  /* ── Shadow ── */
+  --shadow-node:   0 2px 8px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-panel:  0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.07);
+  --shadow-popup:  0 16px 40px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.08);
 
   /* ── Motion ── */
   --ease-out:       cubic-bezier(0.16, 1, 0.3, 1);

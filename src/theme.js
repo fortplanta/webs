@@ -1,64 +1,54 @@
 /**
- * Webs — Ant Design 6 theme config
- * All values mirror the CSS custom properties in tokens.css so
- * both antd components and our hand-rolled CSS stay in sync.
+ * Webs — Ant Design 6 theme config (dark)
  */
+import { theme as antTheme } from 'antd';
+
 export const theme = {
+  algorithm: antTheme.darkAlgorithm,
   token: {
-    // ── Brand ──────────────────────────────────────────────────────────
-    colorPrimary:          '#1A6BD4',
-    colorPrimaryBg:        'rgba(26, 107, 212, 0.07)',
-    colorPrimaryBorder:    'rgba(26, 107, 212, 0.25)',
-    colorPrimaryHover:     '#155dbe',
-    colorPrimaryActive:    '#1250a8',
+    colorBgBase:           '#161614',
+    colorBgContainer:      '#242424',
+    colorBgElevated:       '#2A2927',
+    colorBgLayout:         '#161614',
+    colorBgSpotlight:      '#2A2927',
+    colorFillQuaternary:   'rgba(255,255,255,0.05)',
 
-    // ── Backgrounds ────────────────────────────────────────────────────
-    colorBgBase:           '#FFFFFF',
-    colorBgContainer:      '#FFFFFF',
-    colorBgLayout:         '#EDECEA',
-    colorBgElevated:       '#FFFFFF',
-    colorBgSpotlight:      '#1A1A1A',     // tooltip bg
-    colorFillQuaternary:   '#ECEAE7',     // subtle hover fills
+    colorText:             '#F0EFE8',
+    colorTextSecondary:    'rgba(240,239,232,0.58)',
+    colorTextTertiary:     'rgba(240,239,232,0.35)',
+    colorTextQuaternary:   'rgba(240,239,232,0.25)',
+    colorTextDisabled:     'rgba(240,239,232,0.20)',
 
-    // ── Text ───────────────────────────────────────────────────────────
-    colorText:             '#1A1A1A',
-    colorTextSecondary:    '#5A5A5A',
-    colorTextTertiary:     '#8A8A8A',
-    colorTextQuaternary:   '#8A8A8A',
-    colorTextDisabled:     '#AAAAAA',
+    colorBorder:           'rgba(255,255,255,0.08)',
+    colorBorderSecondary:  'rgba(255,255,255,0.05)',
+    colorSplit:            'rgba(255,255,255,0.07)',
 
-    // ── Borders ────────────────────────────────────────────────────────
-    colorBorder:           'rgba(0, 0, 0, 0.12)',
-    colorBorderSecondary:  'rgba(0, 0, 0, 0.07)',
-    colorSplit:            'rgba(0, 0, 0, 0.07)',
+    colorPrimary:          '#FFAB2B',
+    colorPrimaryBg:        'rgba(255,171,43,0.10)',
+    colorPrimaryBorder:    'rgba(255,171,43,0.25)',
+    colorPrimaryHover:     '#ffc055',
+    colorPrimaryActive:    '#e09520',
 
-    // ── Semantic ───────────────────────────────────────────────────────
-    colorError:            '#C0392B',
-    colorSuccess:          '#16A34A',
-    colorWarning:          '#B45309',
-    colorInfo:             '#1D6FD8',
+    colorError:            '#E05252',
+    colorSuccess:          '#4CAF7D',
+    colorWarning:          '#E09B3D',
+    colorInfo:             '#60A5FA',
 
-    // ── Link ───────────────────────────────────────────────────────────
-    colorLink:             '#1D6FD8',
-    colorLinkHover:        '#1560bf',
-    colorLinkActive:       '#1252a8',
+    colorLink:             '#FFAB2B',
+    colorLinkHover:        '#ffc055',
 
-    // ── Shape ──────────────────────────────────────────────────────────
-    borderRadius:          4,
+    borderRadius:          5,
     borderRadiusSM:        2,
     borderRadiusLG:        8,
     borderRadiusXS:        2,
 
-    // ── Typography ─────────────────────────────────────────────────────
     fontFamily:    "'Neue Haas Unica', 'Helvetica Neue', Arial, sans-serif",
     fontSize:      13,
     fontSizeSM:    11,
     fontSizeLG:    15,
-    fontSizeXL:    18,
-    lineHeight:    1.55,
-    lineHeightSM:  1.25,
+    lineHeight:    1.50,
+    lineHeightSM:  1.30,
 
-    // ── Spacing ────────────────────────────────────────────────────────
     sizeUnit:      4,
     sizeStep:      4,
     padding:       16,
@@ -70,80 +60,60 @@ export const theme = {
     marginXS:      8,
     marginXXS:     4,
 
-    // ── Motion ─────────────────────────────────────────────────────────
-    motionDurationFast:  '100ms',
-    motionDurationMid:   '160ms',
-    motionDurationSlow:  '300ms',
+    motionDurationFast:  '80ms',
+    motionDurationMid:   '140ms',
+    motionDurationSlow:  '280ms',
     motionEaseOutCirc:   'cubic-bezier(0.16, 1, 0.3, 1)',
 
-    // ── Shadow ─────────────────────────────────────────────────────────
-    boxShadow:          '0 1px 3px rgba(0,0,0,0.09), 0 0 0 1px rgba(0,0,0,0.07)',
-    boxShadowSecondary: '0 4px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.07)',
-    boxShadowTertiary:  '0 8px 32px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.09)',
+    boxShadow:          '0 2px 8px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
+    boxShadowSecondary: '0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.07)',
+    boxShadowTertiary:  '0 16px 40px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.3)',
 
-    // ── Z-index ────────────────────────────────────────────────────────
     zIndexPopupBase: 200,
   },
 
   components: {
     Button: {
       defaultBg:              'transparent',
-      defaultBorderColor:     'rgba(0,0,0,0.14)',
-      defaultColor:           '#5A5A5A',
-      defaultHoverBg:         '#F3F2F0',
-      defaultHoverBorderColor:'rgba(0,0,0,0.18)',
-      defaultHoverColor:      '#1A1A1A',
-      defaultActiveBg:        '#ECEAE7',
+      defaultBorderColor:     'rgba(255,255,255,0.10)',
+      defaultColor:           'rgba(240,239,232,0.50)',
+      defaultHoverBg:         'rgba(255,255,255,0.05)',
+      defaultHoverBorderColor:'rgba(255,255,255,0.20)',
+      defaultHoverColor:      '#F0EFE8',
       contentFontSizeSM:      11,
       paddingInlineSM:        10,
-      onlyIconSizeSM:         12,
     },
 
     Input: {
-      colorBgContainer:       '#F3F2F0',
-      colorBorder:            'rgba(0,0,0,0.12)',
-      hoverBorderColor:       'rgba(0,0,0,0.22)',
-      activeBorderColor:      '#1D6FD8',
-      activeShadow:           '0 0 0 3px rgba(29,111,216,0.08)',
-      colorTextPlaceholder:   '#8A8A8A',
+      colorBgContainer:       '#242424',
+      colorBorder:            'rgba(255,255,255,0.10)',
+      hoverBorderColor:       'rgba(255,255,255,0.20)',
+      activeBorderColor:      '#FFAB2B',
+      activeShadow:           '0 0 0 2px rgba(255,171,43,0.15)',
+      colorTextPlaceholder:   'rgba(240,239,232,0.20)',
       paddingBlock:           6,
       paddingInline:          10,
     },
 
     Modal: {
       titleFontSize:          15,
-      titleColor:             '#1A1A1A',
-      headerBg:               '#FFFFFF',
-      contentBg:              '#FFFFFF',
-      footerBg:               '#FFFFFF',
+      titleColor:             '#F0EFE8',
+      headerBg:               '#1e1d1b',
+      contentBg:              '#1e1d1b',
+      footerBg:               '#1e1d1b',
       paddingMD:              24,
-      borderRadiusOuter:      10,
-    },
-
-    Segmented: {
-      itemColor:              '#5A5A5A',
-      itemHoverColor:         '#1A1A1A',
-      itemHoverBg:            '#ECEAE7',
-      itemSelectedBg:         'rgba(29, 111, 216, 0.10)',
-      itemSelectedColor:      '#1D6FD8',
-      trackBg:                '#F0EFED',
-      trackPadding:           2,
-    },
-
-    Typography: {
-      colorLink:              '#1D6FD8',
-      colorLinkHover:         '#1560bf',
+      borderRadiusOuter:      8,
     },
 
     Tooltip: {
-      colorBgSpotlight:       '#1A1A1A',
-      colorTextLightSolid:    '#FFFFFF',
-      borderRadius:           6,
+      colorBgSpotlight:       '#2A2927',
+      colorTextLightSolid:    '#F0EFE8',
+      borderRadius:           5,
       paddingSM:              8,
     },
 
     Divider: {
-      colorSplit:             'rgba(0,0,0,0.08)',
+      colorSplit:             'rgba(255,255,255,0.07)',
       marginLG:               16,
     },
   },
