@@ -25,9 +25,16 @@ const AnchorNode = memo(({ data, selected }) => {
       <Handle type="target" position={Position.Top}    id="top"    style={{ top: labelH }} />
       <Handle type="source" position={Position.Bottom} id="bottom" />
 
+        {/* Image — floats between label and card */}
+      {data.nodeImage && (
+        <div className="node-img-float" style={{ marginTop: labelH }}>
+          <img src={data.nodeImage} alt={data.title} className="node-img-float__img" />
+        </div>
+      )}
+
       <div
-        className={`anchor-node${selected ? ' selected' : ''}${isLoading ? ' loading' : ''}${isStarred ? ' starred' : ''}`}
-        style={{ marginTop: labelH }}
+        className={`anchor-node${selected ? ' selected' : ''}${isLoading ? ' loading' : ''}${isStarred ? ' starred' : ''}${data.nodeImage ? ' has-image' : ''}`}
+        style={{ marginTop: data.nodeImage ? 0 : labelH }}
         onContextMenu={data.onContextMenu}
       >
         <NodeResizer
@@ -55,11 +62,6 @@ const AnchorNode = memo(({ data, selected }) => {
         </span>
 
         <div className="anchor-node__body">
-          {data.nodeImage && (
-            <div className="node-image-banner">
-              <img src={data.nodeImage} alt={data.title} className="node-image-banner__img" />
-            </div>
-          )}
           <div className="anchor-node__title">{data.title || 'untitled'}</div>
           {data.body && <div className="anchor-node__desc">{data.body}</div>}
           <div className="anchor-node__footer">

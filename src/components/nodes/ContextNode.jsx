@@ -32,6 +32,13 @@ const ContextNode = memo(({ data, selected }) => {
       <Handle type="target" position={Position.Top}    id="top"    style={{ top: labelH }} />
       <Handle type="source" position={Position.Bottom} id="bottom" />
 
+      {/* Image — floats between label and card */}
+      {revealed && data.nodeImage && (
+        <div className="node-img-float" style={{ marginTop: labelH }}>
+          <img src={data.nodeImage} alt={data.title} className="node-img-float__img" />
+        </div>
+      )}
+
       {/* Star */}
       {revealed && (
         <span
@@ -39,7 +46,7 @@ const ContextNode = memo(({ data, selected }) => {
           tabIndex={0}
           className={`node-star${isStarred ? ' active' : ''}`}
           title={isStarred ? 'unstar' : 'star'}
-          style={{ top: labelH + 8 }}
+          style={{ top: labelH + (data.nodeImage ? 168 : 8) }}
           onPointerDown={e => { e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation?.(); }}
           onMouseDown={e => { e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation?.(); }}
           onClick={e => { e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation?.(); data.onToggleStar?.(); }}
@@ -50,8 +57,8 @@ const ContextNode = memo(({ data, selected }) => {
       )}
 
       <div
-        className={`context-node${revealed ? ' revealed' : ' locked'}${selected ? ' selected' : ''}${isStarred ? ' starred' : ''}`}
-        style={{ '--node-color': cat.color, marginTop: labelH }}
+        className={`context-node${revealed ? ' revealed' : ' locked'}${selected ? ' selected' : ''}${isStarred ? ' starred' : ''}${revealed && data.nodeImage ? ' has-image' : ''}`}
+        style={{ '--node-color': cat.color, marginTop: revealed && data.nodeImage ? 0 : labelH }}
       >
         {revealed && (
           <NodeResizer
@@ -65,11 +72,6 @@ const ContextNode = memo(({ data, selected }) => {
 
         {revealed ? (
           <div className="context-node__inner-clip">
-            {data.nodeImage && (
-              <div className="node-image-banner">
-                <img src={data.nodeImage} alt={data.title} className="node-image-banner__img" />
-              </div>
-            )}
             <div className="context-node__body">
               <div className="context-node__title">{data.title || cat.label}</div>
               {data.summary && (
