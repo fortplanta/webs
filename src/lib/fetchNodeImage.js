@@ -2,9 +2,10 @@
  * Fetch a representative image for a node title.
  *
  * Strategy:
- * 1. Wikipedia REST summary (fast, exact title match)
- * 2. Wikipedia search API (handles AI-generated/approximate titles,
- *    company names, famous people, geographic locations, etc.)
+ * 1. Wikipedia REST summary — fast, works for exact entity names
+ *    (people, companies, places, well-known concepts)
+ * 2. Wikipedia search → summary — handles AI-generated/narrative titles
+ *    by finding the closest matching article, then pulling its image
  *
  * Free, no API key, CORS-enabled. Returns null if nothing found.
  */
@@ -22,19 +23,19 @@ async function fetchViaSummary(title) {
 }
 
 async function fetchViaSearch(title) {
-  const res = await fetch(
-    `https://en.wikipedia.org/w/api.php?` +
-    `action=query&generator=search&gsrsearch=${encodeURIComponent(title)}&gsrlimit=1` +
-    `&prop=pageimages&piprop=thumbnail|original&pithumbsize=800` +
-    `&format=json&origin=*`,
+  // Step 1: find the closest matching Wikipedia article title
+  const searchRes = await fetch(
+    `https://en.wikipedia.org/w/api.php?action=query&list=search` +
+    `&srsearch=${encodeURIComponent(title)}&srlimit=1&format=json&origin=*`,
     { signal: AbortSignal.timeout(6000) }
   );
-  if (!res.ok) return null;
-  const data  = await res.json();
-  const pages = data.query?.pages;
-  if (!pages) return null;
-  const page  = Object.values(pages)[0];
-  return page?.original?.source ?? page?.thumbnail?.source ?? null;
+  if (!searchRes.ok) return null;
+  const searchData = await searchRes.json();
+  const articleTitle = searchData.query?.search?.[0]?.title;
+  if (!articleTitle) return null;
+
+  // Step 2: fetch the image from that article's summary
+  return fetchViaSummary(articleTitle);
 }
 
 export async function fetchNodeImage(title) {
@@ -45,7 +46,7 @@ export async function fetchNodeImage(title) {
   let src = null;
   try {
     src = await fetchViaSummary(title);
-  } catch { /* network error — fall through to search */ }
+  } catch { /* fall through */ }
 
   if (!src) {
     try {
