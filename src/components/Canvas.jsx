@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 import {
   ReactFlow,
   Background,
@@ -22,10 +22,10 @@ import ContextNode     from './nodes/ContextNode';
 import GroupFrameNode  from './nodes/GroupFrameNode';
 import MediaNode       from './nodes/MediaNode';
 import FloatingEdge    from './edges/FloatingEdge';
+import ProximityEdge   from './edges/ProximityEdge';
 import CSSInspector    from './CSSInspector';
 import DebugPanel      from './DebugPanel';
 import ViewPanel       from './ViewPanel';
-import ProximityLines  from './ProximityLines';
 import StickyNode      from './nodes/StickyNode';
 import { CATEGORY_BY_KEY, STORAGE_KEYS } from '../constants';
 import { expandAnchor, radialPositions, generateCards } from '../lib/expand';
@@ -44,8 +44,16 @@ const nodeTypes = {
 };
 
 const edgeTypes = {
-  floating: FloatingEdge,
+  floating:  FloatingEdge,
+  proximity: ProximityEdge,
 };
+
+/** Minimum bounding-box edge distance between two rectangles */
+function rectEdgeDist(ax, ay, aw, ah, bx, by, bw, bh) {
+  const dx = Math.max(0, Math.max(ax, bx) - Math.min(ax + aw, bx + bw));
+  const dy = Math.max(0, Math.max(ay, by) - Math.min(ay + ah, by + bh));
+  return Math.sqrt(dx * dx + dy * dy);
+}
 
 const PROXIMITY_THRESHOLD = 80; // px, flow coordinates
 
@@ -184,22 +192,42 @@ export default function Canvas({
 
   // ── Re-attach callbacks to nodes loaded from localStorage ────────────────
   // Functions are stripped when serialised to JSON; re-inject them on mount.
+  // Also computes inGroup from group membership so label bg works for old nodes.
   useEffect(() => {
-    setNodes(ns => ns.map(n => {
-      if (n.type === 'anchorNode') {
-        return { ...n, data: { ...n.data, ...makeAnchorCallbacks(n.id) } };
-      }
-      if (n.type === 'contextNode') {
-        const item = {
-          key:                n.data.category,
-          title:              n.data.title,
-          summary:            n.data.summary,
-          connectionStrength: n.data.connectionStrength,
-        };
-        return { ...n, data: { ...n.data, ...makeContextCallbacks(n.id, n.data.anchorId, item) } };
-      }
-      return n;
-    }));
+    setNodes(ns => {
+      const groupMemberIds = new Set(
+        ns.filter(n => n.type === 'groupFrame').flatMap(n => n.data?.memberIds ?? [])
+      );
+      return ns.map(n => {
+        const inGroup = groupMemberIds.has(n.id);
+        if (n.type === 'anchorNode') {
+          return { ...n, data: { ...n.data, inGroup, ...makeAnchorCallbacks(n.id) } };
+        }
+        if (n.type === 'contextNode') {
+          const item = {
+            key:                n.data.category,
+            title:              n.data.title,
+            summary:            n.data.summary,
+            connectionStrength: n.data.connectionStrength,
+          };
+          return { ...n, data: { ...n.data, inGroup, ...makeContextCallbacks(n.id, n.data.anchorId, item) } };
+        }
+        if (n.type === 'stickyNode') {
+          return { ...n, data: {
+            ...n.data,
+            onTextChange: (text) => setNodes(prev => prev.map(nd => nd.id === n.id ? { ...nd, data: { ...nd.data, text } } : nd)),
+            onDelete: () => setNodes(prev => prev.filter(nd => nd.id !== n.id)),
+          }};
+        }
+        if (n.type === 'mediaNode') {
+          return { ...n, data: {
+            ...n.data,
+            onDelete: () => setNodes(prev => prev.filter(nd => nd.id !== n.id)),
+          }};
+        }
+        return n;
+      });
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply proximity-target CSS class to proximity node
@@ -738,6 +766,47 @@ export default function Canvas({
 
   const selectedNodes = nodes.filter(n => n.selected && n.type !== 'groupFrame');
 
+  // ── Proximity edges (media nodes → nearest node, rendered in SVG layer behind cards) ──
+  const PROX_THRESHOLD = 500;
+  const proximityEdges = useMemo(() => {
+    const mediaNodes = nodes.filter(n => n.type === 'mediaNode' && !n.hidden);
+    const candidates  = nodes.filter(n => n.type !== 'mediaNode' && n.type !== 'groupFrame' && !n.hidden);
+    const result = [];
+    mediaNodes.forEach(media => {
+      const mw = media.measured?.width  ?? 320;
+      const mh = media.measured?.height ?? 200;
+      let closest = null, minDist = PROX_THRESHOLD;
+      candidates.forEach(c => {
+        const cw = c.measured?.width  ?? 320;
+        const ch = c.measured?.height ?? 200;
+        const d  = rectEdgeDist(media.position.x, media.position.y, mw, mh, c.position.x, c.position.y, cw, ch);
+        if (d < minDist) { minDist = d; closest = c; }
+      });
+      if (!closest) return;
+      const opacity = (0.07 + (1 - minDist / PROX_THRESHOLD) * 0.18).toFixed(3);
+      result.push({
+        id: `prox-${media.id}-${closest.id}`,
+        source: media.id, target: closest.id,
+        type: 'proximity',
+        selectable: false, deletable: false, focusable: false,
+        style: { stroke: `rgba(255,255,255,${opacity})` },
+      });
+    });
+    return result;
+  }, [nodes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── V / T keyboard shortcuts ─────────────────────────────────────────────
+  useEffect(() => {
+    function onKey(e) {
+      // Skip if typing in an input/editable element
+      if (e.target instanceof Element && e.target.closest('input, textarea, [contenteditable]')) return;
+      if (e.key === 'v' || e.key === 'V') setToolMode('pointer');
+      if (e.key === 't' || e.key === 'T') setToolMode(m => m === 'text' ? 'pointer' : 'text');
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div
       className="canvas-wrapper"
@@ -765,11 +834,14 @@ export default function Canvas({
     >
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={[...edges, ...proximityEdges]}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onEdgesChange={changes => {
+          // Ignore proximity edge changes — they're computed, not stored
+          onEdgesChange(changes.filter(c => !c.id?.startsWith('prox-')));
+        }}
         onConnect={onConnect}
         onConnectEnd={onConnectEnd}
         onInit={setRfInstance}
@@ -787,9 +859,11 @@ export default function Canvas({
         fitViewOptions={{ padding: 0.3 }}
         minZoom={0.08}
         maxZoom={2.5}
-        deleteKeyCode="Delete"
+        deleteKeyCode={['Delete', 'Backspace']}
         selectionMode={SelectionMode.Partial}
-        selectionKeyCode="Shift"
+        selectionOnDrag={true}
+        panOnDrag={[1, 2]}
+        panOnScroll={true}
         multiSelectionKeyCode="Shift"
         connectionMode={ConnectionMode.Loose}
         connectionRadius={40}
@@ -824,7 +898,6 @@ export default function Canvas({
           showMiniMap={showMiniMap}   onMiniMapToggle={() => setShowMiniMap(v => !v)}
           onFitView={() => rfInstance?.fitView({ padding: 0.3 })}
         />
-        <ProximityLines />
         <EdgeLabels />
       </ReactFlow>
 
