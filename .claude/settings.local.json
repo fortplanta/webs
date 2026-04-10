@@ -25,7 +25,8 @@
       "Bash(mkdir -p ~/.ssh)",
       "Bash(ssh-keyscan github.com)",
       "Bash(~/.ssh/known_hosts)",
-      "Bash(node -e \"const p = require\\(''./node_modules/antd/package.json''\\); console.log\\(p.version\\)\")"
+      "Bash(node -e \"const p = require\\(''./node_modules/antd/package.json''\\); console.log\\(p.version\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)\\)\")"
     ]
   }
 }

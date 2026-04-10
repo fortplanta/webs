@@ -44,8 +44,10 @@
   --color-star-border:   rgba(255, 171, 43, 0.30);
 
   /* ── Color: Group frame ── */
-  --color-group-bg:      rgba(255, 255, 255, 0.02);
-  --color-group-border:  rgba(255, 255, 255, 0.06);
+  --color-group-bg:           rgba(255, 255, 255, 0.02);
+  --color-group-border:       rgba(255, 255, 255, 0.06);
+  /* canvas-bg + group overlay composite — used for label bg inside groups */
+  --color-group-bg-effective: rgb(27, 27, 25);
 
   /* ── Color: Context categories ── */
   --color-technology:    #60A5FA;

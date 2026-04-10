@@ -31,13 +31,19 @@ const MediaNode = memo(({ data, selected }) => {
             className="media-node__media"
             onClick={e => e.stopPropagation()}
           />
-        ) : (
+        ) : data.src ? (
           <img
             src={data.src}
             alt={data.name || 'Dropped image'}
             className="media-node__media"
             draggable={false}
           />
+        ) : (
+          <div className="media-node__unsupported">
+            <span className="media-node__unsupported-icon">⚠</span>
+            <span className="media-node__unsupported-name">{data.name}</span>
+            <span className="media-node__unsupported-hint">Conversion failed</span>
+          </div>
         )}
       </div>
 

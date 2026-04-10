@@ -17,7 +17,7 @@ const AnchorNode = memo(({ data, selected }) => {
   return (
     <div className="node-outer">
       {/* Floating category label — sits above the card */}
-      <div className="node-label" ref={labelRef}>note</div>
+      <div className="node-label" ref={labelRef} style={{ background: data.inGroup ? 'var(--color-group-bg-effective)' : 'var(--color-bg)' }}>note</div>
 
       {/* Handles — on the card, offset by label height */}
       <Handle type="target" position={Position.Left}   id="left"   style={{ top: labelH + (/* card center approx */ 60) }} />

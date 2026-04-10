@@ -1,7 +1,14 @@
 import { useNodes, useViewport, Panel } from '@xyflow/react';
 import { memo, useMemo } from 'react';
 
-const THRESHOLD = 350;
+const THRESHOLD = 500; // flow units — edge-to-edge distance
+
+/** Minimum distance between two axis-aligned rectangles (returns 0 if overlapping) */
+function rectEdgeDist(ax, ay, aw, ah, bx, by, bw, bh) {
+  const dx = Math.max(0, Math.max(ax, bx) - Math.min(ax + aw, bx + bw));
+  const dy = Math.max(0, Math.max(ay, by) - Math.min(ay + ah, by + bh));
+  return Math.sqrt(dx * dx + dy * dy);
+}
 
 function ProximityLines() {
   const nodes = useNodes();
@@ -9,44 +16,43 @@ function ProximityLines() {
 
   const lines = useMemo(() => {
     const mediaNodes = nodes.filter((n) => n.type === 'mediaNode' && !n.hidden);
-    const candidateNodes = nodes.filter(
+    const candidates = nodes.filter(
       (n) => n.type !== 'mediaNode' && n.type !== 'groupFrame' && !n.hidden
     );
 
     const result = [];
 
     for (const media of mediaNodes) {
-      const mCx =
-        media.position.x + (media.measured?.width ?? 320) / 2;
-      const mCy =
-        media.position.y + (media.measured?.height ?? 200) / 2;
+      const mw = media.measured?.width  ?? 320;
+      const mh = media.measured?.height ?? 200;
+      const mx = media.position.x;
+      const my = media.position.y;
 
-      let closest = null;
-      let closestDist = Infinity;
+      let closest     = null;
+      let closestDist = THRESHOLD;
 
-      for (const candidate of candidateNodes) {
-        const cCx =
-          candidate.position.x + (candidate.measured?.width ?? 320) / 2;
-        const cCy =
-          candidate.position.y + (candidate.measured?.height ?? 200) / 2;
+      for (const candidate of candidates) {
+        const cw = candidate.measured?.width  ?? 320;
+        const ch = candidate.measured?.height ?? 200;
+        const cx = candidate.position.x;
+        const cy = candidate.position.y;
 
-        const dx = mCx - cCx;
-        const dy = mCy - cCy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const dist = rectEdgeDist(mx, my, mw, mh, cx, cy, cw, ch);
 
-        if (dist < THRESHOLD && dist < closestDist) {
+        if (dist < closestDist) {
           closestDist = dist;
-          closest = { node: candidate, cx: cCx, cy: cCy };
+          closest = { node: candidate, cx, cy, cw, ch };
         }
       }
 
       if (closest) {
-        const opacity = 0.06 + (1 - closestDist / THRESHOLD) * 0.16;
+        const opacity = 0.07 + (1 - closestDist / THRESHOLD) * 0.18;
 
-        const x1 = mCx * zoom + vpX;
-        const y1 = mCy * zoom + vpY;
-        const x2 = closest.cx * zoom + vpX;
-        const y2 = closest.cy * zoom + vpY;
+        // Connect center-of-media to center-of-closest (visually cleaner than edge-to-edge for the line itself)
+        const x1 = (mx + mw / 2) * zoom + vpX;
+        const y1 = (my + mh / 2) * zoom + vpY;
+        const x2 = (closest.cx + closest.cw / 2) * zoom + vpX;
+        const y2 = (closest.cy + closest.ch / 2) * zoom + vpY;
 
         result.push({ key: `${media.id}-${closest.node.id}`, x1, y1, x2, y2, opacity });
       }
@@ -74,11 +80,8 @@ function ProximityLines() {
         {lines.map(({ key, x1, y1, x2, y2, opacity }) => (
           <line
             key={key}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
-            stroke={`rgba(255,255,255,${opacity})`}
+            x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={`rgba(255,255,255,${opacity.toFixed(3)})`}
             strokeWidth={1}
             strokeDasharray="3 8"
             strokeLinecap="round"
@@ -90,5 +93,4 @@ function ProximityLines() {
 }
 
 ProximityLines.displayName = 'ProximityLines';
-
 export default memo(ProximityLines);

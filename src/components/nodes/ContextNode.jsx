@@ -22,7 +22,7 @@ const ContextNode = memo(({ data, selected }) => {
       onContextMenu={data.onContextMenu}
     >
       {/* Floating label — category name above the card */}
-      <div className="node-label" ref={labelRef} style={{ color: cat.color }}>
+      <div className="node-label" ref={labelRef} style={{ color: cat.color, background: data.inGroup ? 'var(--color-group-bg-effective)' : 'var(--color-bg)' }}>
         {cat.label}
       </div>
 

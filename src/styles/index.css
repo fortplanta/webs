@@ -379,7 +379,7 @@ body {
   font-size: 13px;
   letter-spacing: -0.01em;
   color: var(--color-accent);
-  background: var(--color-bg);
+  /* background set inline per-node — var(--color-bg) or var(--color-group-bg-effective) */
   padding: 10px 2px;
   line-height: 1;
   z-index: 2;
@@ -1306,6 +1306,14 @@ body {
 }
 .media-node:hover .media-node__remove { opacity: 1; }
 .media-node__remove:hover { background: rgba(0,0,0,0.85); color: #fff; }
+.media-node__unsupported {
+  width: 100%; height: 100%; min-height: 80px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 12px;
+}
+.media-node__unsupported-icon { font-size: 18px; opacity: 0.4; }
+.media-node__unsupported-name { font-size: 11px; color: rgba(240,239,232,0.40); word-break: break-all; text-align: center; }
+.media-node__unsupported-hint { font-size: 10px; color: rgba(240,239,232,0.25); }
 
 /* ── STICKY NODE ── */
 .sticky-node {
@@ -1376,7 +1384,7 @@ body {
 .canvas-tool-strip {
   position: absolute;
   left: 12px;
-  bottom: 52px; /* above status bar */
+  top: 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;

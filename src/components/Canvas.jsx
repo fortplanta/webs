@@ -31,6 +31,7 @@ import { CATEGORY_BY_KEY, STORAGE_KEYS } from '../constants';
 import { expandAnchor, radialPositions, generateCards } from '../lib/expand';
 import { explainTerms } from '../lib/explainTerms';
 import { fetchNodeImage } from '../lib/fetchNodeImage';
+import heic2any from 'heic2any';
 
 const { Text } = Typography;
 
@@ -361,10 +362,10 @@ export default function Canvas({
         groupNode,
         ...ns.map(n =>
           n.id === anchorId
-            ? { ...n, data: { ...n.data, loading: false, contextNodes: contextNodeIds, groupId } }
+            ? { ...n, data: { ...n.data, loading: false, contextNodes: contextNodeIds, groupId, inGroup: true } }
             : n
         ),
-        ...newNodes,
+        ...newNodes.map(n => ({ ...n, data: { ...n.data, inGroup: true } })),
       ]);
       setEdges(es => [...es, ...newEdges]);
 
@@ -684,28 +685,48 @@ export default function Canvas({
   const onDrop = useCallback((e) => {
     e.preventDefault();
     if (!rfInstance) return;
-    const files = Array.from(e.dataTransfer.files).filter(f =>
-      f.type.startsWith('image/') || f.type.startsWith('video/')
-    );
+
+    const isHeic = f => /\.(heic|heif)$/i.test(f.name) || f.type === 'image/heic' || f.type === 'image/heif';
+    const isVideo = f => f.type.startsWith('video/') || /\.(mp4|webm|mov|avi)$/i.test(f.name);
+    const isImage = f => f.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff?)$/i.test(f.name);
+
+    const files = Array.from(e.dataTransfer.files).filter(f => isImage(f) || isVideo(f) || isHeic(f));
     if (files.length === 0) return;
     const dropPos = rfInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+
+    function placeNode(src, file, idx, mediaType) {
+      const id = uuidv4();
+      setNodes(ns => [...ns, {
+        id, type: 'mediaNode',
+        position: { x: dropPos.x + idx * 24, y: dropPos.y + idx * 24 },
+        style: { width: 320, height: mediaType === 'video' ? 200 : undefined },
+        data: {
+          src, name: file.name,
+          mediaType,
+          onDelete: () => setNodes(n => n.filter(nd => nd.id !== id)),
+        },
+      }]);
+    }
+
     files.forEach((file, i) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const id      = uuidv4();
-        const isVideo = file.type.startsWith('video/');
-        setNodes(ns => [...ns, {
-          id, type: 'mediaNode',
-          position: { x: dropPos.x + i * 24, y: dropPos.y + i * 24 },
-          style:    { width: 320, height: isVideo ? 200 : undefined },
-          data: {
-            src: ev.target.result, name: file.name,
-            mediaType: isVideo ? 'video' : 'image',
-            onDelete: () => setNodes(n => n.filter(nd => nd.id !== id)),
-          },
-        }]);
-      };
-      reader.readAsDataURL(file);
+      if (isHeic(file)) {
+        // Convert HEIC → JPEG client-side
+        heic2any({ blob: file, toType: 'image/jpeg', quality: 0.88 })
+          .then(result => {
+            const blob = Array.isArray(result) ? result[0] : result;
+            const reader = new FileReader();
+            reader.onload = ev => placeNode(ev.target.result, file, i, 'image');
+            reader.readAsDataURL(blob);
+          })
+          .catch(() => {
+            // Conversion failed — place placeholder
+            placeNode(null, file, i, 'image');
+          });
+      } else {
+        const reader = new FileReader();
+        reader.onload = ev => placeNode(ev.target.result, file, i, isVideo(file) ? 'video' : 'image');
+        reader.readAsDataURL(file);
+      }
     });
   }, [rfInstance]);
 
