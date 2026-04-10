@@ -24,7 +24,9 @@ import MediaNode       from './nodes/MediaNode';
 import FloatingEdge    from './edges/FloatingEdge';
 import CSSInspector    from './CSSInspector';
 import DebugPanel      from './DebugPanel';
-import ViewPanel from './ViewPanel';
+import ViewPanel       from './ViewPanel';
+import ProximityLines  from './ProximityLines';
+import StickyNode      from './nodes/StickyNode';
 import { CATEGORY_BY_KEY, STORAGE_KEYS } from '../constants';
 import { expandAnchor, radialPositions, generateCards } from '../lib/expand';
 import { explainTerms } from '../lib/explainTerms';
@@ -37,6 +39,7 @@ const nodeTypes = {
   contextNode: ContextNode,
   groupFrame:  GroupFrameNode,
   mediaNode:   MediaNode,
+  stickyNode:  StickyNode,
 };
 
 const edgeTypes = {
@@ -114,6 +117,9 @@ export default function Canvas({
   const [bgVariant,    setBgVariant]    = useState(BackgroundVariant.Dots);
   const [snapToGrid,   setSnapToGrid]   = useState(false);
   const [showMiniMap,  setShowMiniMap]  = useState(true);
+
+  // Tool mode: 'pointer' | 'text'
+  const [toolMode, setToolMode] = useState('pointer');
 
   // Proximity connect
   const [proximityTargetId, setProximityTargetId] = useState(null);
@@ -241,6 +247,22 @@ export default function Canvas({
       onContextMenu: (e) => { e.preventDefault(); openContextMenuRef.current?.(e, id, 'contextNode'); },
       onToggleStar:  () => toggleStarRef.current?.(id),
     };
+  }
+
+  // ── Add sticky note ──────────────────────────────────────────────────────
+  function addStickyNode(flowPos) {
+    const id = uuidv4();
+    setNodes(ns => [...ns, {
+      id,
+      type: 'stickyNode',
+      position: flowPos,
+      style: { width: 200, minHeight: 100 },
+      data: {
+        text: '',
+        onTextChange: (text) => setNodes(n => n.map(nd => nd.id === id ? { ...nd, data: { ...nd.data, text } } : nd)),
+        onDelete: () => setNodes(n => n.filter(nd => nd.id !== id)),
+      },
+    }]);
   }
 
   // ── Add anchor node ──────────────────────────────────────────────────────
@@ -699,14 +721,25 @@ export default function Canvas({
     <div
       className="canvas-wrapper"
       ref={reactFlowWrapper}
+      data-tool={toolMode}
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDoubleClick={e => {
+        // In text mode, single click already created a sticky — nothing to do on double-click
+        if (toolMode === 'text') return;
         // Only trigger on bare canvas clicks — not on nodes or UI elements
         if (!rfInstance || e.target.closest('.react-flow__node, .react-flow__controls, .view-panel, .ant-modal')) return;
         const flowPos = rfInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
         setAddForm({ title: '', body: '', flowPos });
         setAddDialog(true);
+      }}
+      onClick={e => {
+        // Text tool: single click on bare canvas creates a sticky
+        if (toolMode !== 'text') return;
+        if (!rfInstance || e.target.closest('.react-flow__node, .react-flow__controls, .view-panel, .ant-modal, .canvas-tool-strip')) return;
+        const flowPos = rfInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        addStickyNode(flowPos);
+        setToolMode('pointer'); // revert to pointer after placing
       }}
     >
       <ReactFlow
@@ -770,8 +803,33 @@ export default function Canvas({
           showMiniMap={showMiniMap}   onMiniMapToggle={() => setShowMiniMap(v => !v)}
           onFitView={() => rfInstance?.fitView({ padding: 0.3 })}
         />
+        <ProximityLines />
         <EdgeLabels />
       </ReactFlow>
+
+      {/* ── Canvas tool strip ── */}
+      <div className="canvas-tool-strip">
+        <button
+          className={`canvas-tool-strip__btn${toolMode === 'pointer' ? ' active' : ''}`}
+          title="Select / Move (V)"
+          onClick={() => setToolMode('pointer')}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 1l9 5.5-4 1.5L5.5 12 2 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <button
+          className={`canvas-tool-strip__btn${toolMode === 'text' ? ' active' : ''}`}
+          title="Sticky note (T) — click canvas to place"
+          onClick={() => setToolMode(m => m === 'text' ? 'pointer' : 'text')}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="2" y="2" width="10" height="10" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+            <line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            <line x1="4.5" y1="7.5" x2="7.5" y2="7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+        </button>
+      </div>
 
       {/* ── Add note dialog ── */}
       <Modal

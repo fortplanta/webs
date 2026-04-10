@@ -12,7 +12,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '⬡',
     color: 'var(--color-technology)',
     weight: 1.2,
-    prompt: 'Technology that paved the way for this, or technology that would later emerge from it.',
+    prompt: 'What technological shift made this possible, inevitable, or obsolete — and who understood that before everyone else?',
   },
   {
     key: 'political',
@@ -20,7 +20,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '⚑',
     color: 'var(--color-political)',
     weight: 1.3,
-    prompt: 'The local and global political environment — who held power, what tensions were active, what was possible or forbidden.',
+    prompt: 'What was the real power dynamic underneath? Who needed this to happen, who needed it to fail — and what does that reveal about the actual game being played?',
   },
   {
     key: 'market',
@@ -28,7 +28,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '◫',
     color: 'var(--color-market)',
     weight: 1.1,
-    prompt: 'Market forces, economic conditions, competition, and the dominant business logic of the era.',
+    prompt: 'What economic incentive or pressure was quietly steering behaviour? Follow the money — whose position improved, whose collapsed, and why then?',
   },
   {
     key: 'supplyChain',
@@ -36,7 +36,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '→',
     color: 'var(--color-supply-chain)',
     weight: 1.0,
-    prompt: 'The physical and logistical infrastructure — raw materials, labour, distribution, and dependencies.',
+    prompt: 'What physical dependency or chokepoint was invisible until it mattered? What did this expose about where real leverage actually sits?',
   },
   {
     key: 'people',
@@ -44,7 +44,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '○',
     color: 'var(--color-people)',
     weight: 1.4,
-    prompt: 'The key individuals who shaped, enabled, opposed, or were shaped by this — with a brief note on how.',
+    prompt: 'Whose obsession, fear, or ambition was the actual engine here? Who do we undercount or misunderstand when we tell the conventional story?',
   },
   {
     key: 'law',
@@ -52,7 +52,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '⊙',
     color: 'var(--color-law)',
     weight: 1.2,
-    prompt: 'Relevant national and international law, regulation, or legal battles — what was allowed, blocked, or redefined.',
+    prompt: 'What rule made this possible, or what precedent did it quietly set? What were powerful actors trying to lock in — or lock out — through legal means?',
   },
   {
     key: 'business',
@@ -60,7 +60,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '◇',
     color: 'var(--color-business)',
     weight: 1.1,
-    prompt: 'The revenue streams, business models, and economic incentives at play.',
+    prompt: 'What financial logic was actually driving decisions — and how did it diverge from the stated mission or public narrative?',
   },
   {
     key: 'conflict',
@@ -68,7 +68,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '×',
     color: 'var(--color-conflict)',
     weight: 1.5,
-    prompt: 'Wars, social conflicts, institutional tensions, or ideological clashes that intersected with this.',
+    prompt: 'What was the real fault line — and what had been suppressing it? What does this conflict reveal about a deeper, older friction that was waiting to surface?',
   },
   {
     key: 'companies',
@@ -76,7 +76,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '□',
     color: 'var(--color-companies)',
     weight: 1.0,
-    prompt: 'The major companies, organisations, and institutional actors involved — including unlikely ones.',
+    prompt: 'Which organisations were structurally positioned to win or lose regardless of their intentions? Who was the unsexy actor that actually made it happen?',
   },
   {
     key: 'ideology',
@@ -84,7 +84,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '◎',
     color: 'var(--color-ideology)',
     weight: 1.4,
-    prompt: 'The dominant ideologies, worldviews, religions, or philosophical currents that shaped thinking at the time.',
+    prompt: 'What worldview was taken for granted — invisible, unquestioned — and how did it shape what was even conceivable? What collective sentiment was running underneath?',
   },
   {
     key: 'geography',
@@ -92,7 +92,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '◉',
     color: 'var(--color-geography)',
     weight: 1.3,
-    prompt: 'Why HERE mattered — the geographic, physical, or spatial dimension. Why this city, region, or landscape.',
+    prompt: 'Why here and not somewhere else? What did this specific landscape, city, or location make possible that wouldn\'t have worked in any other context?',
   },
   {
     key: 'culture',
@@ -100,7 +100,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '◆',
     color: 'var(--color-culture)',
     weight: 1.3,
-    prompt: 'The art, music, literature, and cultural movements being made at exactly the same moment — the zeitgeist.',
+    prompt: 'What did artists and storytellers sense that analysts missed? What collective anxiety, longing, or mood were they expressing — and what did it predict?',
   },
   {
     key: 'science',
@@ -108,7 +108,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '⊡',
     color: 'var(--color-science)',
     weight: 1.2,
-    prompt: 'The dominant scientific paradigm, adjacent discoveries happening simultaneously, and the ideas in the air.',
+    prompt: 'What idea was quietly circulating before this happened — and which thinkers were ignored or ahead of their time? What does this reveal about how new thinking actually spreads?',
   },
   {
     key: 'media',
@@ -116,7 +116,7 @@ export const CONTEXT_CATEGORIES = [
     icon: '↑',
     color: 'var(--color-media)',
     weight: 1.1,
-    prompt: 'How this was communicated, reported, or mythologised — and how the medium shaped the message.',
+    prompt: 'What story was being told vs. what was actually happening? Who controlled the frame — and how did that shape what became "true" in the public mind?',
   },
 ];
 

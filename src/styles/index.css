@@ -307,6 +307,8 @@ body {
   overflow: hidden;
   background: var(--color-bg);
 }
+/* Tool mode cursors */
+.canvas-wrapper[data-tool="text"] .react-flow__pane { cursor: crosshair; }
 .react-flow__background { background: var(--color-bg); }
 .canvas-wrapper .react-flow__background { background: var(--color-bg); }
 .canvas-wrapper .react-flow__background pattern circle,
@@ -1251,3 +1253,154 @@ body {
   letter-spacing: -0.01em;
 }
 .edge-label:hover { border-color: var(--color-accent-border); color: var(--color-accent); }
+
+/* ── MEDIA NODE ── */
+.media-node {
+  position: relative;
+  background: var(--color-card);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  min-width: 120px;
+  min-height: 80px;
+}
+.media-node.selected { border-color: rgba(255,255,255,0.20); }
+.media-node__media-wrap {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.media-node__media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+.media-node__caption {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: rgba(240,239,232,0.50);
+  background: linear-gradient(transparent, rgba(0,0,0,0.5));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-node__remove {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 20px; height: 20px;
+  background: rgba(0,0,0,0.6);
+  border: none;
+  border-radius: 50%;
+  color: rgba(255,255,255,0.6);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+  z-index: 2;
+}
+.media-node:hover .media-node__remove { opacity: 1; }
+.media-node__remove:hover { background: rgba(0,0,0,0.85); color: #fff; }
+
+/* ── STICKY NODE ── */
+.sticky-node {
+  position: relative;
+  min-width: 160px;
+  min-height: 80px;
+  width: 100%;
+  height: 100%;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  cursor: default;
+}
+.sticky-node.selected {
+  border-color: rgba(255,255,255,0.15);
+}
+.sticky-node.editing {
+  border-color: rgba(255,255,255,0.18);
+}
+.sticky-node__text {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  color: var(--color-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  pointer-events: none;
+  user-select: none;
+}
+.sticky-node__text.placeholder {
+  color: var(--color-text-dim);
+  font-style: italic;
+}
+.sticky-node__textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 60px;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  color: var(--color-text);
+  padding: 0;
+  caret-color: var(--color-accent);
+}
+.sticky-node__remove {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 18px; height: 18px;
+  background: transparent;
+  border: none;
+  color: rgba(240,239,232,0.25);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity var(--duration-fast), color var(--duration-fast);
+  line-height: 1;
+}
+.sticky-node:hover .sticky-node__remove { opacity: 1; }
+.sticky-node__remove:hover { color: var(--color-text); }
+
+/* ── CANVAS TOOL STRIP ── */
+.canvas-tool-strip {
+  position: absolute;
+  left: 12px;
+  bottom: 52px; /* above status bar */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: var(--z-panel);
+  background: var(--color-surface-2);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius-md);
+  padding: 4px;
+}
+.canvas-tool-strip__btn {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: rgba(240,239,232,0.35);
+  cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+.canvas-tool-strip__btn:hover {
+  background: rgba(255,255,255,0.06);
+  color: rgba(240,239,232,0.80);
+}
+.canvas-tool-strip__btn.active {
+  background: rgba(255,255,255,0.10);
+  color: var(--color-text);
+}
