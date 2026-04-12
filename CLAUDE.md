@@ -267,9 +267,26 @@ Update this section at the end of each session.
 | Status bar dark | TODO | Simple CSS override |
 | Ant Design ConfigProvider dark | TODO | See config block above |
 | React Flow edge style | TODO | smoothstep, rgba white 10% |
+| Cluster / satellite system — Phase 1 (rendering) | TODO | See cluster-system-spec.md |
+| Cluster / satellite system — Phase 2 (drag) | TODO | See cluster-system-spec.md |
+| Cluster / satellite system — Phase 3 (source + fact check) | TODO | See cluster-system-spec.md |
+| Cluster / satellite system — Phase 4 (note absorption) | TODO | See cluster-system-spec.md |
+| Pivot edges | NOT STARTED | Amber dashed, directional — spec TBD |
+| Train of thought toggle | NOT STARTED | Path highlight + summary panel — spec TBD |
 | Loading state | NOT STARTED | No design yet |
 | Empty canvas state | NOT STARTED | No design yet |
 | Remember/flashcard mode | NOT STARTED | Not audited |
+
+---
+
+## Cluster system architecture (DO NOT DEVIATE)
+
+Satellites are NOT separate React Flow nodes. They are absolutely positioned
+children of an expanded context-node bounding box. See cluster-system-spec.md
+for full architecture, data model, and phased implementation plan.
+
+Key rule: satellite mousedown must call e.stopPropagation() or the whole
+node drags instead of just the satellite.
 
 ---
 
