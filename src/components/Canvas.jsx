@@ -155,9 +155,11 @@ export default function Canvas({
   const markerTypeRef         = useRef(markerType);
   const animateEdgesRef       = useRef(animateEdges);
   const proximityTargetIdRef  = useRef(proximityTargetId);
-  const clipboardRef          = useRef([]);
-  const copySelectedRef       = useRef(null);
-  const pasteNodesRef         = useRef(null);
+  const clipboardRef            = useRef([]);
+  const copySelectedRef         = useRef(null);
+  const pasteNodesRef           = useRef(null);
+  const groupSelectedNodesRef   = useRef(null);
+  const ungroupSelectedRef      = useRef(null);
 
   useEffect(() => { edgeTypeRef.current          = edgeType;          }, [edgeType]);
   useEffect(() => { markerTypeRef.current         = markerType;        }, [markerType]);
@@ -230,6 +232,22 @@ export default function Canvas({
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Migrate edges stored with root `label` prop → move into `data.label`
+  // (avoids ReactFlow built-in edge types rendering their own white label box)
+  useEffect(() => {
+    setEdges(es => es.map(e => {
+      if (e.label && !e.data?.label) {
+        const { label, ...rest } = e;
+        return { ...rest, data: { ...rest.data, label } };
+      }
+      if (e.label === '' || e.label === undefined) {
+        const { label, ...rest } = e;
+        return rest;
+      }
+      return e;
+    }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Apply proximity-target CSS class to proximity node
   useEffect(() => {
     setNodes(ns => ns.map(n => {
@@ -253,7 +271,7 @@ export default function Canvas({
       type:      et,
       animated:  anim,
       markerEnd: marker,
-      label:     '',
+      data:      { label: '' },
       style: {
         stroke:      edgeColor(strength),
         strokeWidth: edgeWidth(strength),
@@ -364,36 +382,13 @@ export default function Canvas({
         newEdges.push(makeEdge(anchorId, ctxId, item.connectionStrength));
       });
 
-      // Group frame
-      const groupId    = uuidv4();
-      const allMembers = [anchor.position, ...positions];
-      const bounds     = computeGroupBounds(
-        allMembers.map((p, i) => ({ position: p, type: i === 0 ? 'anchorNode' : 'contextNode', measured: null }))
-      );
-      const groupNode = {
-        id:         groupId,
-        type:       'groupFrame',
-        position:   { x: bounds.x, y: bounds.y },
-        style:      { width: bounds.width, height: bounds.height },
-        selectable: false,
-        draggable:  false,
-        zIndex:     -1,
-        data: {
-          label:            anchor.data.title,
-          memberIds:        [anchorId, ...contextNodeIds],
-          collapsed:        false,
-          onToggleCollapse: () => toggleGroupCollapse(groupId),
-        },
-      };
-
       setNodes(ns => [
-        groupNode,
         ...ns.map(n =>
           n.id === anchorId
-            ? { ...n, data: { ...n.data, loading: false, contextNodes: contextNodeIds, groupId, inGroup: true } }
+            ? { ...n, data: { ...n.data, loading: false, contextNodes: contextNodeIds } }
             : n
         ),
-        ...newNodes.map(n => ({ ...n, data: { ...n.data, inGroup: true } })),
+        ...newNodes,
       ]);
       setEdges(es => [...es, ...newEdges]);
 
@@ -477,6 +472,50 @@ export default function Canvas({
         return n;
       });
     });
+  }
+
+  // ── Group / Ungroup selected nodes ───────────────────────────────────────
+  function groupSelectedNodes() {
+    const sel = nodesRef.current.filter(n => n.selected && n.type !== 'groupFrame');
+    if (sel.length < 2) return;
+    const groupId   = uuidv4();
+    const memberIds = sel.map(n => n.id);
+    const bounds    = computeGroupBounds(sel);
+    const anchor    = sel.find(n => n.type === 'anchorNode');
+    const groupNode = {
+      id:         groupId,
+      type:       'groupFrame',
+      position:   { x: bounds.x, y: bounds.y },
+      style:      { width: bounds.width, height: bounds.height },
+      selectable: false,
+      draggable:  false,
+      zIndex:     -1,
+      data: {
+        label:            anchor?.data?.title ?? '',
+        memberIds,
+        collapsed:        false,
+        onToggleCollapse: () => toggleGroupCollapse(groupId),
+      },
+    };
+    setNodes(ns => [
+      groupNode,
+      ...ns.map(n => memberIds.includes(n.id) ? { ...n, data: { ...n.data, inGroup: true } } : n),
+    ]);
+  }
+
+  function ungroupSelected() {
+    const selIds        = new Set(nodesRef.current.filter(n => n.selected).map(n => n.id));
+    const groupsToRemove = nodesRef.current.filter(n =>
+      n.type === 'groupFrame' &&
+      (selIds.has(n.id) || (n.data.memberIds ?? []).some(id => selIds.has(id)))
+    );
+    if (groupsToRemove.length === 0) return;
+    const removeGroupIds   = new Set(groupsToRemove.map(g => g.id));
+    const unGroupMemberIds = new Set(groupsToRemove.flatMap(g => g.data.memberIds ?? []));
+    setNodes(ns => ns
+      .filter(n => !removeGroupIds.has(n.id))
+      .map(n => unGroupMemberIds.has(n.id) ? { ...n, data: { ...n.data, inGroup: false } } : n)
+    );
   }
 
   // ── Context menu ─────────────────────────────────────────────────────────
@@ -619,8 +658,10 @@ export default function Canvas({
       };
     })]);
   }
-  copySelectedRef.current = copySelected;
-  pasteNodesRef.current   = pasteNodes;
+  copySelectedRef.current       = copySelected;
+  pasteNodesRef.current         = pasteNodes;
+  groupSelectedNodesRef.current = groupSelectedNodes;
+  ungroupSelectedRef.current    = ungroupSelected;
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
   useEffect(() => {
@@ -628,6 +669,8 @@ export default function Canvas({
       const meta = e.metaKey || e.ctrlKey;
       if (meta && e.key === 'c') { e.preventDefault(); copySelectedRef.current?.(); }
       if (meta && e.key === 'v') { e.preventDefault(); pasteNodesRef.current?.(); }
+      if (meta && !e.shiftKey && e.key === 'g') { e.preventDefault(); groupSelectedNodesRef.current?.(); }
+      if (meta &&  e.shiftKey && e.key === 'G') { e.preventDefault(); ungroupSelectedRef.current?.(); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -666,38 +709,67 @@ export default function Canvas({
     setEdges(es => es.map(e => ({ ...e, animated: anim })));
   }
 
-  // ── Edge label editing ───────────────────────────────────────────────────
+  // ── Edge label editing (inline, no modal) ───────────────────────────────
   function onEdgeDoubleClick(e, edge) {
     e.stopPropagation();
-    setEditingEdge({ id: edge.id, label: edge.label ?? '' });
+    // Ensure the edge has a data.label field before editing
+    if (!edge.data?.label && edge.data?.label !== '') {
+      setEdges(es => es.map(e2 => e2.id === edge.id ? { ...e2, data: { ...e2.data, label: '' } } : e2));
+    }
+    setEditingEdge({ id: edge.id, label: edge.data?.label ?? '' });
   }
   function saveEdgeLabel(label) {
     if (!editingEdge) return;
+    const trimmed = label.trim();
     setEdges(es => es.map(e =>
-      e.id === editingEdge.id ? { ...e, label } : e
+      e.id === editingEdge.id ? { ...e, data: { ...e.data, label: trimmed || undefined } } : e
     ));
     setEditingEdge(null);
   }
 
-  // ── Edge label renderer for non-floating edges ──────────────────────────
-  // Render labels on standard edges via EdgeLabelRenderer
+  // ── Edge label renderer — inline editable, all edge types ───────────────
   function EdgeLabels() {
+    // Show edges that have a real label, or the one currently being edited
+    const visible = edges.filter(e => e.data?.label || editingEdge?.id === e.id);
     return (
       <EdgeLabelRenderer>
-        {edges.filter(e => e.label && e.type !== 'floating').map(edge => {
-          // Find approximate midpoint from source/target positions
+        {visible.map(edge => {
           const src = nodesRef.current.find(n => n.id === edge.source);
           const tgt = nodesRef.current.find(n => n.id === edge.target);
           if (!src || !tgt) return null;
           const x = (src.position.x + (src.measured?.width ?? 200) / 2 + tgt.position.x + (tgt.measured?.width ?? 200) / 2) / 2;
           const y = (src.position.y + (src.measured?.height ?? 100) / 2 + tgt.position.y + (tgt.measured?.height ?? 100) / 2) / 2;
+          const isEditing = editingEdge?.id === edge.id;
           return (
             <div
               key={edge.id}
-              className="edge-label nodrag nopan"
+              className={`edge-label nodrag nopan${isEditing ? ' editing' : ''}`}
               style={{ transform: `translate(-50%,-50%) translate(${x}px,${y}px)` }}
             >
-              {edge.label}
+              {isEditing ? (
+                <input
+                  className="edge-label__input"
+                  autoFocus
+                  value={editingEdge.label}
+                  placeholder="Label…"
+                  onChange={ev => setEditingEdge(prev => prev ? { ...prev, label: ev.target.value } : null)}
+                  onBlur={() => saveEdgeLabel(editingEdge.label)}
+                  onKeyDown={ev => {
+                    if (ev.key === 'Enter')  { ev.stopPropagation(); saveEdgeLabel(editingEdge.label); }
+                    if (ev.key === 'Escape') { ev.stopPropagation(); setEditingEdge(null); }
+                  }}
+                  onClick={ev => ev.stopPropagation()}
+                />
+              ) : (
+                <span
+                  onDoubleClick={ev => {
+                    ev.stopPropagation();
+                    setEditingEdge({ id: edge.id, label: edge.data?.label ?? '' });
+                  }}
+                >
+                  {edge.data?.label}
+                </span>
+              )}
             </div>
           );
         })}
@@ -975,25 +1047,6 @@ export default function Canvas({
           value={addForm.body}
           onChange={e => setAddForm(f => ({ ...f, body: e.target.value }))}
           autoSize={{ minRows: 3, maxRows: 6 }}
-        />
-      </Modal>
-
-      {/* ── Edge label edit dialog ── */}
-      <Modal
-        title="Edge label"
-        open={!!editingEdge}
-        onCancel={() => setEditingEdge(null)}
-        onOk={() => saveEdgeLabel(editingEdge?.label ?? '')}
-        okText="Save"
-        width={320}
-        destroyOnHidden
-      >
-        <Input
-          value={editingEdge?.label ?? ''}
-          onChange={e => setEditingEdge(prev => prev ? { ...prev, label: e.target.value } : null)}
-          onPressEnter={() => saveEdgeLabel(editingEdge?.label ?? '')}
-          placeholder="Label this edge…"
-          autoFocus
         />
       </Modal>
 

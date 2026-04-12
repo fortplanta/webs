@@ -2,7 +2,7 @@
  * FloatingEdge — connects to the nearest point on each node's border
  * rather than fixed left/right handles. Supports labels + EdgeLabelRenderer.
  */
-import { useInternalNode, getBezierPath, EdgeLabelRenderer, BaseEdge } from '@xyflow/react';
+import { useInternalNode, getBezierPath, BaseEdge } from '@xyflow/react';
 
 /** Find where the line from node-center toward `targetCenter` exits the node's rect border */
 function getNodeBorderPoint(node, targetCenter) {
@@ -52,27 +52,13 @@ export default function FloatingEdge({
     targetY: tgtBorder.y,
   });
 
-  const displayLabel = label ?? data?.label;
-
   return (
-    <>
-      <BaseEdge
-        id={id}
-        path={edgePath}
-        style={style}
-        markerEnd={markerEnd}
-        markerStart={markerStart}
-      />
-      {displayLabel && (
-        <EdgeLabelRenderer>
-          <div
-            className="edge-label nodrag nopan"
-            style={{ transform: `translate(-50%,-50%) translate(${labelX}px,${labelY}px)` }}
-          >
-            {displayLabel}
-          </div>
-        </EdgeLabelRenderer>
-      )}
-    </>
+    <BaseEdge
+      id={id}
+      path={edgePath}
+      style={style}
+      markerEnd={markerEnd}
+      markerStart={markerStart}
+    />
   );
 }

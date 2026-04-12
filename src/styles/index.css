@@ -376,11 +376,14 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+  /* Span full card width so background masks shadow bleed + selection ring */
+  width: 100%;
+  box-sizing: border-box;
   font-size: 13px;
   letter-spacing: -0.01em;
   color: var(--color-accent);
   /* background set inline per-node — var(--color-bg) or var(--color-group-bg-effective) */
-  padding: 10px 2px;
+  padding: 8px 2px 10px;
   line-height: 1;
   z-index: 2;
   white-space: nowrap;
@@ -1251,8 +1254,28 @@ body {
   box-shadow: var(--shadow-node);
   white-space: nowrap;
   letter-spacing: -0.01em;
+  user-select: none;
 }
 .edge-label:hover { border-color: var(--color-accent-border); color: var(--color-accent); }
+.edge-label.editing {
+  border-color: var(--color-accent-border);
+  border-radius: var(--radius-sm);
+  padding: 0;
+}
+/* Inline input inside the edge label */
+.edge-label__input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba(240,239,232,0.85);
+  letter-spacing: -0.01em;
+  padding: 2px 8px;
+  width: 120px;
+  font-family: inherit;
+}
+.edge-label__input::placeholder { color: rgba(240,239,232,0.25); }
 
 /* ── MEDIA NODE ── */
 .media-node {
