@@ -377,19 +377,28 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  /* Span full card width so background masks shadow bleed + selection ring */
   width: 100%;
   box-sizing: border-box;
   font-size: 13px;
   letter-spacing: -0.01em;
   color: var(--color-accent);
-  /* background set inline per-node — var(--color-bg) or var(--color-group-bg-effective) */
-  padding: 8px 2px 10px;
+  /* No background — floats transparently above the card */
+  padding: 8px 4px 10px;
   line-height: 1;
-  z-index: 2;
-  white-space: nowrap;
-  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   font-weight: 400;
+  /* pointer-events enabled so tool buttons are clickable */
+}
+.node-label__text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 /* ── ANCHOR NODE ── */
@@ -679,88 +688,63 @@ body {
 }
 
 /* ── CLUSTER TOOL PANEL ── */
-.cluster-tools-tether {
-  position: absolute;
-  top: 50%;
-  left: 220px;
-  width: 14px;
-  height: 1px;
-  background: rgba(255,255,255,0.08);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
+/* ── CLUSTER TOOL STRIP (inline in label row) ── */
 .cluster-tools {
-  position: absolute;
-  top: 50%;
-  left: 234px;
-  transform: translateY(-50%);
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  z-index: 10;
+  flex-direction: row;
+  gap: 3px;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .cluster-tool-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  background: #1E1D1B;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 3px;
   cursor: pointer;
-  white-space: nowrap;
-  min-width: 110px;
-  transition: background 0.1s, border-color 0.12s;
+  color: rgba(240,239,232,0.35);
+  transition: color 0.1s, background 0.1s, border-color 0.12s;
   font-family: var(--font-body, "Neue Haas Unica", "Helvetica Neue", Arial, sans-serif);
   font-weight: 400;
 }
 .cluster-tool-btn:hover {
-  background: #2A2927;
+  color: rgba(240,239,232,0.85);
+  background: rgba(255,255,255,0.08);
   border-color: rgba(255,255,255,0.18);
 }
 .cluster-tool-btn.active {
-  background: #2A2927;
-  border-color: rgba(255,255,255,0.2);
+  color: rgba(240,239,232,0.9);
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.22);
 }
 
-.cluster-tool-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  opacity: 0.45;
+/* Pivot button — amber tint */
+.cluster-tool-btn--pivot {
+  color: rgba(255,171,43,0.45);
+  border-color: rgba(255,171,43,0.12);
 }
-.cluster-tool-btn:hover .cluster-tool-icon,
-.cluster-tool-btn.active .cluster-tool-icon {
-  opacity: 0.85;
+.cluster-tool-btn--pivot:hover {
+  color: #FFAB2B;
+  background: rgba(255,171,43,0.08);
+  border-color: rgba(255,171,43,0.35);
 }
-
-.cluster-tool-label {
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(240,239,232,0.42);
-  font-weight: 400;
+.cluster-tool-btn--pivot.active {
+  color: #FFAB2B;
+  background: rgba(255,171,43,0.10);
+  border-color: rgba(255,171,43,0.45);
 }
-.cluster-tool-btn:hover .cluster-tool-label,
-.cluster-tool-btn.active .cluster-tool-label {
-  color: rgba(240,239,232,0.85);
-}
-
-/* Pivot button is visually distinct — amber */
-.cluster-tool-btn--pivot .cluster-tool-icon { opacity: 0.5; }
-.cluster-tool-btn--pivot .cluster-tool-label { color: rgba(255,171,43,0.55); }
-.cluster-tool-btn--pivot:hover .cluster-tool-label,
-.cluster-tool-btn--pivot.active .cluster-tool-label { color: #FFAB2B; }
-.cluster-tool-btn--pivot:hover { border-color: rgba(255,171,43,0.3); }
-.cluster-tool-btn--pivot.active { border-color: rgba(255,171,43,0.5); }
 
 /* Add note input */
 .cluster-note-input {
   position: absolute;
-  top: calc(50% + 36px);
-  left: 234px;
+  top: 36px; /* just below label row */
+  right: 0;
   width: 180px;
   background: #1E1D1B;
   border: 1px solid rgba(255,171,43,0.25);
@@ -814,9 +798,8 @@ body {
 /* ── FACT CHECK PANEL ── */
 .cluster-fact-panel {
   position: absolute;
-  top: 50%;
-  left: 354px;
-  transform: translateY(-50%);
+  top: 36px; /* just below label row */
+  right: 0;
   width: 190px;
   background: #1E1D1B;
   border: 1px solid rgba(255,255,255,0.12);
