@@ -60,8 +60,8 @@ function rectEdgeDist(ax, ay, aw, ah, bx, by, bw, bh) {
 const PROXIMITY_THRESHOLD = 80; // px, flow coordinates
 
 // ── Stub satellite data for Phase 1 testing ──────────────────────────────────
-// Hardcoded on technology + market nodes so the cluster system can be tested
-// before the AI pipeline returns a satellites array. Remove in Phase 5.
+// Applied to all context nodes so the cluster system is testable across every
+// category before the AI pipeline returns a satellites array. Remove in Phase 5.
 const STUB_SATELLITES = {
   technology: [
     { id: 'sat_tech_1', type: 'quote',     x: 0, y: 0, content: { type: 'quote',     text: 'The models are changing the economics of scale.', attribution: 'Wired, 2024' } },
@@ -72,6 +72,66 @@ const STUB_SATELLITES = {
     { id: 'sat_mkt_1', type: 'stat',       x: 0, y: 0, content: { type: 'stat',      value: '$2.3T', label: 'estimated market value' } },
     { id: 'sat_mkt_2', type: 'datapoint',  x: 0, y: 0, content: { type: 'datapoint', value: '18%', unit: 'CAGR', context: 'Projected 5-year growth' } },
     { id: 'sat_mkt_3', type: 'source',     x: 0, y: 0, content: { type: 'source',    name: 'Reuters', domain: 'reuters.com' } },
+  ],
+  political: [
+    { id: 'sat_pol_1', type: 'quote',     x: 0, y: 0, content: { type: 'quote',     text: 'Power is never given — only redistributed.', attribution: 'Political Theory' } },
+    { id: 'sat_pol_2', type: 'stat',      x: 0, y: 0, content: { type: 'stat',      value: '62%', label: 'policy outcomes lobbied' } },
+    { id: 'sat_pol_3', type: 'concept',   x: 0, y: 0, content: { type: 'concept',   label: 'Regulatory capture', description: 'When regulators serve the regulated' } },
+  ],
+  supplyChain: [
+    { id: 'sat_sc_1', type: 'stat',       x: 0, y: 0, content: { type: 'stat',      value: '94%', label: 'Fortune 500s impacted 2020–21' } },
+    { id: 'sat_sc_2', type: 'datapoint',  x: 0, y: 0, content: { type: 'datapoint', value: '14', unit: 'wks', context: 'Average disruption window' } },
+    { id: 'sat_sc_3', type: 'concept',    x: 0, y: 0, content: { type: 'concept',   label: 'Just-in-time', description: 'Lean efficiency vs. resilience tradeoff' } },
+  ],
+  people: [
+    { id: 'sat_ppl_1', type: 'quote',     x: 0, y: 0, content: { type: 'quote',     text: 'The person who frames the problem wins the argument.', attribution: 'Influence studies' } },
+    { id: 'sat_ppl_2', type: 'concept',   x: 0, y: 0, content: { type: 'concept',   label: 'Network centrality', description: 'Who connects whom determines flow of ideas' } },
+    { id: 'sat_ppl_3', type: 'stat',      x: 0, y: 0, content: { type: 'stat',      value: '150', label: 'Dunbar number' } },
+  ],
+  law: [
+    { id: 'sat_law_1', type: 'concept',   x: 0, y: 0, content: { type: 'concept',   label: 'Precedent', description: 'How past rulings constrain future decisions' } },
+    { id: 'sat_law_2', type: 'stat',      x: 0, y: 0, content: { type: 'stat',      value: '3–7yr', label: 'avg regulatory lag' } },
+    { id: 'sat_law_3', type: 'source',    x: 0, y: 0, content: { type: 'source',    name: 'Law Review', domain: 'lawreview.org' } },
+  ],
+  business: [
+    { id: 'sat_biz_1', type: 'stat',      x: 0, y: 0, content: { type: 'stat',      value: '90%', label: 'startups fail within 10yr' } },
+    { id: 'sat_biz_2', type: 'concept',   x: 0, y: 0, content: { type: 'concept',   label: 'Unit economics', description: 'Revenue vs. cost per customer' } },
+    { id: 'sat_biz_3', type: 'datapoint', x: 0, y: 0, content: { type: 'datapoint', value: '40%', unit: 'margin', context: 'Software gross margin benchmark' } },
+  ],
+  conflict: [
+    { id: 'sat_con_1', type: 'quote',     x: 0, y: 0, content: { type: 'quote',     text: 'Conflict reveals what consensus was suppressing.', attribution: 'Sociology' } },
+    { id: 'sat_con_2', type: 'concept',   x: 0, y: 0, content: { type: 'concept',   label: 'Zero-sum framing', description: 'Conflict escalates when gains are seen as fixed' } },
+    { id: 'sat_con_3', type: 'stat',      x: 0, y: 0, content: { type: 'stat',      value: '↑38%', label: 'polarisation index 2010–24' } },
+  ],
+  companies: [
+    { id: 'sat_co_1', type: 'stat',       x: 0, y: 0, content: { type: 'stat',      value: '5', label: 'companies control 80% of market' } },
+    { id: 'sat_co_2', type: 'source',     x: 0, y: 0, content: { type: 'source',    name: 'Bloomberg', domain: 'bloomberg.com' } },
+    { id: 'sat_co_3', type: 'concept',    x: 0, y: 0, content: { type: 'concept',   label: 'Platform lock-in', description: 'Network effects as competitive moat' } },
+  ],
+  ideology: [
+    { id: 'sat_ideo_1', type: 'quote',    x: 0, y: 0, content: { type: 'quote',     text: 'The most powerful ideas are the ones nobody notices.', attribution: 'Cultural theory' } },
+    { id: 'sat_ideo_2', type: 'concept',  x: 0, y: 0, content: { type: 'concept',   label: 'Overton window', description: 'The range of politically acceptable ideas' } },
+    { id: 'sat_ideo_3', type: 'stat',     x: 0, y: 0, content: { type: 'stat',      value: '71%', label: 'beliefs formed before age 18' } },
+  ],
+  geography: [
+    { id: 'sat_geo_1', type: 'concept',   x: 0, y: 0, content: { type: 'concept',   label: 'Path dependency', description: 'History shapes what geography allows' } },
+    { id: 'sat_geo_2', type: 'stat',      x: 0, y: 0, content: { type: 'stat',      value: '3', label: 'river deltas feed half of humanity' } },
+    { id: 'sat_geo_3', type: 'datapoint', x: 0, y: 0, content: { type: 'datapoint', value: '80%', unit: 'GDP', context: 'Generated within 50km of coastlines' } },
+  ],
+  culture: [
+    { id: 'sat_cul_1', type: 'quote',     x: 0, y: 0, content: { type: 'quote',     text: 'Art is the early warning system of civilisation.', attribution: 'McLuhan' } },
+    { id: 'sat_cul_2', type: 'concept',   x: 0, y: 0, content: { type: 'concept',   label: 'Countercultural lag', description: 'Mainstream absorbs subculture ~7yr later' } },
+    { id: 'sat_cul_3', type: 'stat',      x: 0, y: 0, content: { type: 'stat',      value: '6yr', label: 'avg trend-to-mass cycle' } },
+  ],
+  science: [
+    { id: 'sat_sci_1', type: 'quote',     x: 0, y: 0, content: { type: 'quote',     text: 'Science advances one funeral at a time.', attribution: 'Planck' } },
+    { id: 'sat_sci_2', type: 'concept',   x: 0, y: 0, content: { type: 'concept',   label: 'Paradigm shift', description: 'Kuhn model of scientific revolution' } },
+    { id: 'sat_sci_3', type: 'stat',      x: 0, y: 0, content: { type: 'stat',      value: '50yr', label: 'avg idea-to-application lag' } },
+  ],
+  media: [
+    { id: 'sat_med_1', type: 'quote',     x: 0, y: 0, content: { type: 'quote',     text: 'The medium is the message.', attribution: 'McLuhan, 1964' } },
+    { id: 'sat_med_2', type: 'stat',      x: 0, y: 0, content: { type: 'stat',      value: '8s', label: 'average attention span 2024' } },
+    { id: 'sat_med_3', type: 'concept',   x: 0, y: 0, content: { type: 'concept',   label: 'Agenda-setting', description: 'Media decides what we think about, not what we think' } },
   ],
 };
 
