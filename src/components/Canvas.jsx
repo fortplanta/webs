@@ -21,6 +21,7 @@ import AnchorNode      from './nodes/AnchorNode';
 import ContextNode     from './nodes/ContextNode';
 import GroupFrameNode  from './nodes/GroupFrameNode';
 import MediaNode       from './nodes/MediaNode';
+import PivotInputNode  from './nodes/PivotInputNode';
 import FloatingEdge    from './edges/FloatingEdge';
 import ProximityEdge   from './edges/ProximityEdge';
 import CSSInspector    from './CSSInspector';
@@ -36,11 +37,12 @@ import heic2any from 'heic2any';
 const { Text } = Typography;
 
 const nodeTypes = {
-  anchorNode:  AnchorNode,
-  contextNode: ContextNode,
-  groupFrame:  GroupFrameNode,
-  mediaNode:   MediaNode,
-  stickyNode:  StickyNode,
+  anchorNode:     AnchorNode,
+  contextNode:    ContextNode,
+  groupFrame:     GroupFrameNode,
+  mediaNode:      MediaNode,
+  stickyNode:     StickyNode,
+  pivotInputNode: PivotInputNode,
 };
 
 const edgeTypes = {
@@ -56,6 +58,22 @@ function rectEdgeDist(ax, ay, aw, ah, bx, by, bw, bh) {
 }
 
 const PROXIMITY_THRESHOLD = 80; // px, flow coordinates
+
+// ── Stub satellite data for Phase 1 testing ──────────────────────────────────
+// Hardcoded on technology + market nodes so the cluster system can be tested
+// before the AI pipeline returns a satellites array. Remove in Phase 5.
+const STUB_SATELLITES = {
+  technology: [
+    { id: 'sat_tech_1', type: 'quote',     x: 0, y: 0, content: { type: 'quote',     text: 'The models are changing the economics of scale.', attribution: 'Wired, 2024' } },
+    { id: 'sat_tech_2', type: 'stat',      x: 0, y: 0, content: { type: 'stat',      value: '73%', label: 'of creative roles affected' } },
+    { id: 'sat_tech_3', type: 'concept',   x: 0, y: 0, content: { type: 'concept',   label: 'Attention economy', description: 'Competing for finite human attention' } },
+  ],
+  market: [
+    { id: 'sat_mkt_1', type: 'stat',       x: 0, y: 0, content: { type: 'stat',      value: '$2.3T', label: 'estimated market value' } },
+    { id: 'sat_mkt_2', type: 'datapoint',  x: 0, y: 0, content: { type: 'datapoint', value: '18%', unit: 'CAGR', context: 'Projected 5-year growth' } },
+    { id: 'sat_mkt_3', type: 'source',     x: 0, y: 0, content: { type: 'source',    name: 'Reuters', domain: 'reuters.com' } },
+  ],
+};
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
 function loadCanvas() {
@@ -108,16 +126,22 @@ function computeGroupBounds(memberNodes, padding = 56) {
 
 export default function Canvas({
   apiKey, onCardsGenerated, importedState,
-  activePanel, onPanelClose, onRegisterAddNote, onUsageChange,
+  activePanel, onPanelClose, onRegisterAddNote, onUsageChange, onRegisterClearCanvas,
 }) {
   const saved = importedState || loadCanvas();
-  const [nodes, setNodes, onNodesChange] = useNodesState(saved.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(saved.edges);
+  // Strip any stale pivot state that may have been persisted
+  const cleanNodes = (saved.nodes || []).filter(n => n.id !== '__pivot_target__');
+  const cleanEdges = (saved.edges || []).filter(e => !e.id?.startsWith('pivot-preview-'));
+  const [nodes, setNodes, onNodesChange] = useNodesState(cleanNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(cleanEdges);
 
   const [contextMenu, setContextMenu]   = useState(null);
   const [addDialog, setAddDialog]       = useState(false);
   const [addForm, setAddForm]           = useState({ title: '', body: '', flowPos: null });
   const [usage, setUsage]               = useState(getUsage);
+
+  // Pivot idea state
+  const [isPivoting, setIsPivoting]     = useState(false);
 
   // Edge / canvas config
   const [edgeType,     setEdgeType]     = useState('smoothstep');
@@ -151,6 +175,11 @@ export default function Canvas({
   const expandNodeRef         = useRef(null);
   const openContextMenuRef    = useRef(null);
   const revealContextNodeRef  = useRef(null);
+  const toggleClusterRef      = useRef(null);
+  const pivotStartRef         = useRef(null);
+  const pivotCommitRef        = useRef(null);
+  const pivotCancelRef        = useRef(null);
+  const pivotDismissRef       = useRef(null); // callback from ContextNode to reset its activeTool
   const edgeTypeRef           = useRef(edgeType);
   const markerTypeRef         = useRef(markerType);
   const animateEdgesRef       = useRef(animateEdges);
@@ -176,6 +205,14 @@ export default function Canvas({
       setAddDialog(true);
     });
   }, [onRegisterAddNote]);
+
+  // Register clear canvas trigger for sidebar (new/close session)
+  useEffect(() => {
+    onRegisterClearCanvas?.(() => {
+      setNodes([]);
+      setEdges([]);
+    });
+  }, [onRegisterClearCanvas]);
 
   // Click-away to close active panel
   useEffect(() => {
@@ -290,9 +327,17 @@ export default function Canvas({
   }
   function makeContextCallbacks(id, anchorId, item) {
     return {
-      onReveal:      () => revealContextNodeRef.current?.(id, anchorId, item),
-      onContextMenu: (e) => { e.preventDefault(); openContextMenuRef.current?.(e, id, 'contextNode'); },
-      onToggleStar:  () => toggleStarRef.current?.(id),
+      onReveal:              () => revealContextNodeRef.current?.(id, anchorId, item),
+      onContextMenu:         (e) => { e.preventDefault(); openContextMenuRef.current?.(e, id, 'contextNode'); },
+      onToggleStar:          () => toggleStarRef.current?.(id),
+      onToggleCluster:       () => toggleClusterRef.current?.(id),
+      onAddNoteSatellite:    (sat) => {
+        setNodes(ns => ns.map(n =>
+          n.id === id ? { ...n, data: { ...n.data, satellites: [...(n.data.satellites ?? []), sat] } } : n
+        ));
+      },
+      onPivotStart:          (onDismiss) => pivotStartRef.current?.(id, onDismiss),
+      onPivotCancel:         ()          => pivotCancelRef.current?.(id),
     };
   }
 
@@ -376,6 +421,8 @@ export default function Canvas({
             starred:            false,
             termDefinitions:    {},
             nodeImage:          null,
+            satellites:         STUB_SATELLITES[item.key] ?? [],
+            clusterExpanded:    false,
             ...makeContextCallbacks(ctxId, anchorId, item),
           },
         });
@@ -457,6 +504,115 @@ export default function Canvas({
       n.id === nodeId ? { ...n, data: { ...n.data, starred: !n.data.starred } } : n
     ));
     setContextMenu(null);
+  }
+
+  // ── Toggle cluster expansion ─────────────────────────────────────────────
+  function toggleCluster(nodeId) {
+    setNodes(ns => ns.map(n =>
+      n.id === nodeId ? { ...n, data: { ...n.data, clusterExpanded: !n.data.clusterExpanded } } : n
+    ));
+  }
+
+  // ── Pivot idea ───────────────────────────────────────────────────────────
+  function pivotStart(nodeId, onDismiss) {
+    const node = nodesRef.current.find(n => n.id === nodeId);
+    if (!node) return;
+
+    pivotDismissRef.current  = onDismiss;
+
+    setIsPivoting(true);
+
+    const targetPos = { x: node.position.x + 340, y: node.position.y };
+
+    // Temp pivot input node — removed on commit / cancel
+    setNodes(ns => [...ns, {
+      id:       '__pivot_target__',
+      type:     'pivotInputNode',
+      position: targetPos,
+      data: {
+        onCommit: (topic) => pivotCommitRef.current?.(nodeId, targetPos, topic),
+        onCancel: ()      => pivotCancelRef.current?.(nodeId),
+      },
+    }]);
+
+    // Amber dashed preview edge
+    setEdges(es => [...es, {
+      id:       `pivot-preview-${nodeId}`,
+      source:   nodeId,
+      target:   '__pivot_target__',
+      type:     'straight',
+      animated: false,
+      style: {
+        stroke:          '#FFAB2B',
+        strokeWidth:     1,
+        strokeDasharray: '4 5',
+        opacity:         0.65,
+      },
+      markerEnd: {
+        type:   MarkerType.Arrow,
+        color:  '#FFAB2B',
+        width:  12,
+        height: 12,
+      },
+    }]);
+  }
+
+  function pivotCommit(sourceNodeId, targetPos, topic) {
+    // Remove temp node and preview edge
+    setNodes(ns => ns.filter(n => n.id !== '__pivot_target__'));
+    setEdges(es => es.filter(e => e.id !== `pivot-preview-${sourceNodeId}`));
+
+    // Create real anchor node at the pivot position
+    const newId  = uuidv4();
+    const newNode = {
+      id:       newId,
+      type:     'anchorNode',
+      position: targetPos,
+      data: {
+        title:        topic,
+        body:         '',
+        contextNodes: [],
+        loading:      false,
+        starred:      false,
+        ...makeAnchorCallbacks(newId),
+      },
+    };
+
+    // Permanent amber dashed edge
+    const pivotEdge = {
+      id:       `pivot-${sourceNodeId}->${newId}`,
+      source:   sourceNodeId,
+      target:   newId,
+      type:     'straight',
+      animated: false,
+      style: {
+        stroke:          '#FFAB2B',
+        strokeWidth:     1,
+        strokeDasharray: '4 5',
+        opacity:         0.65,
+      },
+      markerEnd: {
+        type:   MarkerType.Arrow,
+        color:  '#FFAB2B',
+        width:  12,
+        height: 12,
+      },
+    };
+
+    setNodes(ns => [...ns, newNode]);
+    setEdges(es => [...es, pivotEdge]);
+
+    setIsPivoting(false);
+    pivotDismissRef.current?.();
+    pivotDismissRef.current = null;
+  }
+
+  function pivotCancel(sourceNodeId) {
+    setNodes(ns => ns.filter(n => n.id !== '__pivot_target__'));
+    setEdges(es => es.filter(e => e.id !== `pivot-preview-${sourceNodeId}`));
+    setIsPivoting(false);
+    pivotDismissRef.current?.();
+    pivotDismissRef.current = null;
   }
 
   // ── Toggle group collapse ────────────────────────────────────────────────
@@ -835,6 +991,10 @@ export default function Canvas({
   expandNodeRef.current        = expandNode;
   openContextMenuRef.current   = openContextMenu;
   revealContextNodeRef.current = revealContextNode;
+  toggleClusterRef.current     = toggleCluster;
+  pivotStartRef.current        = pivotStart;
+  pivotCommitRef.current       = pivotCommit;
+  pivotCancelRef.current       = pivotCancel;
 
   const selectedNodes = nodes.filter(n => n.selected && n.type !== 'groupFrame');
 
@@ -881,7 +1041,7 @@ export default function Canvas({
 
   return (
     <div
-      className="canvas-wrapper"
+      className={`canvas-wrapper${isPivoting ? ' canvas--pivoting' : ''}`}
       ref={reactFlowWrapper}
       data-tool={toolMode}
       onDrop={onDrop}

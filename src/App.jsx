@@ -31,7 +31,9 @@ export default function App() {
   const [importedState, setImportedState] = useState(null);
   const [usageCount, setUsageCount]   = useState(getUsageCount);
   const [activePanel, setActivePanel] = useState(null);
+  const [sessionConfirm, setSessionConfirm] = useState(null); // 'new' | 'close' | null
   const addNoteRef = useRef(null);
+  const clearCanvasRef = useRef(null);
 
   function unlock() {
     localStorage.setItem(AUTH_KEY, 'true');
@@ -93,17 +95,44 @@ export default function App() {
     input.click();
   }
 
+  // ── New session ────────────────────────────────────────────────────────
+  function startNewSession() {
+    clearCanvasRef.current?.();
+    setSessionConfirm(null);
+    setImportedState(null); // reset imported state so empty canvas on next load
+  }
+
+  function saveAndNewSession() {
+    exportSession();
+    startNewSession();
+  }
+
+  // ── Close session ──────────────────────────────────────────────────────
+  function closeSession() {
+    clearCanvasRef.current?.();
+    setSessionConfirm(null);
+    setImportedState(null);
+  }
+
+  function saveAndCloseSession() {
+    exportSession();
+    closeSession();
+  }
+
   // ── Keyboard shortcuts ──────────────────────────────────────────────────
   const exportRef = useRef(null);
   const importRef = useRef(null);
+  const newSessionRef = useRef(null);
   exportRef.current = exportSession;
   importRef.current = importSession;
+  newSessionRef.current = () => setSessionConfirm('new');
 
   useEffect(() => {
     function onKey(e) {
       const meta = e.metaKey || e.ctrlKey;
       if (meta && e.key === 's') { e.preventDefault(); exportRef.current?.(); }
       if (meta && e.key === 'o') { e.preventDefault(); importRef.current?.(); }
+      if (meta && e.key === 'n') { e.preventDefault(); newSessionRef.current?.(); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -166,19 +195,61 @@ export default function App() {
         )}
 
         {/* Session */}
-        <div className="sidebar-section">
-          <span className="sidebar-label">session</span>
-          <button className="sidebar-item" onClick={exportSession} title="save session (⌘S)">
-            <span className="sidebar-item__icon" aria-hidden="true">↓</span>
-            save session
-            <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘S</kbd>
-          </button>
-          <button className="sidebar-item" onClick={importSession} title="open session (⌘O)">
-            <span className="sidebar-item__icon" aria-hidden="true">↑</span>
-            open session
-            <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘O</kbd>
-          </button>
-        </div>
+        {sessionConfirm ? (
+          <div className="session-confirm">
+            <div className="session-confirm__text">
+              {sessionConfirm === 'new' && (
+                <>
+                  Start new session?<br />
+                  Current session will be lost if not saved.
+                </>
+              )}
+              {sessionConfirm === 'close' && (
+                <>
+                  Close session?<br />
+                  Unsaved changes will be lost.
+                </>
+              )}
+            </div>
+            <div className="session-confirm__actions">
+              {sessionConfirm === 'new' && (
+                <>
+                  <button className="session-confirm__btn" onClick={saveAndNewSession}>Save first</button>
+                  <button className="session-confirm__btn session-confirm__btn--danger" onClick={startNewSession}>Start fresh</button>
+                </>
+              )}
+              {sessionConfirm === 'close' && (
+                <>
+                  <button className="session-confirm__btn" onClick={saveAndCloseSession}>Save & close</button>
+                  <button className="session-confirm__btn session-confirm__btn--danger" onClick={closeSession}>Close anyway</button>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="sidebar-section">
+            <span className="sidebar-label">session</span>
+            <button className="sidebar-item" onClick={exportSession} title="save session (⌘S)">
+              <span className="sidebar-item__icon" aria-hidden="true">↓</span>
+              save session
+              <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘S</kbd>
+            </button>
+            <button className="sidebar-item" onClick={importSession} title="open session (⌘O)">
+              <span className="sidebar-item__icon" aria-hidden="true">↑</span>
+              open session
+              <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘O</kbd>
+            </button>
+            <button className="sidebar-item" onClick={() => setSessionConfirm('new')} title="new session (⌘N)">
+              <span className="sidebar-item__icon" aria-hidden="true">◆</span>
+              new session
+              <kbd className="sidebar-item__shortcut" aria-hidden="true">⌘N</kbd>
+            </button>
+            <button className="sidebar-item" onClick={() => setSessionConfirm('close')} title="close session">
+              <span className="sidebar-item__icon" aria-hidden="true">⊘</span>
+              close session
+            </button>
+          </div>
+        )}
 
         {/* View panels */}
         <div className="sidebar-section">
@@ -234,6 +305,7 @@ export default function App() {
               onPanelClose={() => setActivePanel(null)}
               onRegisterAddNote={fn => { addNoteRef.current = fn; }}
               onUsageChange={setUsageCount}
+              onRegisterClearCanvas={fn => { clearCanvasRef.current = fn; }}
             />
           ) : (
             <RememberMode newCards={newCards} />
