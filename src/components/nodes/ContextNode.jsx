@@ -6,10 +6,13 @@ import SatelliteCard from './SatelliteCard';
 import ClusterTethers from './ClusterTethers';
 
 // ── Scatter satellites into a ring around the primary card ───────────────────
-const CARD_CENTER_X = 110;
-const CARD_CENTER_Y = 110;
-const MIN_RADIUS    = 140;
-const MAX_RADIUS    = 200;
+// The revealed card is ~320px wide and 400–550px tall (label + image + body).
+// Center point is tuned to the visual mid-point of a typical revealed card.
+// Radius is large enough to clear all four edges with comfortable margin.
+const CARD_CENTER_X = 160; // half of 320px node width
+const CARD_CENTER_Y = 260; // approx mid of label(34) + image(168) + body(~220)
+const MIN_RADIUS    = 290;
+const MAX_RADIUS    = 380;
 
 function scatterSatellites(count) {
   const positions = [];
@@ -194,6 +197,16 @@ const ContextNode = memo(({ data, selected, isConnectable }) => {
         </span>
       )}
 
+      {/* Cluster layer — rendered BEFORE the primary card so the card paints on top */}
+      {revealed && satellitesWithPos.length > 0 && (
+        <div className="cluster-layer">
+          <ClusterTethers primaryCenter={primaryCenter} satellites={satellitesWithPos} />
+          {satellitesWithPos.map(sat => (
+            <SatelliteCard key={sat.id} satellite={sat} x={sat.renderX} y={sat.renderY} />
+          ))}
+        </div>
+      )}
+
       {/* Primary card */}
       <div
         className={`context-node${revealed ? ' revealed' : ' locked'}${selected ? ' selected' : ''}${isStarred ? ' starred' : ''}${revealed && data.nodeImage ? ' has-image' : ''}`}
@@ -227,16 +240,6 @@ const ContextNode = memo(({ data, selected, isConnectable }) => {
           </div>
         )}
       </div>
-
-      {/* Cluster layer — auto-shown when revealed */}
-      {revealed && satellitesWithPos.length > 0 && (
-        <div className="cluster-layer">
-          <ClusterTethers primaryCenter={primaryCenter} satellites={satellitesWithPos} />
-          {satellitesWithPos.map(sat => (
-            <SatelliteCard key={sat.id} satellite={sat} x={sat.renderX} y={sat.renderY} />
-          ))}
-        </div>
-      )}
 
       {/* Sub-panels — anchored below the label row, right-aligned */}
       {activeTool === 'note' && (
