@@ -42,65 +42,98 @@ with blur) are wrong by default in this project.
 
 Teenage Engineering / Swiss typography / Dieter Rams.
 
-- Single font weight (400) everywhere. No bold in the node/card system.
-- Hierarchy via scale and opacity only.
-- Dark surface. Near-monochrome. One accent colour.
-- Sharp or minimal corner radius. No decorative effects.
-- Dense, tight typography. Tracking slightly negative on UI text.
+- Font weight 400 everywhere in node/card content. Weight 500 only for meta chrome (eyebrows, wordmark).
+- Hierarchy via scale, weight (400 vs 500), and opacity.
+- **Light canvas. White cards on light gray.** Color is semantic, not decorative.
+- No rounded corners. Sharp edges throughout. No decorative effects.
+- Dense, tight typography. Negative letter-spacing is non-negotiable.
+- Voice: lowercase, noun-phrases, no exclamation marks, no emoji.
 - If in doubt: remove rather than add.
 
 ---
 
-## Current design tokens (v1.1 — locked)
+## Current design tokens (v2.0 — Neurodive system, locked)
 
 These are the source of truth. Do not hardcode values that differ from these.
+Source: `.claude/skills/Neurodive Design System.zip` → `colors_and_type.css`
 
 ```css
 /* Canvas & surfaces */
---color-bg:           #161614;   /* main canvas */
---color-surface-2:    #1e1d1b;   /* sidebar */
---color-surface-3:    #242424;   /* nodes, cards */
+--canvas:        #F8F8F8;   /* main canvas — light gray */
+--canvas-dot:    #CBCBCB;   /* dot grid */
+--surface:       #FFFFFF;   /* cards / nodes */
+--surface-alt:   #EDEDED;   /* starting fragments, image placeholders */
+--surface-mute:  #F7F7F7;   /* dropdown body */
+--hairline:      rgb(229,231,235);
+--hairline-2:    rgb(243,244,246);
 
-/* Text */
---color-text:         #F0EFE8;
---color-text-dim:     rgba(240, 239, 232, 0.58);
---color-text-dimmer:  rgba(240, 239, 232, 0.28);
+/* Text — black on light */
+--fg:            #000000;
+--fg-strong:     #0F172A;
+--fg-2:          #475569;
+--fg-3:          #6B7280;
+--fg-4:          #ACACAC;
+--fg-invert:     #FFFFFF;
+--fg-mute:       #696969;
 
-/* Accent */
---color-focus:        #3c3c3c;   /* intentionally restrained — do not brighten */
---color-accent-border:#3c3c3c40;
+/* Category colors — semantic, never decorative */
+--cat-event:     #FF5500;   /* on-event:   white */
+--cat-works:     #FF007B;   /* on-works:   white */
+--cat-policy:    #E8FF4F;   /* on-policy:  black */
+--cat-concept:   #FFCC00;   /* on-concept: black */
+--cat-people:    #00FF88;   /* on-people:  black */
+--cat-media:     #53E8FF;   /* on-media:   black */
+--cat-source:    #F600FF;   /* on-source:  white */
+--cat-misc:      #22D3EE;   /* on-misc:    black */
+
+/* System signals */
+--signal-quote:     #0126DC;   /* cobalt — quote backdrop */
+--signal-highlight: #001EFF;   /* electric blue — highlight */
+--signal-danger:    #FF0207;   /* red — destructive */
 
 /* Typography */
---font-body:          "Neue Haas Unica", "Helvetica Neue", Arial, sans-serif;
---font-size-sm:       13px;
---font-size-base:     15px;
---line-height-base:   1.50;
---line-height-tight:  1.30;
---letter-spacing-ui:  -0.01em;
+--font-sans:     "Neue Haas Unica", "Inter", ui-sans-serif, sans-serif;
+--font-display:  "Neue Haas Unica", "Inter", sans-serif;
+--font-meta:     "Inter", "Neue Haas Unica", sans-serif;  /* buttons, eyebrows */
+--font-mono:     "Menlo", "SF Mono", ui-monospace, monospace;
 
-/* Category label */
---label-color:        #FFAB2B;
---label-bg:           #161614;
---label-font-size:    13px;
---label-pad-h:        2px;
---label-pad-v:        10px;
+/* Type scale (negative letter-spacing is non-negotiable) */
+--fs-display: 80px;  --ls-display: -0.045em;  --lh-display: 0.95;
+--fs-h1:      48px;  --ls-h1:      -0.052em;  --lh-h1:      1;
+--fs-h2:      30px;  --ls-h2:      -0.050em;  --lh-h2:      1.2;
+--fs-h3:      24px;  --ls-h3:      -0.050em;  --lh-h3:      1.333;
+--fs-h4:      20px;  --ls-h4:      -0.035em;  --lh-h4:      1.2;
+--fs-body:    16px;  --ls-body:    -0.031em;  --lh-body:    1.25;
+--fs-label:   20px;  --ls-label:   -0.035em;  --lh-label:   1.2;
+--fs-small:   14px;  --ls-small:   -0.028em;  --lh-small:   1;
+--fs-tag:     15px;  --ls-tag:     -0.050em;  --lh-tag:     1;
+--fs-code:    11px;  --ls-code:    0;          --lh-code:    1.4;
 
-/* Node body */
---node-width:         320px;
---node-pad-h:         15px;
---node-pad-v:         18px;
---node-radius:        5px;
---node-border-opacity:0.05;
---node-bg:            #242424;
---gap-title-more:     24px;
+/* Spacing — 4px base, 8px is the card-padding beat */
+--s-1:  4px;   --s-2:  8px;   --s-3: 12px;   --s-4: 16px;
+--s-5: 20px;   --s-6: 24px;   --s-8: 32px;   --s-10: 40px;
+--s-12: 48px;  --s-16: 64px;  --s-20: 80px;
 
-/* Expanded card */
---card-width:         321px;
---card-bg:            #242424;
---card-title-size:    15px;
---card-body-size:     15px;
---card-body-lh:       1.50;
---card-body-opacity:  0.58;
+/* Grid */
+--grid-dot:  16px;    /* dot grid spacing */
+--grid-col:  320px;   /* fragment / node column width */
+
+/* Borders & radii */
+--radius:       0;    /* NO rounded corners — this is the rule */
+--radius-soft:  4px;  /* ONLY for toolbar toggle buttons */
+--stroke:       1px solid var(--hairline);
+--stroke-soft:  1px solid var(--hairline-2);
+
+/* Shadows — hard, physical, short */
+--shadow-card:    2px 2px 14px 0 rgba(0,0,0,0.07);
+--shadow-toolbar: 0 4px 6px -2px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.10);
+--shadow-lift:    0 1px 2px 0 rgba(0,0,0,0.05);
+
+/* Motion — essentially none */
+--ease:      cubic-bezier(0.2, 0, 0.2, 1);
+--dur-fast:  80ms;
+--dur:       140ms;
+--dur-slow:  200ms;
 ```
 
 ---
@@ -117,7 +150,7 @@ Every node (collapsed and expanded) uses this exact DOM structure.
     [card contents]
 ```
 
-The label background (#161614) matches the canvas background. This creates the
+The label background (`var(--canvas)` = `#F8F8F8`) matches the canvas background. This creates the
 visual effect of the label sitting between the canvas and the card — floating,
 not contained. This is intentional. Do not change it.
 
@@ -178,24 +211,24 @@ Status bar:
 
 ## Ant Design configuration
 
-The project uses Ant Design. Override it via ConfigProvider dark algorithm in App.tsx:
+The project uses Ant Design. Override it via ConfigProvider in App.tsx (light algorithm):
 
 ```tsx
 import { ConfigProvider, theme } from 'antd';
 
 <ConfigProvider theme={{
-  algorithm: theme.darkAlgorithm,
+  algorithm: theme.defaultAlgorithm,
   token: {
-    colorBgBase:        '#161614',
-    colorBgContainer:   '#242424',
-    colorBgElevated:    '#2A2927',
-    colorBorder:        'rgba(255,255,255,0.08)',
-    colorText:          '#F0EFE8',
-    colorTextSecondary: 'rgba(240,239,232,0.58)',
-    colorPrimary:       '#3c3c3c',
-    borderRadius:       5,
-    fontFamily:         '"Neue Haas Unica", "Helvetica Neue", Arial, sans-serif',
-    fontSize:           13,
+    colorBgBase:        '#F8F8F8',
+    colorBgContainer:   '#FFFFFF',
+    colorBgElevated:    '#FFFFFF',
+    colorBorder:        'rgb(229,231,235)',
+    colorText:          '#000000',
+    colorTextSecondary: '#6B7280',
+    colorPrimary:       '#0126DC',
+    borderRadius:       0,
+    fontFamily:         '"Neue Haas Unica", "Inter", ui-sans-serif, sans-serif',
+    fontSize:           16,
   },
 }}>
 ```
@@ -205,21 +238,21 @@ import { ConfigProvider, theme } from 'antd';
 ## React Flow configuration
 
 ```tsx
-// Edge style — step connectors, low opacity white
+// Edge style — smoothstep, low opacity dark on light canvas
 const defaultEdgeOptions = {
   type: 'smoothstep',
   style: {
-    stroke: 'rgba(255, 255, 255, 0.10)',
+    stroke: 'rgba(0, 0, 0, 0.12)',
     strokeWidth: 1,
   },
 };
 
-// Background — dot grid
+// Background — dot grid, 16px spacing, CBCBCB dots on F8F8F8
 <Background
   variant={BackgroundVariant.Dots}
-  gap={24}
+  gap={16}
   size={1}
-  color="rgba(255, 255, 255, 0.07)"
+  color="#CBCBCB"
 />
 ```
 
@@ -230,15 +263,17 @@ const defaultEdgeOptions = {
 Run through this list. If anything fails, fix it before considering a task done.
 
 1. **No hardcoded hex values** outside the token file or :root block
-2. **No font-weight above 400** in the node/card system
+2. **Font weight 400 in node/card content. 500 only for meta chrome** (eyebrows, wordmark)
 3. **No bold text** in .anchor-node, .context-node, .sidebar-item, .view-panel
 4. **Label outside card body** — .node-label must be a sibling of the card, not a child
-5. **Dark surfaces only** — no white or near-white backgrounds on canvas elements
-6. **No raw Ant Design defaults visible** — if it looks like a grey web form, it's wrong
-7. **Node width = 320px** exactly
-8. **Border radius = 5px** on nodes and cards
-9. **No blur, gradient, or shadow blur** — box-shadow max is `0 16px 40px rgba(0,0,0,0.55)`
+5. **Light surfaces only** — white cards (`var(--surface)`) on light gray canvas (`var(--canvas)`). No dark backgrounds on canvas elements.
+6. **No raw Ant Design defaults visible** — if it looks like a default light-gray form, it's wrong
+7. **Node width = 320px** exactly (`var(--grid-col)`)
+8. **Border radius = 0** on all cards and nodes. `var(--radius-soft)` = 4px only on toolbar toggles
+9. **No blur, gradient, or decorative shadows** — only `var(--shadow-card)`, `var(--shadow-toolbar)`, `var(--shadow-lift)`
 10. **Neue Haas Unica** loads correctly — check Network tab if text looks wrong
+11. **Category colors are semantic** — `--cat-event`, `--cat-works`, etc. Use only for their designated category, never decoratively
+12. **Voice is lowercase** — labels, headings, and buttons are lowercase; capitalize only proper nouns in body copy
 
 ---
 
@@ -259,21 +294,24 @@ Update this section at the end of each session.
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Dark mode base (canvas, body) | TODO | webs-tokens.css ready to import |
-| Sidebar dark surface | TODO | Tokens defined, CSS in webs-tokens.css |
-| Node floating label architecture | TODO | DOM restructure required — see above |
-| Expanded card floating label | TODO | Same architecture as collapsed node |
-| View panel reskin | TODO | Replace Ant Design defaults |
-| Status bar dark | TODO | Simple CSS override |
-| Ant Design ConfigProvider dark | TODO | See config block above |
-| React Flow edge style | TODO | smoothstep, rgba white 10% |
-| Cluster / satellite system — Phase 1 (rendering) | TODO | See cluster-system-spec.md |
+| Apply Neurodive tokens to :root / index.css | TODO | Source: .claude/skills/Neurodive Design System.zip → colors_and_type.css |
+| Canvas: light gray bg + dot grid (CBCBCB on F8F8F8, 16px) | TODO | Replace old dark canvas |
+| Ant Design ConfigProvider → light algorithm + Neurodive tokens | TODO | See config block above |
+| React Flow edge style → dark on light (rgba 0,0,0,0.12) | TODO | See config block above |
+| Node cards → white surface, 0px radius, shadow-card | TODO | Replace #242424 cards |
+| Category labels → semantic color chips per --cat-* tokens | TODO | Orange=event, pink=works, yellow=policy, etc. |
+| Sidebar reskin → light surface | TODO | Remove old dark sidebar CSS |
+| Node floating label architecture | TODO | DOM restructure — see above. Label bg = var(--canvas) |
+| Expanded card / expansion panel | TODO | See feature-expansion-panel-edge-labels.md |
+| View panel reskin | TODO | Light surface, 0px radius |
+| Status bar reskin | TODO | Light surface |
+| Cluster / satellite system — Phase 1 (rendering) | TODO | See cluster-system-spec.md (visual specs updated to light theme) |
 | Cluster / satellite system — Phase 2 (drag) | TODO | See cluster-system-spec.md |
 | Cluster / satellite system — Phase 3 (source + fact check) | TODO | See cluster-system-spec.md |
 | Cluster / satellite system — Phase 4 (note absorption) | TODO | See cluster-system-spec.md |
-| Pivot edges | NOT STARTED | Amber dashed, directional — spec TBD |
-| Train of thought toggle | NOT STARTED | Path highlight + summary panel — spec TBD |
-| Loading state | NOT STARTED | No design yet |
+| Pivot edges | NOT STARTED | Spec TBD |
+| Train of thought toggle | NOT STARTED | Spec TBD |
+| Loading state | NOT STARTED | Blue+pink progress band per Neurodive spec |
 | Empty canvas state | NOT STARTED | No design yet |
 | Remember/flashcard mode | NOT STARTED | Not audited |
 
@@ -343,4 +381,4 @@ Logic/architecture questions → ask before assuming
 Anything affecting more than 3 files → confirm scope before starting
 
 ---
-*Last updated: April 2026 — v1.1 tokens locked, dark mode in progress*
+*Last updated: April 2026 — v2.0 Neurodive design system. Light theme. Dark theme removed.*

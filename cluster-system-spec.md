@@ -163,65 +163,66 @@ Re-renders when satellite positions change.
 
 ## Satellite card visual specs
 
-All satellites follow the established token system. No bold. Single weight.
-Background: #1E1D1B. Border: rgba(255,255,255,0.09). Border-radius: 4px.
-Type label: 8px, uppercase, letter-spacing 0.1em, color rgba(240,239,232,0.25).
+All satellites follow the Neurodive token system (v2.0). No bold. Single weight (400).
+Background: var(--surface) [white]. Border: var(--stroke) [1px solid hairline]. Border-radius: var(--radius) [0].
+Shadow: var(--shadow-card). Padding: 8px (var(--s-2)).
+Type label: var(--fs-small), lowercase, letter-spacing 0.08em, color: var(--fg-3).
 
 ### image  (width: 96px)
 ```
 [type label: "image"]
-[image area: 96×60px, bg #2A2927, centered placeholder text if no src]
+[image area: 96×60px, bg var(--surface-alt) #EDEDED, centered placeholder text if no src]
 ```
 
-### quote  (width: 140px, padding: 10px)
+### quote  (width: 140px, padding: 8px)
 ```
-[large " mark: 22px, color #FFAB2B, opacity 0.5]
-[quote text: 10px, line-height 1.4, color rgba(240,239,232,0.65), italic]
-[attribution: 9px, color rgba(240,239,232,0.28), margin-top 5px]
+[large " mark: 22px, color var(--signal-quote) #0126DC, opacity 0.6]
+[quote text: var(--fs-small), line-height 1.4, color var(--fg-2), italic]
+[attribution: var(--fs-small), color var(--fg-3), margin-top 5px]
 ```
 
 ### stat  (width: 80px, centered)
 ```
 [type label: "stat"]
-[value: 22px, letter-spacing -0.03em, color rgba(240,239,232,0.9)]
-[label: 9px, uppercase, color rgba(240,239,232,0.35)]
+[value: 22px, letter-spacing -0.03em, color var(--fg-strong)]
+[label: var(--fs-small), lowercase, color var(--fg-3)]
 ```
 
 ### source  (width: 72px, centered)
 ```
 [type label: "source"]
-[logo box: 32×32px, bg #2A2927, border-radius 6px, domain initial]
-[domain name: 8px, color rgba(240,239,232,0.3)]
+[logo box: 32×32px, bg var(--surface-alt) #EDEDED, border-radius: var(--radius) 0, domain initial]
+[domain name: var(--fs-small), color var(--fg-3)]
 ```
 
 ### video  (width: 120px)
 ```
 [type label: "video"]
-[thumbnail: 120×68px, bg #2A2927]
-[play icon: centered 16×16px triangle in rgba(240,239,232,0.4)]
-[title: 9px, padding 5px 8px, color rgba(240,239,232,0.6)]
-[duration badge: bottom-right of thumbnail, 8px, bg rgba(0,0,0,0.5)]
+[thumbnail: 120×68px, bg var(--surface-alt) #EDEDED]
+[play icon: centered 16×16px triangle in rgba(0,0,0,0.35)]
+[title: var(--fs-small), padding 5px 8px, color var(--fg-2)]
+[duration badge: bottom-right of thumbnail, var(--fs-small), bg rgba(0,0,0,0.45), color white]
 ```
 
-### concept  (width: 100px, padding: 8px 10px)
+### concept  (width: 100px, padding: 8px)
 ```
 [type label: "concept"]
-[label: 11px, color rgba(240,239,232,0.85), margin-top 4px]
-[description: 9px, color rgba(240,239,232,0.4), margin-top 3px, optional]
+[label: var(--fs-body), color var(--fg), margin-top 4px]
+[description: var(--fs-small), color var(--fg-3), margin-top 3px, optional]
 ```
 
-### datapoint  (width: 100px, padding: 8px 10px)
+### datapoint  (width: 100px, padding: 8px)
 ```
 [type label: "data"]
-[value + unit: 14px, letter-spacing -0.02em, color rgba(240,239,232,0.9)]
-[context: 9px, color rgba(240,239,232,0.4), margin-top 3px]
+[value + unit: var(--fs-h4), letter-spacing var(--ls-h4), color var(--fg-strong)]
+[context: var(--fs-small), color var(--fg-3), margin-top 3px]
 ```
 
-### note  (width: 120px, padding: 10px)
+### note  (width: 120px, padding: 8px)
 ```
-[type label: "note" — color #FFAB2B instead of dim white]
-[text: 11px, line-height 1.45, color rgba(240,239,232,0.75)]
-[timestamp: 8px, color rgba(240,239,232,0.2), margin-top 6px]
+[type label: "note" — color var(--cat-concept) #FFCC00 on var(--surface)]
+[text: var(--fs-small), line-height 1.45, color var(--fg-2)]
+[timestamp: var(--fs-small), color var(--fg-4), margin-top 6px]
 ```
 
 ---
@@ -230,7 +231,7 @@ Type label: 8px, uppercase, letter-spacing 0.1em, color rgba(240,239,232,0.25).
 
 ```css
 /* SVG lines from primary card center to each satellite center */
-stroke: rgba(255, 255, 255, 0.08);
+stroke: rgba(0, 0, 0, 0.10);
 stroke-width: 1;
 stroke-dasharray: 3 5;
 /* No arrowheads. Pure dashed line. */

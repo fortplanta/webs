@@ -1939,3 +1939,191 @@ body {
   background: rgba(255,255,255,0.10);
   color: var(--color-text);
 }
+
+/* ── EXPANSION PANEL (NodeToolbar) ── */
+.expansion-panel {
+  width: 340px;
+  background: #242424;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 5px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3);
+  overflow: hidden;
+  animation: panelReveal 0.18s ease-out;
+}
+
+@keyframes panelReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.expansion-panel__image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.expansion-panel__body {
+  padding: 16px 15px 14px;
+}
+
+.expansion-panel__title {
+  font-size: 15px;
+  line-height: 1.30;
+  letter-spacing: -0.01em;
+  color: rgba(240, 239, 232, 1.0);
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+
+.expansion-panel__summary {
+  font-size: 13px;
+  line-height: 1.55;
+  letter-spacing: 0.005em;
+  color: rgba(240, 239, 232, 0.58);
+  font-weight: 400;
+}
+
+.expansion-panel__footer {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 7px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.expansion-panel__source {
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: rgba(240, 239, 232, 0.22);
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+.expansion-panel__close {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(240, 239, 232, 0.28);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-weight: 400;
+  transition: color 0.1s;
+}
+.expansion-panel__close:hover {
+  color: rgba(240, 239, 232, 0.7);
+}
+
+/* ── LABEL EDGE — midpoint dot + bloom + inline input ── */
+.edge-label-root {
+  pointer-events: all;
+}
+
+.edge-midpoint {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Invisible enlarged hit area */
+.edge-midpoint::before {
+  content: '';
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.edge-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transition: opacity 0.1s, background 0.1s;
+}
+.edge-midpoint:hover .edge-dot {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.edge-dot--center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+/* Bloom dots — cardinal positions, animated in */
+.edge-dot--n {
+  top: calc(50% - 8px); left: 50%;
+  transform: translate(-50%, 0);
+  animation: dotBloom 0.1s ease-out both;
+}
+.edge-dot--s {
+  top: calc(50% + 4px); left: 50%;
+  transform: translate(-50%, 0);
+  animation: dotBloom 0.1s ease-out 0.02s both;
+}
+.edge-dot--e {
+  top: 50%; left: calc(50% + 8px);
+  transform: translate(0, -50%);
+  animation: dotBloom 0.1s ease-out 0.01s both;
+}
+.edge-dot--w {
+  top: 50%; left: calc(50% - 8px);
+  transform: translate(0, -50%);
+  animation: dotBloom 0.1s ease-out 0.03s both;
+}
+
+@keyframes dotBloom {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  to   { opacity: 1; }
+}
+
+/* Existing label text (set, not hovering) */
+.edge-label-text {
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  transform: translateX(-50%);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: rgba(240, 239, 232, 0.28);
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+/* Inline label input */
+.edge-label-input-wrap {
+  background: #1E1D1B;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  padding: 2px 4px;
+  min-width: 100px;
+}
+
+.edge-label-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 11px;
+  letter-spacing: -0.01em;
+  color: rgba(240, 239, 232, 0.85);
+  font-family: var(--font-body);
+  font-weight: 400;
+  width: 100%;
+  text-align: center;
+}
+.edge-label-input::placeholder {
+  color: rgba(240, 239, 232, 0.22);
+}

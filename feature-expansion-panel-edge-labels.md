@@ -101,13 +101,13 @@ useEffect(() => {
 ```css
 .expansion-panel {
   width: 340px;
-  background: #242424;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 5px;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3);
+  background: var(--surface);
+  border: var(--stroke);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-toolbar);
   overflow: hidden;
   /* Entrance animation */
-  animation: panelReveal 0.18s ease-out;
+  animation: panelReveal 0.14s var(--ease);
 }
 
 @keyframes panelReveal {
@@ -127,59 +127,61 @@ useEffect(() => {
   height: 180px;
   object-fit: cover;
   display: block;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  border-bottom: var(--stroke);
 }
 
 /* Content body */
 .expansion-panel__body {
-  padding: 16px 15px 14px;
+  padding: 16px 8px 14px;
 }
 
 .expansion-panel__title {
-  font-size: 15px;
-  line-height: 1.30;
-  letter-spacing: -0.01em;
-  color: rgba(240, 239, 232, 1.0);
+  font-size: var(--fs-h4);
+  line-height: var(--lh-h4);
+  letter-spacing: var(--ls-h4);
+  color: var(--fg);
   font-weight: 400;
   margin-bottom: 10px;
+  text-transform: lowercase;
 }
 
 .expansion-panel__summary {
-  font-size: 13px;
-  line-height: 1.55;
-  letter-spacing: 0.005em;
-  color: rgba(240, 239, 232, 0.58);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: var(--ls-body);
+  color: var(--fg-2);
   font-weight: 400;
 }
 
 /* Footer */
 .expansion-panel__footer {
-  border-top: 1px solid rgba(255,255,255,0.06);
-  padding: 7px 15px;
+  border-top: var(--stroke-soft);
+  padding: 7px 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .expansion-panel__source {
-  font-size: 9px;
-  letter-spacing: 0.05em;
-  color: rgba(240, 239, 232, 0.22);
+  font-size: var(--fs-small);
+  letter-spacing: var(--ls-small);
+  color: var(--fg-4);
+  font-family: var(--font-meta);
 }
 
 .expansion-panel__close {
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(240, 239, 232, 0.28);
+  font-size: var(--fs-small);
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+  color: var(--fg-3);
   cursor: pointer;
   background: none;
   border: none;
-  font-family: var(--font-body);
-  transition: color 0.1s;
+  font-family: var(--font-sans);
+  transition: color var(--dur-fast);
 }
 .expansion-panel__close:hover {
-  color: rgba(240, 239, 232, 0.7);
+  color: var(--fg);
 }
 ```
 
@@ -360,11 +362,11 @@ export function LabelEdge({
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  transition: opacity 0.1s, background 0.1s;
+  background: rgba(0, 0, 0, 0.20);
+  transition: opacity var(--dur-fast), background var(--dur-fast);
 }
 .edge-midpoint:hover .edge-dot {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.50);
 }
 
 .edge-dot--center { top: 50%; left: 50%; transform: translate(-50%,-50%); }
@@ -393,38 +395,39 @@ export function LabelEdge({
   left: 50%;
   top: -18px;
   transform: translateX(-50%);
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  color: rgba(240, 239, 232, 0.28);
+  font-size: var(--fs-small);
+  letter-spacing: var(--ls-small);
+  color: var(--fg-3);
   white-space: nowrap;
   pointer-events: none;
-  font-family: var(--font-body);
+  font-family: var(--font-meta);
 }
 
 /* Input */
 .edge-label-input-wrap {
-  background: #1E1D1B;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 3px;
+  background: var(--surface);
+  border: var(--stroke);
+  border-radius: var(--radius);
   padding: 2px 4px;
   min-width: 100px;
+  box-shadow: var(--shadow-lift);
 }
 
 .edge-label-input {
   background: transparent;
   border: none;
   outline: none;
-  font-size: 11px;
-  letter-spacing: -0.01em;
-  color: rgba(240, 239, 232, 0.85);
-  font-family: var(--font-body);
+  font-size: var(--fs-small);
+  letter-spacing: var(--ls-small);
+  color: var(--fg);
+  font-family: var(--font-sans);
   font-weight: 400;
   width: 100%;
   text-align: center;
 }
 
 .edge-label-input::placeholder {
-  color: rgba(240, 239, 232, 0.22);
+  color: var(--fg-4);
 }
 ```
 

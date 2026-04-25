@@ -1,16 +1,13 @@
 import { memo, useRef, useState, useEffect, useMemo } from 'react';
-import { Handle, Position, NodeResizer } from '@xyflow/react';
+import { Handle, Position, NodeToolbar, useViewport } from '@xyflow/react';
 import { CATEGORY_BY_KEY } from '../../constants';
 import SmartText from '../SmartText';
 import SatelliteCard from './SatelliteCard';
 import ClusterTethers from './ClusterTethers';
 
 // ── Scatter satellites into a ring around the primary card ───────────────────
-// The revealed card is ~320px wide and 400–550px tall (label + image + body).
-// Center point is tuned to the visual mid-point of a typical revealed card.
-// Radius is large enough to clear all four edges with comfortable margin.
-const CARD_CENTER_X = 160; // half of 320px node width
-const CARD_CENTER_Y = 260; // approx mid of label(34) + image(168) + body(~220)
+const CARD_CENTER_X = 160;
+const CARD_CENTER_Y = 260;
 const MIN_RADIUS    = 290;
 const MAX_RADIUS    = 380;
 
@@ -30,23 +27,61 @@ function scatterSatellites(count) {
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
-const ContextNode = memo(({ data, selected, isConnectable }) => {
+const ContextNode = memo(({ id, data, selected, isConnectable }) => {
   const cat        = CATEGORY_BY_KEY[data.category] || { label: data.category, icon: '·', color: 'var(--color-accent)' };
   const revealed   = data.revealed       ?? false;
   const isStarred  = data.starred        ?? false;
   const termMap    = data.termDefinitions ?? {};
   const satellites = data.satellites      ?? [];
 
+  const { zoom } = useViewport();
+
   const labelRef = useRef(null);
-  const [labelH, setLabelH] = useState(34);
+  const [labelH, setLabelH]     = useState(34);
   const [activeTool, setActiveTool] = useState(null); // 'note' | 'factcheck' | 'pivot' | null
   const [noteText, setNoteText]     = useState('');
+  const [panelPosition, setPanelPosition] = useState(Position.Right);
+
+  // transform-origin keeps the panel anchored to the node edge as zoom changes
+  const panelOrigin = {
+    [Position.Right]:  'left center',
+    [Position.Left]:   'right center',
+    [Position.Bottom]: 'top center',
+    [Position.Top]:    'bottom center',
+  }[panelPosition] ?? 'left center';
 
   useEffect(() => {
     if (labelRef.current) setLabelH(labelRef.current.offsetHeight);
   }, []);
 
-  // Compute scatter positions once when the node is first revealed.
+  // Smart panel positioning: flip left if near right edge, bottom if near top edge
+  useEffect(() => {
+    if (!revealed) return;
+    const el = document.querySelector(`[data-id="${id}"]`);
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (rect.right > vw * 0.6) {
+      setPanelPosition(Position.Left);
+    } else if (rect.top < vh * 0.2) {
+      setPanelPosition(Position.Bottom);
+    } else {
+      setPanelPosition(Position.Right);
+    }
+  }, [revealed, id]);
+
+  // Escape key to close
+  useEffect(() => {
+    if (!revealed) return;
+    function onKey(e) {
+      if (e.key === 'Escape') data.onClose?.();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [revealed, data]);
+
+  // Compute scatter positions once when first revealed
   const scatterRef = useRef(null);
   if (revealed && satellites.length > 0) {
     if (!scatterRef.current || scatterRef.current.length !== satellites.length) {
@@ -89,20 +124,27 @@ const ContextNode = memo(({ data, selected, isConnectable }) => {
     setActiveTool(null);
   }
 
-  // Stop pointer/mouse events on interactive label children from
-  // triggering the node drag or React Flow selection.
   function stopProp(e) {
     e.stopPropagation();
     e.nativeEvent?.stopImmediatePropagation?.();
   }
 
+  function handleCardClick(e) {
+    e.stopPropagation();
+    if (revealed) {
+      data.onClose?.();
+    } else {
+      data.onReveal?.();
+    }
+  }
+
   return (
     <div
       className="node-outer"
-      onClick={!revealed ? e => { e.stopPropagation(); data.onReveal?.(); } : undefined}
+      onClick={handleCardClick}
       onContextMenu={data.onContextMenu}
     >
-      {/* Label row — category name + tool icon strip (no background) */}
+      {/* Label row — category name + tool icon strip */}
       <div
         className="node-label"
         ref={labelRef}
@@ -110,7 +152,7 @@ const ContextNode = memo(({ data, selected, isConnectable }) => {
       >
         <span className="node-label__text">{cat.label}</span>
 
-        {/* Tool strip — icon-only buttons, only when revealed */}
+        {/* Tool strip — only when revealed */}
         {revealed && (
           <div
             className="cluster-tools"
@@ -173,31 +215,7 @@ const ContextNode = memo(({ data, selected, isConnectable }) => {
       <Handle type="target" position={Position.Top}    id="top"    style={{ top: labelH }} />
       <Handle type="source" position={Position.Bottom} id="bottom" />
 
-      {/* Image — floats between label and card */}
-      {revealed && data.nodeImage && (
-        <div className="node-img-float" style={{ marginTop: labelH }}>
-          <img src={data.nodeImage} alt={data.title} className="node-img-float__img" />
-        </div>
-      )}
-
-      {/* Star */}
-      {revealed && (
-        <span
-          role="button"
-          tabIndex={0}
-          className={`node-star${isStarred ? ' active' : ''}`}
-          title={isStarred ? 'unstar' : 'star'}
-          style={{ top: labelH + (data.nodeImage ? 168 : 8) }}
-          onPointerDown={stopProp}
-          onMouseDown={stopProp}
-          onClick={e => { stopProp(e); data.onToggleStar?.(); }}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { stopProp(e); data.onToggleStar?.(); } }}
-        >
-          {isStarred ? '★' : '☆'}
-        </span>
-      )}
-
-      {/* Cluster layer — rendered BEFORE the primary card so the card paints on top */}
+      {/* Cluster layer — rendered BEFORE the primary card */}
       {revealed && satellitesWithPos.length > 0 && (
         <div className="cluster-layer">
           <ClusterTethers primaryCenter={primaryCenter} satellites={satellitesWithPos} />
@@ -207,39 +225,56 @@ const ContextNode = memo(({ data, selected, isConnectable }) => {
         </div>
       )}
 
-      {/* Primary card */}
+      {/* Primary card — always shows locked/collapsed state */}
       <div
-        className={`context-node${revealed ? ' revealed' : ' locked'}${selected ? ' selected' : ''}${isStarred ? ' starred' : ''}${revealed && data.nodeImage ? ' has-image' : ''}`}
-        style={{ '--node-color': cat.color, marginTop: revealed && data.nodeImage ? 0 : labelH }}
+        className={`context-node locked${selected ? ' selected' : ''}${isStarred ? ' starred' : ''}`}
+        style={{ '--node-color': cat.color, marginTop: labelH }}
       >
-        {revealed && (
-          <NodeResizer
-            isVisible={selected}
-            minWidth={200}
-            minHeight={72}
-            lineStyle={{ borderColor: 'rgba(255,255,255,0.15)', opacity: 0.5 }}
-            handleStyle={{ width: 6, height: 6, background: 'rgba(255,255,255,0.4)', border: 'none', borderRadius: '1px' }}
-          />
-        )}
-
-        {revealed ? (
-          <div className="context-node__inner-clip">
-            <div className="context-node__body">
-              <div className="context-node__title">{data.title || cat.label}</div>
-              {data.summary && (
-                <div className="context-node__summary">
-                  <SmartText text={data.summary} termMap={termMap} />
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="context-node__locked-inner">
-            <div className="context-node__locked-icon">{cat.icon}</div>
-            <div className="context-node__locked-hint">click to reveal</div>
-          </div>
-        )}
+        <div className="context-node__locked-inner">
+          <div className="context-node__locked-icon">{cat.icon}</div>
+          <div className="context-node__locked-hint">{revealed ? 'click to close' : 'click to reveal'}</div>
+        </div>
       </div>
+
+      {/* Floating expansion panel — anchored to node via NodeToolbar */}
+      <NodeToolbar isVisible={revealed} position={panelPosition} offset={12}>
+        {/* Zoom-scaling wrapper: keeps panel proportional to canvas zoom */}
+        <div style={{ transform: `scale(${zoom})`, transformOrigin: panelOrigin }}>
+        <div
+          className="expansion-panel"
+          onClick={stopProp}
+          onPointerDown={stopProp}
+          onMouseDown={stopProp}
+        >
+          {data.nodeImage && (
+            <img
+              src={data.nodeImage}
+              alt={data.title}
+              className="expansion-panel__image"
+            />
+          )}
+          <div className="expansion-panel__body">
+            <div className="expansion-panel__title">{data.title || cat.label}</div>
+            {data.summary && (
+              <div className="expansion-panel__summary">
+                <SmartText text={data.summary} termMap={termMap} />
+              </div>
+            )}
+          </div>
+          <div className="expansion-panel__footer">
+            <span className="expansion-panel__source">
+              {data.source?.domain ?? ''}
+            </span>
+            <button
+              className="expansion-panel__close"
+              onClick={e => { stopProp(e); data.onClose?.(); }}
+            >
+              close
+            </button>
+          </div>
+        </div>
+        </div>{/* end zoom-scaling wrapper */}
+      </NodeToolbar>
 
       {/* Sub-panels — anchored below the label row, right-aligned */}
       {activeTool === 'note' && (

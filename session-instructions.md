@@ -31,5 +31,4 @@ Do not move to the next step until you confirm the current step works.
 - Do not touch AnchorNode, sidebar, session logic, satellite/cluster code,
   or any AI/API calls
 - No font-weight above 400 anywhere in new components
-- All colours must use tokens from CLAUDE.md — no hardcoded values
-  except where exact hex values are specified in the feature spec
+- All colours must use tokens from CLAUDE.md (v2.0 Neurodive system) — no hardcoded values

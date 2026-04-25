@@ -24,6 +24,7 @@ import MediaNode       from './nodes/MediaNode';
 import PivotInputNode  from './nodes/PivotInputNode';
 import FloatingEdge    from './edges/FloatingEdge';
 import ProximityEdge   from './edges/ProximityEdge';
+import LabelEdge       from './edges/LabelEdge';
 import CSSInspector    from './CSSInspector';
 import DebugPanel      from './DebugPanel';
 import ViewPanel       from './ViewPanel';
@@ -46,8 +47,10 @@ const nodeTypes = {
 };
 
 const edgeTypes = {
-  floating:  FloatingEdge,
-  proximity: ProximityEdge,
+  floating:   FloatingEdge,
+  proximity:  ProximityEdge,
+  smoothstep: LabelEdge,
+  default:    LabelEdge,
 };
 
 /** Minimum bounding-box edge distance between two rectangles */
@@ -235,6 +238,7 @@ export default function Canvas({
   const expandNodeRef         = useRef(null);
   const openContextMenuRef    = useRef(null);
   const revealContextNodeRef  = useRef(null);
+  const closeContextNodeRef   = useRef(null);
   const toggleClusterRef      = useRef(null);
   const pivotStartRef         = useRef(null);
   const pivotCommitRef        = useRef(null);
@@ -388,6 +392,7 @@ export default function Canvas({
   function makeContextCallbacks(id, anchorId, item) {
     return {
       onReveal:              () => revealContextNodeRef.current?.(id, anchorId, item),
+      onClose:               () => closeContextNodeRef.current?.(id),
       onContextMenu:         (e) => { e.preventDefault(); openContextMenuRef.current?.(e, id, 'contextNode'); },
       onToggleStar:          () => toggleStarRef.current?.(id),
       onToggleCluster:       () => toggleClusterRef.current?.(id),
@@ -518,6 +523,13 @@ export default function Canvas({
         n.id === anchorId ? { ...n, data: { ...n.data, loading: false } } : n
       ));
     }
+  }
+
+  // ── Close context node expansion panel ──────────────────────────────────
+  function closeContextNode(contextId) {
+    setNodes(ns => ns.map(n =>
+      n.id === contextId ? { ...n, data: { ...n.data, revealed: false } } : n
+    ));
   }
 
   // ── Reveal context node ──────────────────────────────────────────────────
@@ -1051,6 +1063,7 @@ export default function Canvas({
   expandNodeRef.current        = expandNode;
   openContextMenuRef.current   = openContextMenu;
   revealContextNodeRef.current = revealContextNode;
+  closeContextNodeRef.current  = closeContextNode;
   toggleClusterRef.current     = toggleCluster;
   pivotStartRef.current        = pivotStart;
   pivotCommitRef.current       = pivotCommit;
@@ -1137,7 +1150,15 @@ export default function Canvas({
         onConnect={onConnect}
         onConnectEnd={onConnectEnd}
         onInit={setRfInstance}
-        onPaneClick={() => { setContextMenu(null); setProximityTargetId(null); }}
+        onPaneClick={() => {
+          setContextMenu(null);
+          setProximityTargetId(null);
+          setNodes(ns => ns.map(n =>
+            n.type === 'contextNode' && n.data.revealed
+              ? { ...n, data: { ...n.data, revealed: false } }
+              : n
+          ));
+        }}
         onPaneContextMenu={e => {
           e.preventDefault();
           if (!rfInstance) return;
