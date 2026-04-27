@@ -1,2 +1,23 @@
-/* canvas.css — pan-zoom canvas, dot grid, LOD levels
-   Implemented in Session 02. */
+:root {
+  --canvas-dot-spacing: 24px;
+}
+
+.canvas-wrapper {
+  position: fixed;
+  inset: 0;
+  background: var(--color-canvas);
+  cursor: grab;
+  overflow: hidden;
+  user-select: none;
+}
+
+.canvas-wrapper:active {
+  cursor: grabbing;
+}
+
+.canvas-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}

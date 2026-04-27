@@ -16,7 +16,7 @@ export function usePanZoom(initial: Transform = { x: 0, y: 0, zoom: zoomTokens.i
   const isPanning = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
 
-  const onWheel = useCallback((e: WheelEvent) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
     setTransform(prev => {
       const delta = e.deltaY * zoomTokens.speed * -1;
@@ -52,5 +52,5 @@ export function usePanZoom(initial: Transform = { x: 0, y: 0, zoom: zoomTokens.i
     isPanning.current = false;
   }, []);
 
-  return { transform, setTransform, onWheel, onMouseDown, onMouseMove, onMouseUp };
+  return { transform, setTransform, handleWheel, onMouseDown, onMouseMove, onMouseUp };
 }

@@ -829,8 +829,8 @@ Claude Code updates this table at the end of every session.
 |---------|--------|-------|--------------|
 | React Flow removal | DONE | @xyflow/react uninstalled; all node/edge components deleted; zero imports in src/ | Session 01 |
 | Ant Design removal | DONE | antd + antd-style uninstalled; ConfigProvider stripped from main.jsx; zero imports in src/ | Session 01 |
-| Custom pan-zoom canvas | NOT STARTED | Stub at src/canvas/Canvas.tsx + usePanZoom.ts | Session 01 |
-| Dot grid background | NOT STARTED | Stub at src/canvas/CanvasBackground.tsx | Session 01 |
+| Custom pan-zoom canvas | DONE | Full implementation: usePanZoom.ts (zoom-toward-cursor, pan), Canvas.tsx (passive wheel via addEventListener), canvas.css (fixed viewport, transform-origin 0 0) | Session 02 |
+| Dot grid background | DONE | SVG pattern in screen space; spacing = 24 * zoom; offset = x mod spacing; fill = --color-canvas-dot | Session 02 |
 | LOD system (macro/compact/full) | NOT STARTED | — | — |
 | Fragment component (structure) | NOT STARTED | Stubs at src/fragments/Fragment.tsx + FragmentHeader.tsx | Session 01 |
 | Fragment layouts — vertical-flow | NOT STARTED | Stub at src/fragments/layouts/VerticalFlow.tsx | Session 01 |
