@@ -1,384 +1,877 @@
-# CLAUDE.md
-# Webs — AI Knowledge Canvas
-# Read this file at the start of EVERY session before touching any code.
+# WEBS — Claude Code Handoff Brief
+# For use with Claude Code Plan Mode
+# April 2026
 
 ---
 
-## What this product is
+## READ THIS FIRST
 
-Webs is a non-linear learning platform. Users enter a topic and get a knowledge
-graph — interconnected thematic nodes (Technology, Market Dynamics, Culture etc.)
-that expand into contextual narrative on click. It is a thinking space, not a course.
-
-Live URL: https://bulge.netlify.app
-
----
-
-## Stack
-
-- Vite + React + TypeScript
-- React Flow (XYFlow) — canvas, nodes, edges
-- Ant Design — component library (being overridden with custom tokens)
-- Neue Haas Unica — primary typeface (sole typeface, no exceptions)
-- Single compiled CSS bundle via Vite
-
----
-
-## Design authority
-
-All design decisions are made externally by the designer and handed to you as:
-- Precise CSS token values
-- Exact class names to target
-- Instruction documents (like this one)
-
-**You do not make design decisions.** If something is ambiguous — colour, spacing,
-layout — stop and ask rather than guessing. Do not substitute your own aesthetic
-judgement. Generic choices (Inter, rounded corners, purple gradients, card shadows
-with blur) are wrong by default in this project.
-
----
-
-## Design direction
-
-Teenage Engineering / Swiss typography / Dieter Rams.
-
-- Font weight 400 everywhere in node/card content. Weight 500 only for meta chrome (eyebrows, wordmark).
-- Hierarchy via scale, weight (400 vs 500), and opacity.
-- **Light canvas. White cards on light gray.** Color is semantic, not decorative.
-- No rounded corners. Sharp edges throughout. No decorative effects.
-- Dense, tight typography. Negative letter-spacing is non-negotiable.
-- Voice: lowercase, noun-phrases, no exclamation marks, no emoji.
-- If in doubt: remove rather than add.
-
----
-
-## Current design tokens (v2.0 — Neurodive system, locked)
-
-These are the source of truth. Do not hardcode values that differ from these.
-Source: `.claude/skills/Neurodive Design System.zip` → `colors_and_type.css`
-
-```css
-/* Canvas & surfaces */
---canvas:        #F8F8F8;   /* main canvas — light gray */
---canvas-dot:    #CBCBCB;   /* dot grid */
---surface:       #FFFFFF;   /* cards / nodes */
---surface-alt:   #EDEDED;   /* starting fragments, image placeholders */
---surface-mute:  #F7F7F7;   /* dropdown body */
---hairline:      rgb(229,231,235);
---hairline-2:    rgb(243,244,246);
-
-/* Text — black on light */
---fg:            #000000;
---fg-strong:     #0F172A;
---fg-2:          #475569;
---fg-3:          #6B7280;
---fg-4:          #ACACAC;
---fg-invert:     #FFFFFF;
---fg-mute:       #696969;
-
-/* Category colors — semantic, never decorative */
---cat-event:     #FF5500;   /* on-event:   white */
---cat-works:     #FF007B;   /* on-works:   white */
---cat-policy:    #E8FF4F;   /* on-policy:  black */
---cat-concept:   #FFCC00;   /* on-concept: black */
---cat-people:    #00FF88;   /* on-people:  black */
---cat-media:     #53E8FF;   /* on-media:   black */
---cat-source:    #F600FF;   /* on-source:  white */
---cat-misc:      #22D3EE;   /* on-misc:    black */
-
-/* System signals */
---signal-quote:     #0126DC;   /* cobalt — quote backdrop */
---signal-highlight: #001EFF;   /* electric blue — highlight */
---signal-danger:    #FF0207;   /* red — destructive */
-
-/* Typography */
---font-sans:     "Neue Haas Unica", "Inter", ui-sans-serif, sans-serif;
---font-display:  "Neue Haas Unica", "Inter", sans-serif;
---font-meta:     "Inter", "Neue Haas Unica", sans-serif;  /* buttons, eyebrows */
---font-mono:     "Menlo", "SF Mono", ui-monospace, monospace;
-
-/* Type scale (negative letter-spacing is non-negotiable) */
---fs-display: 80px;  --ls-display: -0.045em;  --lh-display: 0.95;
---fs-h1:      48px;  --ls-h1:      -0.052em;  --lh-h1:      1;
---fs-h2:      30px;  --ls-h2:      -0.050em;  --lh-h2:      1.2;
---fs-h3:      24px;  --ls-h3:      -0.050em;  --lh-h3:      1.333;
---fs-h4:      20px;  --ls-h4:      -0.035em;  --lh-h4:      1.2;
---fs-body:    16px;  --ls-body:    -0.031em;  --lh-body:    1.25;
---fs-label:   20px;  --ls-label:   -0.035em;  --lh-label:   1.2;
---fs-small:   14px;  --ls-small:   -0.028em;  --lh-small:   1;
---fs-tag:     15px;  --ls-tag:     -0.050em;  --lh-tag:     1;
---fs-code:    11px;  --ls-code:    0;          --lh-code:    1.4;
-
-/* Spacing — 4px base, 8px is the card-padding beat */
---s-1:  4px;   --s-2:  8px;   --s-3: 12px;   --s-4: 16px;
---s-5: 20px;   --s-6: 24px;   --s-8: 32px;   --s-10: 40px;
---s-12: 48px;  --s-16: 64px;  --s-20: 80px;
-
-/* Grid */
---grid-dot:  16px;    /* dot grid spacing */
---grid-col:  320px;   /* fragment / node column width */
-
-/* Borders & radii */
---radius:       0;    /* NO rounded corners — this is the rule */
---radius-soft:  4px;  /* ONLY for toolbar toggle buttons */
---stroke:       1px solid var(--hairline);
---stroke-soft:  1px solid var(--hairline-2);
-
-/* Shadows — hard, physical, short */
---shadow-card:    2px 2px 14px 0 rgba(0,0,0,0.07);
---shadow-toolbar: 0 4px 6px -2px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.10);
---shadow-lift:    0 1px 2px 0 rgba(0,0,0,0.05);
-
-/* Motion — essentially none */
---ease:      cubic-bezier(0.2, 0, 0.2, 1);
---dur-fast:  80ms;
---dur:       140ms;
---dur-slow:  200ms;
-```
-
----
-
-## Node architecture — CRITICAL
-
-Every node (collapsed and expanded) uses this exact DOM structure.
-**Do not put the category label inside the card body.**
-
-```
-.node-outer                     ← wrapper, position: relative, no bg, no border
-  .node-label                   ← position: absolute, top: 0, left: 0
-  .anchor-node  OR  .context-node   ← card body, margin-top = label height
-    [card contents]
-```
-
-The label background (`var(--canvas)` = `#F8F8F8`) matches the canvas background. This creates the
-visual effect of the label sitting between the canvas and the card — floating,
-not contained. This is intentional. Do not change it.
-
-### Label offset calculation
-Label height ≈ font-size (13px) + pad-top (10px) + pad-bottom (10px) = ~34px.
-Use a useRef to measure dynamically:
-
-```tsx
-const labelRef = useRef<HTMLDivElement>(null);
-const [labelHeight, setLabelHeight] = useState(34);
-useEffect(() => {
-  if (labelRef.current) setLabelHeight(labelRef.current.offsetHeight);
-}, []);
-// Apply: <div className="anchor-node" style={{ marginTop: labelHeight }}>
-```
-
----
-
-## Known class names (from live DOM — do not rename)
-
-```
-App shell:
-  .app, .main-area, .canvas-wrapper
-
-Sidebar:
-  .sidebar, .sidebar-header, .sidebar-logo, .sidebar-logo-sub
-  .sidebar-section, .sidebar-label, .sidebar-modes
-  .mode-option, .mode-option.active, .mode-option__icon, .mode-option__hint
-  .sidebar-cta, .sidebar-item, .sidebar-item__icon, .sidebar-item__shortcut
-  .sidebar-footer, .danger
-
-Nodes:
-  .anchor-node, .anchor-node__bar, .anchor-node__body
-  .anchor-node__label, .anchor-node__title
-  .anchor-node__footer, .anchor-node__expand, .anchor-node__connections
-  .node-star
-
-  .context-node, .context-node__bar, .context-node__body
-  .context-node__category, .context-node__ai-badge
-  .context-node__title, .context-node__summary
-  .context-node__locked-inner, .context-node__locked-icon
-  .context-node__locked-category, .context-node__locked-hint
-  .smart-term
-
-Canvas groups:
-  .group-frame, .group-frame__label, .group-frame__collapse-btn
-
-View panel:
-  .view-panel, .view-panel__header, .view-panel__row, .view-panel__label
-  .view-panel__buttons, .view-panel__btn, .view-panel__btn.active
-  .view-panel__divider, .view-panel__toggles, .view-panel__toggle
-
-Status bar:
-  .status-bar, .status-bar__item, .status-bar__dot
-```
-
----
-
-## Ant Design configuration
-
-The project uses Ant Design. Override it via ConfigProvider in App.tsx (light algorithm):
-
-```tsx
-import { ConfigProvider, theme } from 'antd';
-
-<ConfigProvider theme={{
-  algorithm: theme.defaultAlgorithm,
-  token: {
-    colorBgBase:        '#F8F8F8',
-    colorBgContainer:   '#FFFFFF',
-    colorBgElevated:    '#FFFFFF',
-    colorBorder:        'rgb(229,231,235)',
-    colorText:          '#000000',
-    colorTextSecondary: '#6B7280',
-    colorPrimary:       '#0126DC',
-    borderRadius:       0,
-    fontFamily:         '"Neue Haas Unica", "Inter", ui-sans-serif, sans-serif',
-    fontSize:           16,
-  },
-}}>
-```
-
----
-
-## React Flow configuration
-
-```tsx
-// Edge style — smoothstep, low opacity dark on light canvas
-const defaultEdgeOptions = {
-  type: 'smoothstep',
-  style: {
-    stroke: 'rgba(0, 0, 0, 0.12)',
-    strokeWidth: 1,
-  },
-};
-
-// Background — dot grid, 16px spacing, CBCBCB dots on F8F8F8
-<Background
-  variant={BackgroundVariant.Dots}
-  gap={16}
-  size={1}
-  color="#CBCBCB"
-/>
-```
-
----
-
-## Quality gates — check before every commit
-
-Run through this list. If anything fails, fix it before considering a task done.
-
-1. **No hardcoded hex values** outside the token file or :root block
-2. **Font weight 400 in node/card content. 500 only for meta chrome** (eyebrows, wordmark)
-3. **No bold text** in .anchor-node, .context-node, .sidebar-item, .view-panel
-4. **Label outside card body** — .node-label must be a sibling of the card, not a child
-5. **Light surfaces only** — white cards (`var(--surface)`) on light gray canvas (`var(--canvas)`). No dark backgrounds on canvas elements.
-6. **No raw Ant Design defaults visible** — if it looks like a default light-gray form, it's wrong
-7. **Node width = 320px** exactly (`var(--grid-col)`)
-8. **Border radius = 0** on all cards and nodes. `var(--radius-soft)` = 4px only on toolbar toggles
-9. **No blur, gradient, or decorative shadows** — only `var(--shadow-card)`, `var(--shadow-toolbar)`, `var(--shadow-lift)`
-10. **Neue Haas Unica** loads correctly — check Network tab if text looks wrong
-11. **Category colors are semantic** — `--cat-event`, `--cat-works`, etc. Use only for their designated category, never decoratively
-12. **Voice is lowercase** — labels, headings, and buttons are lowercase; capitalize only proper nouns in body copy
-
----
-
-## What you must NOT change
-
-- TypeScript/JavaScript logic, state management, or data flow
-- Prop interfaces or component APIs  
-- React Flow node position or connection logic
-- Save/load session functionality
-- AI generation pipeline
-- Any file not directly related to the task in the current instruction
-
----
-
-## Work in progress tracker
-
-Update this section at the end of each session.
-
-| Task | Status | Notes |
-|------|--------|-------|
-| Apply Neurodive tokens to :root / index.css | TODO | Source: .claude/skills/Neurodive Design System.zip → colors_and_type.css |
-| Canvas: light gray bg + dot grid (CBCBCB on F8F8F8, 16px) | TODO | Replace old dark canvas |
-| Ant Design ConfigProvider → light algorithm + Neurodive tokens | TODO | See config block above |
-| React Flow edge style → dark on light (rgba 0,0,0,0.12) | TODO | See config block above |
-| Node cards → white surface, 0px radius, shadow-card | TODO | Replace #242424 cards |
-| Category labels → semantic color chips per --cat-* tokens | TODO | Orange=event, pink=works, yellow=policy, etc. |
-| Sidebar reskin → light surface | TODO | Remove old dark sidebar CSS |
-| Node floating label architecture | TODO | DOM restructure — see above. Label bg = var(--canvas) |
-| Expanded card / expansion panel | TODO | See feature-expansion-panel-edge-labels.md |
-| View panel reskin | TODO | Light surface, 0px radius |
-| Status bar reskin | TODO | Light surface |
-| Cluster / satellite system — Phase 1 (rendering) | TODO | See cluster-system-spec.md (visual specs updated to light theme) |
-| Cluster / satellite system — Phase 2 (drag) | TODO | See cluster-system-spec.md |
-| Cluster / satellite system — Phase 3 (source + fact check) | TODO | See cluster-system-spec.md |
-| Cluster / satellite system — Phase 4 (note absorption) | TODO | See cluster-system-spec.md |
-| Pivot edges | NOT STARTED | Spec TBD |
-| Train of thought toggle | NOT STARTED | Spec TBD |
-| Loading state | NOT STARTED | Blue+pink progress band per Neurodive spec |
-| Empty canvas state | NOT STARTED | No design yet |
-| Remember/flashcard mode | NOT STARTED | Not audited |
-
----
-
-## Cluster system architecture (DO NOT DEVIATE)
-
-Satellites are NOT separate React Flow nodes. They are absolutely positioned
-children of an expanded context-node bounding box. See cluster-system-spec.md
-for full architecture, data model, and phased implementation plan.
-
-Key rule: satellite mousedown must call e.stopPropagation() or the whole
-node drags instead of just the satellite.
-
----
-
-## How to receive a task
-
-Instructions arrive as one of:
-1. A markdown instruction document (like claude-code-instructions.md)
-2. A CSS file to import (like webs-tokens.css)
-3. A JSON token export (apply values to :root and relevant components)
-4. A direct message describing a specific, bounded change
-
-For (1): read the full document before starting. Do tasks in order.
-For (2): import the file as specified, do not modify its contents.
-For (3): update tokens only — do not restructure components unless told to.
-For (4): scope the change tightly. Do not refactor adjacent code.
-
-When a task is complete: summarise exactly what files were changed and what was not touched.
-
----
-
-## Session start checklist
+This document is the single source of truth for building Webs. Read it completely before entering plan mode. Do not make architectural decisions not covered here — ask instead.
 
 Before writing a single line of code:
+1. Read this document in full
+2. Locate `/skills/` in the repo root. Unzip the skills archive.
+3. Read `SKILL.md` and `README.md` inside the skills folder
+4. Study the images in `/skills/inspiration/`, `/skills/colors/`, and `/skills/type/`
+5. Read `type.css` and all files in `/skills/ui-kit/`
+6. Read the existing `CLAUDE.md` in the repo root
+7. Only then begin planning
 
-1. Read this file (CLAUDE.md) — you are doing this now
-2. Check the work in progress tracker above
-3. Read any instruction document provided in this session
-4. Identify which files you will need to touch
-5. Confirm your plan in one sentence before executing
+The visual language of this app is entirely defined by the skills folder. Do not invent aesthetic decisions. Do not use generic defaults. Every colour, spacing choice, typographic decision must be traceable to something in the skills folder or this document.
 
 ---
 
-## File locations (update if structure changes)
+## WHAT THIS APP IS
 
+Webs is a personal knowledge canvas for people with associative, non-linear minds. It is a spatial thinking tool — not a productivity app, not a note-taker, not a knowledge base.
+
+The core premise: real thinking does not happen in hierarchies. It happens through wandering, through unexpected adjacencies, through returning to old ideas and seeing them differently. Webs creates a space for that to happen.
+
+The user scatters fragments of interest — a quote, a person, a concept, a source, an event — on an infinite canvas. Fragments cluster by theme. Clusters connect to each other with verb-labelled edges. The AI surfaces connections the user hasn't made yet. Over time, the canvas becomes a visual map of the user's thinking.
+
+**The experience is:** spatial, quiet, absorbing, personal. Like a corkboard that knows things.
+
+---
+
+## WHAT THIS APP IS NOT
+
+Do not build any of the following. If a feature isn't in this document, it doesn't exist yet.
+
+- ❌ A note-taking app (Notion, Obsidian)
+- ❌ A task manager
+- ❌ A presentation tool
+- ❌ A collaborative whiteboard (Miro, Figma)
+- ❌ A knowledge graph with forced hierarchies
+- ❌ A search-first interface
+- ❌ A mobile app
+- ❌ A social/sharing platform
+
+---
+
+## MIGRATION STRATEGY
+
+### Current State
+The repo contains a working React Flow prototype. It has:
+- Working AI generation pipeline (Anthropic API call, cluster/fragment generation)
+- Node positioning logic (orbit-based, jitter)
+- Session save/load
+- Ant Design component library
+- Sidebar, status bar, view panel UI components
+- `webs-tokens.css` design token file
+- Vite + React + TypeScript scaffold
+- Font loading (Neue Haas Unica)
+- Netlify deploy config
+
+### What to Keep
+| Item | Action |
+|------|--------|
+| Vite + React + TypeScript scaffold | Keep exactly |
+| Font loading (Neue Haas Unica) | Keep exactly |
+| Netlify config | Keep exactly |
+| `CLAUDE.md` | Keep, update after build |
+| AI generation pipeline logic | Extract and port — keep the API call, prompt, and response parsing |
+| Session save/load state shape | Extract data model, port to new state management |
+| Orbit positioning math | Extract the math, port to new canvas system |
+| `webs-tokens.css` | Keep, extend with new tokens from this brief |
+
+### What to Remove
+| Item | Action |
+|------|--------|
+| React Flow (`@xyflow/react`) | Remove entirely — uninstall package |
+| All React Flow node components | Delete |
+| All React Flow edge components | Delete |
+| React Flow canvas wrapper | Delete |
+| Ant Design (`antd`) | Remove — replace with plain CSS |
+| Ant Design ConfigProvider | Delete |
+| All Ant Design component usage | Replace with native HTML + CSS |
+| Any hardcoded hex values in components | Remove, replace with token variables |
+
+### Migration Order
+1. Create new folder structure (see below)
+2. Remove React Flow and Ant Design from `package.json`, run install
+3. Build custom pan-zoom canvas layer
+4. Port AI generation pipeline into new architecture
+5. Build Fragment component system
+6. Build Cluster positioning system
+7. Build edge/connection system
+8. Port session save/load
+9. Rebuild sidebar, status bar with plain CSS
+10. Final token audit — no hardcoded values
+
+---
+
+## TECHNICAL ARCHITECTURE
+
+### Stack
+```
+Vite + React + TypeScript
+Custom pan-zoom canvas (no canvas library)
+Anthropic API (claude-sonnet-4-5 or latest Sonnet)
+Plain CSS with custom properties (no CSS-in-JS, no Tailwind)
+No Ant Design
+No React Flow
+No external canvas/diagram libraries
+```
+
+### Folder Structure
 ```
 src/
+  canvas/
+    Canvas.tsx              ← pan-zoom root component
+    usePanZoom.ts           ← custom hook: wheel, drag, transform state
+    useCanvas.ts            ← canvas state: clusters, fragments, edges
+    CanvasBackground.tsx    ← dot grid SVG
+  fragments/
+    Fragment.tsx            ← master fragment component
+    FragmentHeader.tsx      ← colored type label
+    slots/
+      BodySlot.tsx
+      ImageSlot.tsx
+      TagsSlot.tsx
+      ListSlot.tsx
+      DisclaimerSlot.tsx
+    layouts/
+      VerticalFlow.tsx
+      ImageHero.tsx
+      QuoteCentered.tsx
+      CardSplit.tsx
+      Timeline.tsx
+      ListProminent.tsx
+  clusters/
+    Cluster.tsx             ← cluster wrapper + fragment positioning
+    ClusterLabel.tsx        ← title shown at macro zoom level
+  edges/
+    Edge.tsx                ← connection between clusters
+    EdgeLabel.tsx           ← verb label on edge
+    EdgeMidpoint.tsx        ← midpoint dot, hover bloom menu
+  ui/
+    Sidebar.tsx
+    StatusBar.tsx
+    SearchInput.tsx         ← initial query input
+    ContextMenu.tsx         ← fragment hover menu
+  tokens/
+    tokens.ts               ← JS token constants
   styles/
-    webs-tokens.css     ← design token overrides, import last
-    index.css           ← global base styles
-  components/
-    nodes/              ← AnchorNode, ContextNode etc.
-    sidebar/            ← Sidebar component
-    canvas/             ← Canvas wrapper, React Flow config
-  App.tsx               ← ConfigProvider, top-level layout
-  main.tsx              ← entry point
+    webs-tokens.css         ← CSS custom properties (source of truth)
+    index.css               ← global base styles
+    canvas.css
+    fragments.css
+    ui.css
+  api/
+    generate.ts             ← Anthropic API call + prompt
+    types.ts                ← all TypeScript interfaces
+  App.tsx
+  main.tsx
+```
+
+### TypeScript Interfaces
+
+```typescript
+// All core types live in src/api/types.ts
+
+type FragmentType =
+  | "person"
+  | "concept"
+  | "thesis"
+  | "source"
+  | "event"
+  | "era"
+  | "domain"
+  | "quote";
+
+type LayoutType =
+  | "vertical-flow"
+  | "image-hero"
+  | "quote-centered"
+  | "card-split"
+  | "timeline"
+  | "list-prominent";
+
+interface FragmentSlot {
+  type: "body" | "image" | "tags" | "list" | "disclaimer";
+  content?: string;        // body, image url, disclaimer
+  items?: string[];        // tags, list
+}
+
+interface Fragment {
+  id: string;
+  type: FragmentType;
+  layout: LayoutType;      // API decides, rules defined below
+  title: string;
+  slots: FragmentSlot[];
+  createdAtZoom: number;   // zoom level at time of creation
+  starred: boolean;
+}
+
+interface Cluster {
+  id: string;
+  x: number;              // canvas position
+  y: number;
+  title: string;
+  isSeed: boolean;
+  fragments: Fragment[];
+}
+
+interface Edge {
+  id: string;
+  sourceClusterId: string;
+  targetClusterId: string;
+  label: string;          // verb: "shaped by", "resulted in", etc.
+}
+
+interface CanvasState {
+  clusters: Cluster[];
+  edges: Edge[];
+  viewport: {
+    x: number;
+    y: number;
+    zoom: number;
+  };
+  query: string;
+  createdAt: number;
+}
 ```
 
 ---
 
-## Contact
+## PAN-ZOOM CANVAS
 
-Design decisions → back-channel with designer (not your call)
-Logic/architecture questions → ask before assuming
-Anything affecting more than 3 files → confirm scope before starting
+Build a custom pan-zoom layer. Do not use any library for this.
+
+```typescript
+// usePanZoom.ts — core logic
+
+const MIN_ZOOM = 0.05;
+const MAX_ZOOM = 4;
+const ZOOM_SPEED = 0.006;
+
+// State
+const [transform, setTransform] = useState({ x: 0, y: 0, zoom: 0.7 });
+
+// Wheel handler — zoom toward cursor position
+const onWheel = (e: WheelEvent) => {
+  e.preventDefault();
+  const delta = e.deltaY * ZOOM_SPEED * -1;
+  const newZoom = clamp(transform.zoom + delta * transform.zoom, MIN_ZOOM, MAX_ZOOM);
+  const ratio = newZoom / transform.zoom;
+  setTransform({
+    x: e.clientX - ratio * (e.clientX - transform.x),
+    y: e.clientY - ratio * (e.clientY - transform.y),
+    zoom: newZoom,
+  });
+};
+
+// Pan — mouse drag on canvas background only
+// Apply to canvas element:
+// style={{ transform: `translate(${x}px, ${y}px) scale(${zoom})` }}
+// transform-origin: 0 0
+```
+
+Canvas element receives `transform: translate(x, y) scale(zoom)` with `transform-origin: 0 0`. All cluster positions are in canvas-space coordinates. Convert to screen space for pointer events.
 
 ---
-*Last updated: April 2026 — v2.0 Neurodive design system. Light theme. Dark theme removed.*
+
+## LEVEL OF DETAIL (LOD)
+
+Three zoom thresholds that determine what is rendered:
+
+```typescript
+const LOD_FULL = 0.45;      // > 0.45: full fragment cards with all slots
+const LOD_COMPACT = 0.18;   // 0.18–0.45: color bars + cluster title only
+const LOD_MACRO = 0.18;     // < 0.18: cluster title + tiny color dots only
+
+function getLOD(zoom: number): "full" | "compact" | "macro" {
+  if (zoom > LOD_FULL) return "full";
+  if (zoom > LOD_MACRO) return "compact";
+  return "macro";
+}
+```
+
+At LOD `compact`: render cluster title and colored horizontal bars (one bar per fragment, color = fragment type color).
+At LOD `macro`: render cluster title only, with tiny 6px color dots.
+At LOD `full`: render complete Fragment components with all slots.
+
+Fragments are only interactive (hover, click, drag) at LOD `full`.
+
+---
+
+## FRAGMENT COMPONENT SYSTEM
+
+### The Core Model
+One master `<Fragment>` component. It receives a `Fragment` object and renders its slots according to the layout type. The layout is determined by the API based on fragment type (see mapping below). The visual execution of each layout is done with CSS Grid.
+
+The designer (Anton) will iterate on the visual execution of layouts manually. **Do not lock in pixel-perfect layout decisions.** Build the correct structure and make it easy to restyle.
+
+### Fragment Type → Default Layout Mapping
+```typescript
+const LAYOUT_FOR_TYPE: Record<FragmentType, LayoutType> = {
+  person:  "image-hero",
+  concept: "vertical-flow",
+  thesis:  "vertical-flow",
+  quote:   "quote-centered",
+  source:  "card-split",
+  event:   "timeline",
+  era:     "vertical-flow",
+  domain:  "vertical-flow",
+};
+```
+
+### Fragment Type Colors
+Defined as CSS custom properties. Read from `webs-tokens.css`. Reference only:
+```css
+--color-fragment-person-bg:   #00E87B;
+--color-fragment-person-text: #0a0a0a;
+--color-fragment-concept-bg:  #FF6D00;
+--color-fragment-concept-text:#0a0a0a;
+--color-fragment-thesis-bg:   #FF3B30;
+--color-fragment-thesis-text: #ffffff;
+--color-fragment-source-bg:   #00D4FF;
+--color-fragment-source-text: #0a0a0a;
+--color-fragment-event-bg:    #FF9F0A;
+--color-fragment-event-text:  #0a0a0a;
+--color-fragment-era-bg:      #BF5AF2;
+--color-fragment-era-text:    #ffffff;
+--color-fragment-domain-bg:   #1a1a1a;
+--color-fragment-domain-text: rgba(255,255,255,0.75);
+--color-fragment-quote-bg:    #2563EB;
+--color-fragment-quote-text:  #ffffff;
+```
+
+### Slot Rules
+Each slot has its own background, padding, and border. Slots are flush against each other — no gap between them. Each slot type is a discrete visual block.
+
+```
+slot types:     body | image | tags | list | disclaimer
+slot bg:        var(--color-slot-bg)         [white]
+slot border:    1px solid var(--color-slot-border)
+slot padding:   var(--spacing-base) [16px]
+image padding:  0
+disclaimer bg:  var(--color-disclaimer-bg)
+```
+
+### Fragment Header
+The colored type label. Sits above the card — not inside it. Floats between canvas and card. Width is `fit-content` — it never stretches to card width.
+
+```css
+.fragment__header {
+  display: inline-flex;
+  align-items: center;
+  height: var(--size-header-height);       /* 32px */
+  padding: 0 var(--size-header-pad-x);     /* 0 14px */
+  width: fit-content;                       /* never stretches */
+  font-size: var(--font-size-header);
+  font-weight: var(--font-weight-regular);
+  letter-spacing: var(--tracking-tight);
+  /* background and color set by fragment type */
+}
+```
+
+### Layout Implementations
+Each layout uses CSS Grid. These are starting implementations — the designer will iterate. Build them correctly, not beautifully.
+
+**vertical-flow** (concept, thesis, era, domain):
+```css
+.fragment--vertical-flow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;                          /* slots flush */
+  width: 320px;
+}
+```
+
+**image-hero** (person):
+```css
+.fragment--image-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  width: 480px;
+}
+/* header spans both columns */
+/* image takes left column, spans multiple rows */
+/* body/tags on right */
+```
+
+**quote-centered** (quote):
+```css
+.fragment--quote-centered {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  width: 320px;
+}
+/* quote slot: larger font, italic, centered */
+```
+
+**card-split** (source):
+```css
+.fragment--card-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  width: 480px;
+}
+/* header spans both */
+/* image left, body right */
+/* tags span both */
+```
+
+**timeline** (event):
+```css
+.fragment--timeline {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 0;
+  width: 400px;
+}
+/* era label anchors left column */
+/* title/body/tags flow right column */
+```
+
+**list-prominent** (list):
+```css
+.fragment--list-prominent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  width: 480px;
+}
+/* list takes left, body takes right */
+/* tags span both */
+```
+
+### Fragment Contextual Menu
+Appears on hover. Positioned below the fragment card. Uses `position: absolute`, `z-index: 1000`. Does not affect layout of surrounding elements.
+
+Four icon buttons only. No labels:
+- 🔍 Fact check (calls API, returns verification)
+- 🔀 Pivot (calls API, generates related fragments)
+- ⭐ Star (toggles `starred` on fragment)
+- 🗑️ Delete (removes fragment from cluster)
+
+---
+
+## CLUSTER SYSTEM
+
+Clusters are groups of semantically related fragments arranged in proximity on the canvas. They have no visual border — the grouping is implied by spatial proximity.
+
+### Cluster Positioning (from seed)
+On initial generation, clusters orbit the seed fragment:
+```typescript
+function positionClusters(clusters: Cluster[]): Cluster[] {
+  const SEED_INDEX = clusters.findIndex(c => c.isSeed);
+  const BASE_RADIUS = 700;
+  const JITTER = 100;
+  const angleStep = (Math.PI * 2) / (clusters.length - 1);
+
+  return clusters.map((cluster, i) => {
+    if (cluster.isSeed) return { ...cluster, x: 0, y: 0 };
+    const angle = angleStep * (i - 1);
+    const r = BASE_RADIUS + (Math.random() - 0.5) * JITTER;
+    return {
+      ...cluster,
+      x: Math.cos(angle) * r,
+      y: Math.sin(angle) * r,
+    };
+  });
+}
+```
+
+### Fragments Within a Cluster
+Fragments within a cluster are arranged in a loose grid — not perfectly aligned. Small random offsets (±8px x, ±8px y) applied at mount time. Fragments are draggable independently within the canvas space.
+
+### Seed Fragment
+Special cluster. Visually distinct:
+- Background color: `#D2F34C` (lime green)
+- Small "exploring" micro-label above title
+- Title = user's original query (lowercase)
+- Body = 2-3 sentences of AI-generated context
+- No contextual menu
+- Positioned at canvas center; viewport centers on it at zoom 0.7
+
+### Cluster Label
+Visible at LOD `compact` and `macro`. Simple text label, positioned above the cluster's bounding area. No background, no border.
+
+---
+
+## EDGE SYSTEM
+
+Connections between clusters (not fragments). Thin SVG lines drawn between cluster center points.
+
+```typescript
+// Edge rendering: SVG overlay, positioned absolute over canvas
+// One <svg> element covering entire canvas space
+// Each edge is a <line> or <path> element
+// Midpoint: render a small dot (6px circle) at midpoint of each edge
+```
+
+### Edge Midpoint Interaction
+On hover of midpoint dot: bloom menu appears. Two options:
+- Edit label (inline text input replaces label)
+- Delete edge
+
+### Edge Labels
+Short verb phrases. Rendered as text centered on the edge midpoint. Examples: "shaped by", "resulted in", "challenged by", "enabled", "inspired".
+
+### Creating Edges
+User drags from one cluster to another. On release, inline text input prompts for a verb label. Press Enter to confirm. Press Escape to cancel.
+
+---
+
+## AI GENERATION
+
+### API Call
+```typescript
+// src/api/generate.ts
+const response = await fetch("https://api.anthropic.com/v1/messages", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    model: "claude-sonnet-4-5",
+    max_tokens: 4000,
+    messages: [{
+      role: "user",
+      content: buildPrompt(query)
+    }]
+  })
+});
+```
+
+### Prompt Structure
+The prompt must instruct Claude to return a JSON object with:
+```typescript
+{
+  context: string,          // 2-3 sentence grounding paragraph for seed
+  clusters: Array<{
+    title: string,
+    fragments: Array<{
+      type: FragmentType,
+      title: string,
+      slots: FragmentSlot[],
+    }>
+  }>,
+  edges: Array<{
+    source: string,         // cluster title
+    target: string,
+    label: string,          // verb phrase
+  }>
+}
+```
+
+Rules for AI output:
+- 5 clusters minimum, 8 maximum
+- 3-5 fragments per cluster
+- Each fragment must have at least a `body` slot
+- Image slots should be omitted from API response (images fetched separately or left empty)
+- Layout is assigned by the client based on `LAYOUT_FOR_TYPE` mapping, not by the API
+
+### API Key
+`VITE_ANTHROPIC_API_KEY` in `.env.local`. Never committed. If key is absent, use mock data (a hardcoded example `CanvasState` that covers all fragment types and layouts).
+
+### Pivot Action
+When user clicks 🔀 on a fragment:
+- Call API with the fragment's title and body as context
+- Generate 3-5 new fragments related to this one
+- Create a new cluster near the source fragment
+- Connect it to the source cluster with an edge labelled "explored via"
+
+---
+
+## TOKEN SYSTEM
+
+All design values live in `src/styles/webs-tokens.css` as CSS custom properties. All values in components reference these variables. No hardcoded hex values, pixel sizes, or font names in component files.
+
+### Token Categories
+
+**Spacing** (px):
+```css
+--spacing-none: 0px;
+--spacing-xxs:  2px;
+--spacing-xs:   4px;
+--spacing-sm:   8px;
+--spacing-base: 16px;
+--spacing-md:   24px;
+--spacing-lg:   32px;
+--spacing-xl:   48px;
+--spacing-xxl:  64px;
+```
+
+**Sizes**:
+```css
+--size-header-height:       32px;
+--size-header-pad-x:        14px;
+--size-tag-height:          22px;
+--size-tag-pad-x:           8px;
+--size-image-height:        240px;
+--size-image-height-small:  200px;
+```
+
+**Typography**:
+```css
+--font-primary:             "Neue Haas Unica", "Helvetica Neue", Arial, sans-serif;
+--font-size-header:         20px;
+--font-size-body:           16px;
+--font-size-tag:            12px;
+--font-size-disclaimer:     11px;
+--font-size-meta:           10px;
+--font-weight-regular:      400;
+--line-height-tight:        1;
+--line-height-normal:       1.3;
+--line-height-relaxed:      1.5;
+--tracking-tight:           -0.05em;
+--tracking-normal:          -0.01em;
+--tracking-wide:            0.05em;
+```
+
+**Color Prominence** (opacity multipliers, applied in code):
+```css
+--prominence-full:          1;
+--prominence-secondary:     0.75;
+--prominence-tertiary:      0.58;
+--prominence-quaternary:    0.28;
+--prominence-disabled:      0.1;
+```
+
+The visual design values for colors, surfaces, and UI chrome must be derived from the skills folder (`/skills/type.css`, `/skills/colors/`, `/skills/ui-kit/`). Do not invent these values.
+
+---
+
+## UI SHELL
+
+### Sidebar
+Left-side panel. Contains:
+- App logo/wordmark ("webs")
+- Query input (start new exploration)
+- Session history (list of past explorations by date/title)
+- Fragment count, cluster count stats
+
+Plain HTML + CSS. No Ant Design. No component library. Derive visual style from skills folder.
+
+### Status Bar
+Bottom of canvas. Shows:
+- Current zoom level (e.g., "0.7×")
+- Fragment count
+- Cluster count
+- Connection indicator (online/offline)
+
+Single line, minimal. Plain CSS.
+
+### Initial State
+On first load with no session: centered query input on blank canvas. Simple. No sidebar visible until a session exists.
+
+---
+
+## SESSION PERSISTENCE
+
+Save and load `CanvasState` to `localStorage`.
+
+```typescript
+// Save on any state change (debounced 1000ms)
+localStorage.setItem("webs-session", JSON.stringify(canvasState));
+
+// Load on mount
+const saved = localStorage.getItem("webs-session");
+if (saved) setCanvasState(JSON.parse(saved));
+```
+
+Store multiple sessions:
+```typescript
+localStorage.setItem("webs-sessions", JSON.stringify(allSessions));
+// each session: { id, title, createdAt, state: CanvasState }
+```
+
+---
+
+## QUALITY GATES
+
+Before considering any task complete, verify:
+
+1. **No React Flow imports anywhere** in the codebase
+2. **No Ant Design imports anywhere** in the codebase
+3. **No hardcoded hex values** in component files — only CSS variable references
+4. **No hardcoded pixel values** in component files — only CSS variable references
+5. **No font-weight above 400** anywhere in the codebase
+6. **Fragment header is `fit-content` width** — never stretches to card width
+7. **Slot gaps are 0** — slots are flush against each other
+8. **Canvas pan-zoom works** at zoom range 0.05–4 without jank
+9. **LOD transitions are smooth** — no flicker between zoom levels
+10. **Seed fragment is visually distinct** from all other fragments
+11. **Contextual menu does not push layout** — absolute positioned, z-indexed
+12. **All token values reference CSS variables** — run grep for hardcoded values before marking complete
+13. **Mock data covers all 8 fragment types and all 6 layout types** — visible without an API key
+14. **Session saves and restores correctly** — reload page, state persists
+
+---
+
+## WHAT CLAUDE CODE MUST NOT DO
+
+- Do not make visual design decisions. Derive all aesthetics from the skills folder.
+- Do not install any canvas library, diagram library, or graph library.
+- Do not install Ant Design or any other component library.
+- Do not install Tailwind CSS.
+- Do not use CSS-in-JS.
+- Do not use inline styles for design values — use CSS classes and custom properties.
+- Do not add features not described in this document.
+- Do not auto-format or prettify token values — preserve them exactly.
+- Do not rename CSS custom properties already defined in `webs-tokens.css`.
+- Do not modify the Vite config, Netlify config, or font loading unless a bug requires it.
+- Do not add TypeScript `any` types — define all interfaces properly.
+
+---
+
+## OPEN QUESTIONS (do not resolve without asking)
+
+The following are intentionally left open. Claude Code must surface these to the designer before implementing:
+
+1. **Fragment layout visual execution** — The grid structure is defined, but exact slot proportions, widths, image heights, and visual treatment within each layout are for the designer to specify. Build the structure, leave visual iteration for the designer.
+2. **Sidebar design** — Overall structure is defined. Visual execution must be derived from the skills folder, but the designer may want to review before finalising.
+3. **Tag component design** — Tags are defined as slots. Their exact visual treatment (background, border, shape) must match the skills folder aesthetic. Check with designer.
+
+---
+
+## HOW THIS PROJECT IS WORKED ON
+
+This project is built in targeted sessions. Each session focuses on one specific part of the app — not the whole thing. This is intentional. Do not scope-creep into adjacent systems.
+
+### Two-Document System
+
+There are always two documents in play:
+
+**`CLAUDE.md`** (repo root, permanent) — the full architecture, token system, quality gates, what not to touch. This document. It is the source of truth for the entire project. It does not change session to session — it accumulates. At the end of each session, Claude Code updates the WIP tracker table in this file to reflect what was completed, what is in progress, and what hasn't been started.
+
+**`SESSION.md`** (repo root, gitignored) — created fresh before each session. Defines the scope of the current session only. Files in scope, files off-limits, specific goals, design intent, reference images if any. Claude Code reads both documents on every session start. SESSION.md takes priority for scope. CLAUDE.md takes priority for architecture and constraints.
+
+### Session Start Protocol (Claude Code must follow this every time)
+
+```
+1. Read CLAUDE.md in full
+2. Read SESSION.md in full
+3. Check the WIP tracker — understand what is done and what isn't
+4. Identify all files listed as in-scope in SESSION.md
+5. Confirm you will not touch files listed as off-limits
+6. State your understanding of today's goal in one sentence
+7. Only then begin
+```
+
+### Session End Protocol (Claude Code must follow this every time)
+
+```
+1. Update the WIP tracker in CLAUDE.md with current status of all touched features
+2. Note any decisions made during the session that affect architecture
+3. Note any open questions that arose
+4. Do not leave the WIP tracker stale
+```
+
+### Design Decision Pipeline
+
+Design decisions are made in a separate Claude chat (claude.ai) before a session begins — not during a Claude Code session. The output of that design chat becomes the content of SESSION.md. Claude Code executes. It does not design.
+
+If Claude Code encounters an ambiguity about visual design or interaction behaviour during a session, it must stop and surface it as a question rather than making a decision.
+
+---
+
+## SESSION.md TEMPLATE
+
+Copy this to `SESSION.md` in the repo root before each session. Fill it in. Add SESSION.md to `.gitignore`.
+
+```markdown
+# SESSION.md
+# Webs — current session scope
+# [date]
+
+## Goal
+[One sentence. What will be different at the end of this session that isn't true now.]
+
+## Context
+[Optional. 2-3 sentences of background if needed. What decisions led to this session.]
+
+## In scope
+[List specific files and components that may be touched this session.]
+
+src/
+  [file or folder]
+  [file or folder]
+
+## Off limits
+[List everything Claude Code must not touch. Be explicit.]
+
+Everything not listed above is off limits, specifically:
+- [file or folder]
+- [file or folder]
+
+## Specific goals
+[Numbered list. Each item is a discrete thing that must be true at the end of the session.]
+
+1.
+2.
+3.
+
+## Design intent
+[Describe the intended behaviour, look, or feel. Be specific. Reference images if you have them.]
+
+## Reference
+[Optional. Link to Figma, attach images, paste a description from the design chat.]
+
+## Known constraints
+[Anything Claude Code should know going in. Edge cases, things that broke last time, dependencies.]
+
+## Definition of done
+[How will we know this session is complete? What is the test?]
+```
+
+---
+
+## WORK IN PROGRESS TRACKER
+
+Claude Code updates this table at the end of every session.
+
+| Feature | Status | Notes | Last touched |
+|---------|--------|-------|--------------|
+| React Flow removal | NOT STARTED | — | — |
+| Ant Design removal | NOT STARTED | — | — |
+| Custom pan-zoom canvas | NOT STARTED | — | — |
+| Dot grid background | NOT STARTED | — | — |
+| LOD system (macro/compact/full) | NOT STARTED | — | — |
+| Fragment component (structure) | NOT STARTED | — | — |
+| Fragment layouts — vertical-flow | NOT STARTED | — | — |
+| Fragment layouts — image-hero | NOT STARTED | — | — |
+| Fragment layouts — quote-centered | NOT STARTED | — | — |
+| Fragment layouts — card-split | NOT STARTED | — | — |
+| Fragment layouts — timeline | NOT STARTED | — | — |
+| Fragment layouts — list-prominent | NOT STARTED | — | — |
+| Fragment contextual menu | NOT STARTED | — | — |
+| Fragment header (floating label) | NOT STARTED | — | — |
+| Slot system | NOT STARTED | — | — |
+| Cluster system | NOT STARTED | — | — |
+| Cluster positioning (orbit) | NOT STARTED | — | — |
+| Cluster labels (compact/macro) | NOT STARTED | — | — |
+| Seed fragment | NOT STARTED | — | — |
+| Edge system (SVG layer) | NOT STARTED | — | — |
+| Edge labels | NOT STARTED | — | — |
+| Edge midpoint menu | NOT STARTED | — | — |
+| Edge creation (drag between clusters) | NOT STARTED | — | — |
+| AI generation pipeline | NOT STARTED | — | — |
+| Pivot action | NOT STARTED | — | — |
+| Session persistence (localStorage) | NOT STARTED | — | — |
+| Sidebar | NOT STARTED | — | — |
+| Status bar | NOT STARTED | — | — |
+| Initial state (blank canvas + input) | NOT STARTED | — | — |
+| Token system (CSS variables) | NOT STARTED | — | — |
+| Mock data (all 8 types + 6 layouts) | NOT STARTED | — | — |
+
+Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKED`
+
+---
+
+## PLAN MODE INSTRUCTION
+
+Enter plan mode. Read the full brief above, including the workflow section. Then:
+
+1. Audit the existing repo — list every file that will be deleted, kept, or modified
+2. List every new file that will be created
+3. Describe the build sequence (what gets built in what order and why)
+4. Check the WIP tracker — note current state of all features
+5. Identify any ambiguities or missing information before starting
+6. Propose the plan for designer approval before writing any code
+
+Do not write code in plan mode. Surface the plan only.
