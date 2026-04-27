@@ -827,37 +827,37 @@ Claude Code updates this table at the end of every session.
 
 | Feature | Status | Notes | Last touched |
 |---------|--------|-------|--------------|
-| React Flow removal | NOT STARTED | — | — |
-| Ant Design removal | NOT STARTED | — | — |
-| Custom pan-zoom canvas | NOT STARTED | — | — |
-| Dot grid background | NOT STARTED | — | — |
+| React Flow removal | DONE | @xyflow/react uninstalled; all node/edge components deleted; zero imports in src/ | Session 01 |
+| Ant Design removal | DONE | antd + antd-style uninstalled; ConfigProvider stripped from main.jsx; zero imports in src/ | Session 01 |
+| Custom pan-zoom canvas | NOT STARTED | Stub at src/canvas/Canvas.tsx + usePanZoom.ts | Session 01 |
+| Dot grid background | NOT STARTED | Stub at src/canvas/CanvasBackground.tsx | Session 01 |
 | LOD system (macro/compact/full) | NOT STARTED | — | — |
-| Fragment component (structure) | NOT STARTED | — | — |
-| Fragment layouts — vertical-flow | NOT STARTED | — | — |
-| Fragment layouts — image-hero | NOT STARTED | — | — |
-| Fragment layouts — quote-centered | NOT STARTED | — | — |
-| Fragment layouts — card-split | NOT STARTED | — | — |
-| Fragment layouts — timeline | NOT STARTED | — | — |
-| Fragment layouts — list-prominent | NOT STARTED | — | — |
-| Fragment contextual menu | NOT STARTED | — | — |
-| Fragment header (floating label) | NOT STARTED | — | — |
-| Slot system | NOT STARTED | — | — |
-| Cluster system | NOT STARTED | — | — |
-| Cluster positioning (orbit) | NOT STARTED | — | — |
-| Cluster labels (compact/macro) | NOT STARTED | — | — |
-| Seed fragment | NOT STARTED | — | — |
-| Edge system (SVG layer) | NOT STARTED | — | — |
-| Edge labels | NOT STARTED | — | — |
-| Edge midpoint menu | NOT STARTED | — | — |
+| Fragment component (structure) | NOT STARTED | Stubs at src/fragments/Fragment.tsx + FragmentHeader.tsx | Session 01 |
+| Fragment layouts — vertical-flow | NOT STARTED | Stub at src/fragments/layouts/VerticalFlow.tsx | Session 01 |
+| Fragment layouts — image-hero | NOT STARTED | Stub at src/fragments/layouts/ImageHero.tsx | Session 01 |
+| Fragment layouts — quote-centered | NOT STARTED | Stub at src/fragments/layouts/QuoteCentered.tsx | Session 01 |
+| Fragment layouts — card-split | NOT STARTED | Stub at src/fragments/layouts/CardSplit.tsx | Session 01 |
+| Fragment layouts — timeline | NOT STARTED | Stub at src/fragments/layouts/Timeline.tsx | Session 01 |
+| Fragment layouts — list-prominent | NOT STARTED | Stub at src/fragments/layouts/ListProminent.tsx | Session 01 |
+| Fragment contextual menu | NOT STARTED | Stub at src/ui/ContextMenu.tsx | Session 01 |
+| Fragment header (floating label) | NOT STARTED | Stub at src/fragments/FragmentHeader.tsx | Session 01 |
+| Slot system | NOT STARTED | Stubs at src/fragments/slots/ (5 files) | Session 01 |
+| Cluster system | NOT STARTED | Stub at src/clusters/Cluster.tsx | Session 01 |
+| Cluster positioning (orbit) | NOT STARTED | positionClusters() in src/api/generate.ts | Session 01 |
+| Cluster labels (compact/macro) | NOT STARTED | Stub at src/clusters/ClusterLabel.tsx | Session 01 |
+| Seed fragment | NOT STARTED | Seed logic in src/api/generate.ts parseApiResponse() | Session 01 |
+| Edge system (SVG layer) | NOT STARTED | Stubs at src/edges/ (Edge.tsx, EdgeLabel.tsx, EdgeMidpoint.tsx) | Session 01 |
+| Edge labels | NOT STARTED | Stub at src/edges/EdgeLabel.tsx | Session 01 |
+| Edge midpoint menu | NOT STARTED | Stub at src/edges/EdgeMidpoint.tsx | Session 01 |
 | Edge creation (drag between clusters) | NOT STARTED | — | — |
-| AI generation pipeline | NOT STARTED | — | — |
-| Pivot action | NOT STARTED | — | — |
-| Session persistence (localStorage) | NOT STARTED | — | — |
-| Sidebar | NOT STARTED | — | — |
-| Status bar | NOT STARTED | — | — |
-| Initial state (blank canvas + input) | NOT STARTED | — | — |
-| Token system (CSS variables) | NOT STARTED | — | — |
-| Mock data (all 8 types + 6 layouts) | NOT STARTED | — | — |
+| AI generation pipeline | NOT STARTED | New structure in src/api/generate.ts (claude-sonnet-4-5, cluster/fragment/edge schema); old logic preserved in src/lib/expand.js | Session 01 |
+| Pivot action | NOT STARTED | generatePivot() stub in src/api/generate.ts | Session 01 |
+| Session persistence (localStorage) | NOT STARTED | useCanvas.ts has loadState(); wiring in later session | Session 01 |
+| Sidebar | NOT STARTED | Stub at src/ui/Sidebar.tsx | Session 01 |
+| Status bar | NOT STARTED | Stub at src/ui/StatusBar.tsx | Session 01 |
+| Initial state (blank canvas + input) | NOT STARTED | Stub at src/ui/SearchInput.tsx | Session 01 |
+| Token system (CSS variables) | DONE | src/styles/webs-tokens.css created with full token set; src/tokens/tokens.ts mirrors as JS constants | Session 01 |
+| Mock data (all 8 types + 6 layouts) | DONE | getMockCanvasState() in src/api/generate.ts — covers all 8 types + 5 layouts; list-prominent needs data in Session 02 | Session 01 |
 
 Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKED`
 
