@@ -18,41 +18,47 @@ export type LayoutType =
   | "timeline"
   | "list-prominent";
 
+export type ConnectorType = "tether" | "weak" | "standard" | "strong";
+
 export interface FragmentSlot {
   type: "body" | "image" | "tags" | "list" | "disclaimer";
-  content?: string;   // body text, image url, or disclaimer text
-  items?: string[];   // tags array or list items array
+  content?: string;
+  items?: string[];
 }
 
 export interface Fragment {
   id: string;
+  clusterId: string;       // logical parent — never changes
+  x: number;              // own canvas-space position (center)
+  y: number;
   type: FragmentType;
-  layout: LayoutType;    // assigned client-side via LAYOUT_FOR_TYPE, not by API
+  layout: LayoutType;
   title: string;
   slots: FragmentSlot[];
-  createdAtZoom: number; // zoom level at time of creation
+  createdAtZoom: number;
   starred: boolean;
 }
 
 export interface Cluster {
   id: string;
-  x: number;             // canvas-space position
+  x: number;              // canvas-space position (center)
   y: number;
-  title: string;
+  label: string;
   isSeed: boolean;
-  fragments: Fragment[];
 }
 
-export interface Edge {
+export interface Connector {
   id: string;
-  sourceClusterId: string;
-  targetClusterId: string;
-  label: string;         // verb phrase: "shaped by", "resulted in", etc.
+  sourceId: string;       // fragment id or cluster id
+  targetId: string;       // fragment id or cluster id
+  type: ConnectorType;
+  label: string;          // editable verb phrase, empty by default
 }
 
 export interface CanvasState {
   clusters: Cluster[];
-  edges: Edge[];
+  fragments: Fragment[];
+  connectors: Connector[];
   viewport: {
     x: number;
     y: number;
@@ -62,7 +68,6 @@ export interface CanvasState {
   createdAt: number;
 }
 
-// Shape of each session stored in localStorage
 export interface SessionRecord {
   id: string;
   title: string;
@@ -82,8 +87,8 @@ export interface GenerateApiResponse {
     }>;
   }>;
   edges: Array<{
-    source: string;  // cluster title
-    target: string;  // cluster title
+    source: string;
+    target: string;
     label: string;
   }>;
 }

@@ -1,0 +1,168 @@
+/* connectors.css — connector lines, labels, context menu, spawn points, fragment placeholders */
+
+@keyframes connectorPulse {
+  0%, 100% { stroke-opacity: 1; }
+  50%       { stroke-opacity: 0.5; }
+}
+
+/* ─── Connector lines ─────────────────────────────────────── */
+
+.connector-standard {
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 1.5;
+}
+
+/* Glow behind strong connector — may have perf impact at scale */
+.connector-strong-glow {
+  stroke: var(--color-fragment-concept-bg);
+  stroke-width: 8;
+  opacity: 0.15;
+  filter: url(#connector-glow-filter);
+}
+
+.connector-strong {
+  stroke: var(--color-fragment-concept-bg);
+  stroke-width: 2.5;
+  animation: connectorPulse 2s ease-in-out infinite;
+}
+
+/* ─── Connector label pill ────────────────────────────────── */
+
+.connector-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  z-index: 2;
+  cursor: pointer;
+  user-select: none;
+}
+
+.connector-label--pill {
+  background: var(--color-surface);
+  border: 1px solid var(--color-slot-border);
+  padding: var(--spacing-xxs) var(--spacing-xs);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-regular);
+  white-space: nowrap;
+  border-radius: 2px;
+}
+
+.connector-label--dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-edge-midpoint);
+  border-radius: 50%;
+}
+
+.connector-label__input {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-regular);
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100px;
+  padding: 0;
+}
+
+/* ─── Context menu ────────────────────────────────────────── */
+
+.connector-context-menu {
+  position: absolute;
+  z-index: 100;
+  background: var(--color-surface);
+  border: 1px solid var(--color-slot-border);
+  padding: var(--spacing-xxs) 0;
+  min-width: 120px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.connector-context-menu button {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-tag);
+  font-weight: var(--font-weight-regular);
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.connector-context-menu button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* ─── Cluster spawn point ─────────────────────────────────── */
+
+.cluster-spawn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  z-index: 1;
+}
+
+.cluster-spawn:active {
+  cursor: grabbing;
+}
+
+.cluster-spawn__label {
+  display: inline-block;
+  background: rgba(10, 10, 10, 0.85);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-tag);
+  font-weight: var(--font-weight-regular);
+  padding: var(--spacing-xxs) var(--spacing-xs);
+  white-space: nowrap;
+}
+
+.cluster-spawn--seed .cluster-spawn__label {
+  background: var(--color-seed-bg);
+  color: var(--color-seed-text);
+}
+
+/* ─── Fragment placeholders ───────────────────────────────── */
+
+.fragment-placeholder {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  z-index: 1;
+}
+
+.fragment-placeholder:active {
+  cursor: grabbing;
+}
+
+.fragment-placeholder--full {
+  width: 320px;
+  height: 80px;
+  border-radius: 2px;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.fragment-placeholder--compact {
+  width: 120px;
+  height: 8px;
+  border-radius: 1px;
+}
+
+.fragment-placeholder--macro {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.fragment-placeholder__title {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-tag);
+  font-weight: var(--font-weight-regular);
+  color: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}

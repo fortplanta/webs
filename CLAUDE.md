@@ -831,7 +831,7 @@ Claude Code updates this table at the end of every session.
 | Ant Design removal | DONE | antd + antd-style uninstalled; ConfigProvider stripped from main.jsx; zero imports in src/ | Session 01 |
 | Custom pan-zoom canvas | DONE | Full implementation: usePanZoom.ts (zoom-toward-cursor, pan), Canvas.tsx (passive wheel via addEventListener), canvas.css (fixed viewport, transform-origin 0 0) | Session 02 |
 | Dot grid background | DONE | SVG pattern in screen space; spacing = 24 * zoom; offset = x mod spacing; fill = --color-canvas-dot | Session 02 |
-| LOD system (macro/compact/full) | NOT STARTED | — | — |
+| LOD system (macro/compact/full) | DONE | getLOD() exported from useCanvas.ts; thresholds from tokens; lod prop computed once in Canvas.tsx and passed down | Session 03 |
 | Fragment component (structure) | NOT STARTED | Stubs at src/fragments/Fragment.tsx + FragmentHeader.tsx | Session 01 |
 | Fragment layouts — vertical-flow | NOT STARTED | Stub at src/fragments/layouts/VerticalFlow.tsx | Session 01 |
 | Fragment layouts — image-hero | NOT STARTED | Stub at src/fragments/layouts/ImageHero.tsx | Session 01 |
@@ -842,14 +842,16 @@ Claude Code updates this table at the end of every session.
 | Fragment contextual menu | NOT STARTED | Stub at src/ui/ContextMenu.tsx | Session 01 |
 | Fragment header (floating label) | NOT STARTED | Stub at src/fragments/FragmentHeader.tsx | Session 01 |
 | Slot system | NOT STARTED | Stubs at src/fragments/slots/ (5 files) | Session 01 |
-| Cluster system | NOT STARTED | Stub at src/clusters/Cluster.tsx | Session 01 |
-| Cluster positioning (orbit) | NOT STARTED | positionClusters() in src/api/generate.ts | Session 01 |
-| Cluster labels (compact/macro) | NOT STARTED | Stub at src/clusters/ClusterLabel.tsx | Session 01 |
-| Seed fragment | NOT STARTED | Seed logic in src/api/generate.ts parseApiResponse() | Session 01 |
-| Edge system (SVG layer) | NOT STARTED | Stubs at src/edges/ (Edge.tsx, EdgeLabel.tsx, EdgeMidpoint.tsx) | Session 01 |
-| Edge labels | NOT STARTED | Stub at src/edges/EdgeLabel.tsx | Session 01 |
-| Edge midpoint menu | NOT STARTED | Stub at src/edges/EdgeMidpoint.tsx | Session 01 |
-| Edge creation (drag between clusters) | NOT STARTED | — | — |
+| Cluster system | DONE | Cluster.tsx is now a spawn-point marker (dark label box); fragments are independent entities with own x,y; data model overhauled Session 04 | Session 04 |
+| Cluster positioning (orbit) | IN PROGRESS | MOCK_CLUSTERS + MOCK_FRAGMENTS hardcoded in useCanvas.ts; positionClusters() orbit math in generate.ts for API wiring later | Session 04 |
+| Cluster labels (compact/macro) | DONE | ClusterLabel.tsx unchanged; cluster spawn points use .cluster-spawn__label styling | Session 04 |
+| Seed fragment | DONE | Seed spawn point uses --color-seed-bg lime green label | Session 04 |
+| Connector system (SVG layer) | DONE | ConnectorLayer.tsx + Connector.tsx; tether/weak/standard/strong types; overflow:visible SVG at canvas origin | Session 04 |
+| Connector tether proximity | DONE | Continuous lerp: opacity 0.2→0.08, dasharray 0→4 6 over 200–600px distance | Session 04 |
+| Connector labels (editable) | DONE | ConnectorLabel.tsx — pill on standard/strong; double-click to edit; Enter/Escape confirm/cancel | Session 04 |
+| Connector context menu | DONE | Right-click on line or label: Make strong / Make standard / Delete per type; dismissed on window click | Session 04 |
+| Connector creation (drag) | DONE | Drag fragment onto another fragment → standard connector created; position reverted | Session 04 |
+| Fragment drag (independent) | DONE | Window-level mousemove/mouseup; zoom-corrected delta; stopPropagation prevents canvas pan | Session 04 |
 | AI generation pipeline | NOT STARTED | New structure in src/api/generate.ts (claude-sonnet-4-5, cluster/fragment/edge schema); old logic preserved in src/lib/expand.js | Session 01 |
 | Pivot action | NOT STARTED | generatePivot() stub in src/api/generate.ts | Session 01 |
 | Session persistence (localStorage) | NOT STARTED | useCanvas.ts has loadState(); wiring in later session | Session 01 |
