@@ -18,20 +18,30 @@ export function usePanZoom(initial: Transform = { x: 0, y: 0, zoom: zoomTokens.i
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-    setTransform(prev => {
-      const delta = e.deltaY * zoomTokens.speed * -1;
-      const newZoom = clamp(
-        prev.zoom + delta * prev.zoom,
-        zoomTokens.min,
-        zoomTokens.max
-      );
-      const ratio = newZoom / prev.zoom;
-      return {
-        x: e.clientX - ratio * (e.clientX - prev.x),
-        y: e.clientY - ratio * (e.clientY - prev.y),
-        zoom: newZoom,
-      };
-    });
+    if (e.ctrlKey) {
+      // Pinch gesture (trackpad) or Ctrl+scroll (mouse) → zoom toward cursor
+      setTransform(prev => {
+        const delta = e.deltaY * zoomTokens.speed * -1;
+        const newZoom = clamp(
+          prev.zoom + delta * prev.zoom,
+          zoomTokens.min,
+          zoomTokens.max
+        );
+        const ratio = newZoom / prev.zoom;
+        return {
+          x: e.clientX - ratio * (e.clientX - prev.x),
+          y: e.clientY - ratio * (e.clientY - prev.y),
+          zoom: newZoom,
+        };
+      });
+    } else {
+      // Two-finger scroll (trackpad) or plain scroll (mouse) → pan
+      setTransform(prev => ({
+        ...prev,
+        x: prev.x - e.deltaX,
+        y: prev.y - e.deltaY,
+      }));
+    }
   }, []);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
