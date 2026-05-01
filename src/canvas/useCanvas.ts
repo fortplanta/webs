@@ -123,6 +123,20 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     setState(prev => ({ ...prev, clusters: [...prev.clusters, cluster] }));
   }, []);
 
+  const addPivotCluster = useCallback((
+    cluster: Cluster,
+    fragments: Fragment[],
+    tetherConnectors: Connector[],
+    interConnector: Connector,
+  ) => {
+    setState(prev => ({
+      ...prev,
+      clusters: [...prev.clusters, cluster],
+      fragments: [...prev.fragments, ...fragments],
+      connectors: [...prev.connectors, ...tetherConnectors, interConnector],
+    }));
+  }, []);
+
   const addFragment = useCallback((fragment: Fragment) => {
     setState(prev => ({
       ...prev,
@@ -183,6 +197,7 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     deleteConnector,
     promoteConnector,
     addCluster,
+    addPivotCluster,
     addFragment,
     toggleStarFragment,
     removeFragment,

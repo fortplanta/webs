@@ -134,3 +134,45 @@
 .loading-canvas__retry:hover {
   border-bottom-color: #000;
 }
+
+/* ─── Status bar ──────────────────────────────────────────────── */
+
+.status-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: var(--color-surface);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 0 var(--spacing-base);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-wide);
+  color: rgba(0, 0, 0, 0.4);
+  text-transform: uppercase;
+  z-index: 20;
+}
+
+.status-bar__items {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.status-bar__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-bar__dot--online {
+  background: #34C759;
+}
+
+.status-bar__dot--offline {
+  background: rgba(0, 0, 0, 0.2);
+}

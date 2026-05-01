@@ -99,6 +99,20 @@ export interface AppState {
   activeTabId: string;
 }
 
+// Pivot API response shape — returned by the pivot endpoint.
+export interface PivotApiResponse {
+  clusterTitle: string;
+  fragments: Array<{
+    type: FragmentType;
+    title: string;
+    body: string;
+    tags?: string[];
+    list?: string[];
+    era?: string;
+  }>;
+  edgeLabel: string;
+}
+
 // Raw API response shape before client-side processing.
 // Uses flat fields — client converts to FragmentSlot[] via buildSlots().
 export interface GenerateApiResponse {

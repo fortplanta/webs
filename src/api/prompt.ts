@@ -1,6 +1,8 @@
 // Prompt construction for Webs AI generation.
 // Kept separate from fetch logic in generate.ts.
 
+import { Fragment } from './types';
+
 export const SYSTEM_PROMPT = `You are a knowledge canvas generator. The user gives you a topic and you return a JSON object describing interconnected clusters of intellectual fragments.
 
 CRITICAL: Return ONLY valid JSON. No markdown code fences. No preamble. No explanation. No trailing text. Your response must start with { and end with }.`;
@@ -48,5 +50,48 @@ Rules:
 - Edge labels must be verb phrases, not nouns: "shaped by", "resulted in", "challenged by", "enabled", "inspired".
 - Edge source and target must EXACTLY match cluster titles in your response.
 - Do not include image fields.
+- Return raw JSON only. No markdown. No code fences. Start with { and end with }.`;
+}
+
+export const PIVOT_SYSTEM_PROMPT = `You are a knowledge canvas generator. The user gives you a fragment of knowledge and you return a JSON object describing a new cluster of related intellectual fragments.
+
+CRITICAL: Return ONLY valid JSON. No markdown code fences. No preamble. No explanation. No trailing text. Your response must start with { and end with }.`;
+
+export function buildPivotUserMessage(fragment: Fragment): string {
+  const bodySlot = fragment.slots.find(s => s.type === 'body');
+  const body = bodySlot?.content ?? '';
+
+  return `Source fragment:
+Title: "${fragment.title}"
+Type: ${fragment.type}
+Body: "${body}"
+
+Generate 3–5 related fragments that explore a different angle or go deeper on this idea. Return ONLY valid JSON matching this exact shape:
+
+{
+  "clusterTitle": "2-4 word cluster title",
+  "fragments": [
+    {
+      "type": "concept",
+      "title": "fragment title (2-5 words, lowercase)",
+      "body": "2-4 sentences of substantive content",
+      "tags": ["tag1", "tag2"],
+      "list": ["optional item 1", "optional item 2"],
+      "era": "optional year or date range"
+    }
+  ],
+  "edgeLabel": "verb phrase connecting source to this cluster"
+}
+
+Rules:
+- Return 3 to 5 fragments
+- Every fragment must have a "body" field with 2-4 sentences of meaningful content
+- Fragment types: person, concept, thesis, source, event, era, domain, quote
+- "tags": required on all fragments except type "quote". 2-4 tags, lowercase, short words.
+- "list": optional. Only include for concept, thesis, domain, source fragments. 3-6 items if used.
+- "era": only for event and era fragment types. A year or short date range.
+- Quote fragments: body field only (verbatim quote + attribution). No tags, no list, no era.
+- edgeLabel must be a verb phrase: "inspired by", "explored through", "connects to", "challenges", "expands on".
+- Different angle from source — not a repeat. Meaningfully related but exploring new territory.
 - Return raw JSON only. No markdown. No code fences. Start with { and end with }.`;
 }

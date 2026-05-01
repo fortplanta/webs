@@ -11,9 +11,10 @@ import {
   LayoutType,
   FragmentSlot,
   GenerateApiResponse,
+  PivotApiResponse,
 } from './types';
-import { SYSTEM_PROMPT, buildUserMessage } from './prompt';
-import { getMockCanvasState } from './mock';
+import { SYSTEM_PROMPT, buildUserMessage, PIVOT_SYSTEM_PROMPT, buildPivotUserMessage } from './prompt';
+import { getMockCanvasState, getMockPivotResult } from './mock';
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-5';
@@ -225,48 +226,71 @@ export async function generateCanvas(query: string): Promise<CanvasState> {
   return parseApiResponse(parsed, query);
 }
 
-export async function generatePivot(
-  fragmentTitle: string,
-  fragmentBody: string,
-  sourceClusterId: string,
-): Promise<{
+const PIVOT_OFFSET_X = 400;
+const PIVOT_OFFSET_Y = -200;
+
+export interface PivotResult {
   cluster: Cluster;
   fragments: Fragment[];
-  connectors: Connector[];
-  edge: Connector;
-}> {
+  tetherConnectors: Connector[];
+  interConnector: Connector;
+}
+
+function buildPivotResult(pivotData: PivotApiResponse, sourceFragment: Fragment, sourceClusterId: string): PivotResult {
+  const clusterId = uuidv4();
+  const clusterX = sourceFragment.x + PIVOT_OFFSET_X + jitter(160);
+  const clusterY = sourceFragment.y + PIVOT_OFFSET_Y + jitter(160);
+
+  const cluster: Cluster = {
+    id: clusterId,
+    x: clusterX,
+    y: clusterY,
+    label: pivotData.clusterTitle,
+    isSeed: false,
+  };
+
+  const positions = fragmentPositions(clusterX, clusterY, pivotData.fragments.length);
+
+  const fragments: Fragment[] = pivotData.fragments.map((f, i) => ({
+    id: uuidv4(),
+    clusterId,
+    x: positions[i].x,
+    y: positions[i].y,
+    type: f.type,
+    layout: LAYOUT_FOR_TYPE[f.type],
+    title: f.title,
+    slots: buildSlots(f),
+    createdAtZoom: 0.7,
+    starred: false,
+  }));
+
+  const tetherConnectors: Connector[] = fragments.map(f => ({
+    id: `tether-${f.id}`,
+    sourceId: f.id,
+    targetId: clusterId,
+    type: 'tether' as const,
+    label: '',
+  }));
+
+  const interConnector: Connector = {
+    id: uuidv4(),
+    sourceId: sourceClusterId,
+    targetId: clusterId,
+    type: 'standard',
+    label: pivotData.edgeLabel || 'explored via',
+  };
+
+  return { cluster, fragments, tetherConnectors, interConnector };
+}
+
+export async function generatePivot(sourceFragment: Fragment, sourceClusterId: string): Promise<PivotResult> {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
 
-  const prompt = `Generate 3-5 fragments closely related to this idea:
-
-Title: "${fragmentTitle}"
-Context: "${fragmentBody}"
-
-Return ONLY valid JSON:
-{
-  "title": "cluster title for these related fragments (2-4 words)",
-  "fragments": [
-    {
-      "type": "concept",
-      "title": "fragment title",
-      "body": "2-4 sentences",
-      "tags": ["tag1", "tag2"]
-    }
-  ]
-}`;
-
-  type PivotResponse = { title: string; fragments: GenerateApiResponse['clusters'][0]['fragments'] };
-
-  let pivotData: PivotResponse;
-
   if (!apiKey) {
-    pivotData = {
-      title: `related to ${fragmentTitle.toLowerCase()}`,
-      fragments: [
-        { type: 'concept', title: 'related concept', body: 'A stub fragment for pivot preview.', tags: ['stub'] },
-      ],
-    };
-  } else {
+    return buildPivotResult(getMockPivotResult(sourceFragment), sourceFragment, sourceClusterId);
+  }
+
+  try {
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
@@ -277,54 +301,30 @@ Return ONLY valid JSON:
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1500,
-        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2000,
+        system: PIVOT_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildPivotUserMessage(sourceFragment) }],
       }),
     });
+
+    if (!response.ok) {
+      console.error('Pivot API error', response.status, '— falling back to mock');
+      return buildPivotResult(getMockPivotResult(sourceFragment), sourceFragment, sourceClusterId);
+    }
 
     const data = await response.json() as { content?: Array<{ text?: string }> };
     const text = data.content?.[0]?.text ?? '';
     const cleaned = text.replace(/^```json\s*|^```\s*|\s*```$/gm, '').trim();
-    pivotData = JSON.parse(cleaned) as PivotResponse;
+    const parsed = JSON.parse(cleaned) as PivotApiResponse;
+
+    if (!parsed.clusterTitle || !Array.isArray(parsed.fragments) || parsed.fragments.length === 0) {
+      console.error('Pivot response missing required fields — falling back to mock');
+      return buildPivotResult(getMockPivotResult(sourceFragment), sourceFragment, sourceClusterId);
+    }
+
+    return buildPivotResult(parsed, sourceFragment, sourceClusterId);
+  } catch (err) {
+    console.error('Pivot generation failed — falling back to mock:', err);
+    return buildPivotResult(getMockPivotResult(sourceFragment), sourceFragment, sourceClusterId);
   }
-
-  const clusterId = uuidv4();
-  const cluster: Cluster = {
-    id: clusterId,
-    x: 0,
-    y: 0,
-    label: pivotData.title,
-    isSeed: false,
-  };
-
-  const fragments: Fragment[] = pivotData.fragments.map(f => ({
-    id: uuidv4(),
-    clusterId,
-    x: 0,
-    y: 0,
-    type: f.type,
-    layout: LAYOUT_FOR_TYPE[f.type],
-    title: f.title,
-    slots: buildSlots(f),
-    createdAtZoom: 0.7,
-    starred: false,
-  }));
-
-  const connectors: Connector[] = fragments.map(f => ({
-    id: `tether-${f.id}`,
-    sourceId: f.id,
-    targetId: clusterId,
-    type: 'tether' as const,
-    label: '',
-  }));
-
-  const edge: Connector = {
-    id: uuidv4(),
-    sourceId: sourceClusterId,
-    targetId: clusterId,
-    type: 'standard',
-    label: 'explored via',
-  };
-
-  return { cluster, fragments, connectors, edge };
 }

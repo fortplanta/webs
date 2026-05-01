@@ -2,7 +2,7 @@
 // Covers all 8 fragment types and all 6 layout types.
 // Uses the correct CanvasState schema (Cluster with label, flat fragments array).
 
-import { CanvasState, Cluster, Fragment, Connector } from './types';
+import { CanvasState, Cluster, Fragment, Connector, PivotApiResponse } from './types';
 import { zoom as zoomTokens } from '../tokens/tokens';
 
 const CLUSTERS: Cluster[] = [
@@ -104,6 +104,100 @@ export const INITIAL_STATE: CanvasState = {
   query: 'colonialism',
   createdAt: 0,
 };
+
+const MOCK_PIVOT_RESULTS: PivotApiResponse[] = [
+  {
+    clusterTitle: 'theoretical roots',
+    edgeLabel: 'grounded in',
+    fragments: [
+      {
+        type: 'concept',
+        title: 'enlightenment foundations',
+        body: 'The intellectual traditions of the Enlightenment provided the ideological scaffolding for many modern systems, prioritising reason, progress, and universal categories that often masked particular interests.',
+        tags: ['enlightenment', 'ideology', 'modernity'],
+        list: ['universalism', 'rationalism', 'progress myth', 'humanism'],
+      },
+      {
+        type: 'thesis',
+        title: 'knowledge as power',
+        body: "Foucault's insight that knowledge production and power are inseparable — what gets counted as knowledge, who produces it, and how it circulates all serve to reproduce existing power relations.",
+        tags: ['Foucault', 'epistemology', 'power'],
+      },
+      {
+        type: 'person',
+        title: 'edward said',
+        body: "Palestinian-American critic whose 1978 work Orientalism revealed how Western scholarship constructed the 'East' as exotic and inferior — a textual apparatus that justified imperial domination.",
+        tags: ['orientalism', 'postcolonial', 'literary theory'],
+      },
+      {
+        type: 'source',
+        title: 'discipline and punish',
+        body: "Foucault's 1975 genealogy of the modern prison, tracing how surveillance, normalisation, and disciplinary power moved from the body to the soul — and from institutions into the fabric of society.",
+        tags: ['Foucault', 'source', '1975', 'surveillance'],
+      },
+    ],
+  },
+  {
+    clusterTitle: 'contemporary echoes',
+    edgeLabel: 'continues through',
+    fragments: [
+      {
+        type: 'concept',
+        title: 'structural inequality',
+        body: 'Inequalities that are reproduced not through individual prejudice but through the design of institutions, policies, and economic arrangements — often invisible to those they benefit.',
+        tags: ['inequality', 'systems', 'race', 'class'],
+        list: ['housing policy', 'education gaps', 'credit access', 'health disparities'],
+      },
+      {
+        type: 'event',
+        title: 'financial crisis 2008',
+        body: 'The global financial collapse that disproportionately stripped wealth from communities of colour and the global south while concentrating bailout funds in financial institutions — a structural pattern with deep historical roots.',
+        tags: ['economics', '2008', 'crisis', 'inequality'],
+        era: '2008',
+      },
+      {
+        type: 'thesis',
+        title: 'coloniality of power',
+        body: "Aníbal Quijano's concept: colonialism did not end with independence — its racial classification system and hierarchies of knowledge were absorbed into the structures of modern nation-states and the global economy.",
+        tags: ['Quijano', 'decoloniality', 'race', 'modernity'],
+      },
+    ],
+  },
+  {
+    clusterTitle: 'counter-narratives',
+    edgeLabel: 'challenged by',
+    fragments: [
+      {
+        type: 'concept',
+        title: 'subaltern studies',
+        body: 'A scholarly movement begun in the 1980s that sought to recover histories of colonised peoples written from below — not through the lens of nationalist elites or colonial archives.',
+        tags: ['historiography', 'India', 'subaltern', 'postcolonial'],
+      },
+      {
+        type: 'quote',
+        title: 'spivak on the subaltern',
+        body: '"Can the subaltern speak?" — Gayatri Chakravorty Spivak, 1988. The question interrogates whether the marginalised can represent themselves within frameworks built to exclude them.',
+      },
+      {
+        type: 'person',
+        title: 'walter mignolo',
+        body: 'Argentine semiotician who developed the concept of border thinking — knowledge produced from the colonial wound that cannot be absorbed into Western epistemology and opens genuinely different possibilities.',
+        tags: ['decoloniality', 'epistemology', 'border thinking'],
+      },
+      {
+        type: 'era',
+        title: 'postcolonial turn',
+        body: 'The intellectual shift from the 1970s onward in which scholars in literature, history, and anthropology began deconstructing colonial knowledge systems and centring non-Western perspectives.',
+        tags: ['academia', '1970s', 'postcolonial theory'],
+      },
+    ],
+  },
+];
+
+export function getMockPivotResult(fragment: Fragment): PivotApiResponse {
+  const charSum = fragment.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return MOCK_PIVOT_RESULTS[charSum % MOCK_PIVOT_RESULTS.length];
+}
 
 export function getMockCanvasState(query: string): CanvasState {
   const seedFragment = FRAGMENTS.find(f => f.clusterId === 'seed');

@@ -1,11 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePanZoom } from './usePanZoom';
 import { useCanvas, getLOD } from './useCanvas';
 import { CanvasState, Fragment } from '../api/types';
+import { generatePivot } from '../api/generate';
 import CanvasBackground from './CanvasBackground';
 import Cluster from '../clusters/Cluster';
 import ConnectorLayer from '../edges/ConnectorLayer';
 import FragmentComponent from '../fragments/Fragment';
+import StatusBar from '../ui/StatusBar';
 import '../styles/connectors.css';
 
 interface CanvasProps {
@@ -31,11 +33,16 @@ export default function Canvas({
     startDrag, updateDrag, endDrag,
     updateConnectorLabel, deleteConnector, promoteConnector,
     removeFragment, toggleStarFragment,
-    addCluster, addFragment,
+    addCluster, addFragment, addPivotCluster,
     updateViewport,
   } = useCanvas(projectId, initialState);
 
   const lod = getLOD(transform.zoom);
+
+  // Pivot state
+  const [pivotingFragmentId, setPivotingFragmentId] = useState<string | null>(null);
+  const [pivotErrors, setPivotErrors] = useState<Record<string, string>>({});
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Keep zoom ref current so window drag listeners always use latest zoom
   useEffect(() => { zoomRef.current = transform.zoom; }, [transform.zoom]);
@@ -128,6 +135,46 @@ export default function Canvas({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [state.fragments, state.clusters, copiedFragment, onFragmentCopy, onFragmentPaste, addCluster, addFragment]);
 
+  const handlePivot = async (fragmentId: string) => {
+    if (pivotingFragmentId !== null) return;
+    const fragment = state.fragments.find(f => f.id === fragmentId);
+    if (!fragment) return;
+
+    setPivotingFragmentId(fragmentId);
+
+    try {
+      const result = await generatePivot(fragment, fragment.clusterId);
+      addPivotCluster(result.cluster, result.fragments, result.tetherConnectors, result.interConnector);
+
+      // Smooth pan to midpoint between source fragment and new cluster
+      const midX = (fragment.x + result.cluster.x) / 2;
+      const midY = (fragment.y + result.cluster.y) / 2;
+      const el = wrapperRef.current;
+      if (el) {
+        setIsTransitioning(true);
+        setTransform(prev => ({
+          ...prev,
+          x: el.clientWidth / 2 - midX * prev.zoom,
+          y: el.clientHeight / 2 - midY * prev.zoom,
+        }));
+        setTimeout(() => setIsTransitioning(false), 400);
+      }
+
+      setPivotingFragmentId(null);
+    } catch (err) {
+      console.error('Pivot failed:', err);
+      setPivotErrors(prev => ({ ...prev, [fragmentId]: "couldn't generate — try again" }));
+      setPivotingFragmentId(null);
+      setTimeout(() => {
+        setPivotErrors(prev => {
+          const next = { ...prev };
+          delete next[fragmentId];
+          return next;
+        });
+      }, 3000);
+    }
+  };
+
   return (
     <div
       ref={wrapperRef}
@@ -142,6 +189,7 @@ export default function Canvas({
         className="canvas-content"
         style={{
           transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
+          transition: isTransitioning ? 'transform 400ms ease-out' : 'none',
         }}
       >
         {/* Connector lines (SVG) sit below fragments via DOM order + z-index */}
@@ -167,6 +215,10 @@ export default function Canvas({
             }}
             onDelete={removeFragment}
             onToggleStar={toggleStarFragment}
+            onPivot={handlePivot}
+            isPivoting={f.id === pivotingFragmentId}
+            pivotDisabled={pivotingFragmentId !== null && f.id !== pivotingFragmentId}
+            pivotError={pivotErrors[f.id] ?? null}
             style={{ left: f.x, top: f.y }}
           />
         ))}
@@ -182,6 +234,12 @@ export default function Canvas({
           />
         ))}
       </div>
+
+      <StatusBar
+        zoom={transform.zoom}
+        fragmentCount={state.fragments.length}
+        clusterCount={state.clusters.length}
+      />
     </div>
   );
 }

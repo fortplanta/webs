@@ -24,10 +24,25 @@ interface FragmentProps {
   onMouseDown: (e: React.MouseEvent) => void;
   onDelete: (id: string) => void;
   onToggleStar: (id: string) => void;
+  onPivot?: (id: string) => void;
+  isPivoting?: boolean;
+  pivotDisabled?: boolean;
+  pivotError?: string | null;
   style?: React.CSSProperties;
 }
 
-export default function Fragment({ fragment, lod, onMouseDown, onDelete, onToggleStar, style }: FragmentProps) {
+export default function Fragment({
+  fragment,
+  lod,
+  onMouseDown,
+  onDelete,
+  onToggleStar,
+  onPivot,
+  isPivoting,
+  pivotDisabled,
+  pivotError,
+  style,
+}: FragmentProps) {
   const { id, type, layout, title, starred } = fragment;
   const bgVar = `var(--color-fragment-${type}-bg)`;
 
@@ -56,6 +71,7 @@ export default function Fragment({ fragment, lod, onMouseDown, onDelete, onToggl
   const LayoutComponent = LAYOUT_COMPONENTS[layout];
   const isQuote = layout === 'quote-centered';
   const isImageHero = layout === 'image-hero';
+  const pivotButtonDisabled = isPivoting || pivotDisabled;
 
   return (
     <div
@@ -67,7 +83,20 @@ export default function Fragment({ fragment, lod, onMouseDown, onDelete, onToggl
       {!isQuote && (
         <FragmentHeader type={type} title={title} small={isImageHero} />
       )}
-      <LayoutComponent fragment={fragment} />
+      <div className="fragment__card-body">
+        <LayoutComponent fragment={fragment} />
+        {isPivoting && (
+          <div className="fragment__pivot-overlay">
+            <div className="fragment__pivot-strip">
+              <div className="fragment__pivot-track" />
+              <div className="loading-canvas__head" />
+            </div>
+          </div>
+        )}
+        {pivotError && !isPivoting && (
+          <div className="fragment__pivot-error">{pivotError}</div>
+        )}
+      </div>
       <div className="fragment__menubar">
         <button
           className="fragment__menubar-item"
@@ -75,7 +104,12 @@ export default function Fragment({ fragment, lod, onMouseDown, onDelete, onToggl
         >
           delete
         </button>
-        <button className="fragment__menubar-item">pivot</button>
+        <button
+          className={`fragment__menubar-item${pivotButtonDisabled ? ' fragment__menubar-item--disabled' : ''}`}
+          onClick={e => { e.stopPropagation(); if (!pivotButtonDisabled) onPivot?.(id); }}
+        >
+          pivot
+        </button>
         <button className="fragment__menubar-item">fact</button>
         <button
           className={`fragment__menubar-item${starred ? ' fragment__menubar-item--active' : ''}`}
