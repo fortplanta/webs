@@ -75,6 +75,30 @@ export interface SessionRecord {
   state: CanvasState;
 }
 
+export interface ProjectMeta {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Project extends ProjectMeta {
+  canvasState: CanvasState;
+  thumbnail?: string;
+}
+
+export interface TabSession {
+  id: string;
+  name: string;
+  isLoaded: boolean;
+  isActive: boolean;
+}
+
+export interface AppState {
+  tabs: TabSession[];
+  activeTabId: string;
+}
+
 // Raw API response shape before client-side processing
 export interface GenerateApiResponse {
   context: string;

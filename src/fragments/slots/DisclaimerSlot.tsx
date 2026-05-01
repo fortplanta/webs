@@ -1,6 +1,10 @@
 import { FragmentSlot } from '../../api/types';
 
-// Disclaimer slot. Implemented in Session 02.
-export default function DisclaimerSlot(_props: { slot: FragmentSlot }) {
-  return null;
+export default function DisclaimerSlot({ slot }: { slot: FragmentSlot }) {
+  if (!slot.content) return null;
+  return (
+    <div className="fragment-slot fragment-slot--disclaimer">
+      {slot.content}
+    </div>
+  );
 }

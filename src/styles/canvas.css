@@ -3,8 +3,9 @@
 }
 
 .canvas-wrapper {
-  position: fixed;
-  inset: 0;
+  position: relative;
+  flex: 1;
+  min-height: 0;
   background: var(--color-canvas);
   cursor: grab;
   overflow: hidden;

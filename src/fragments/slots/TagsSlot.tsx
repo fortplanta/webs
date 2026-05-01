@@ -1,6 +1,12 @@
 import { FragmentSlot } from '../../api/types';
 
-// Tags slot. Implemented in Session 02.
-export default function TagsSlot(_props: { slot: FragmentSlot }) {
-  return null;
+export default function TagsSlot({ slot }: { slot: FragmentSlot }) {
+  if (!slot.items?.length) return null;
+  return (
+    <div className="fragment-slot fragment-slot--tags">
+      {slot.items.map((tag, i) => (
+        <span key={i} className="fragment-tag">{tag}</span>
+      ))}
+    </div>
+  );
 }

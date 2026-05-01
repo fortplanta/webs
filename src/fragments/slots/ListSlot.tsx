@@ -1,6 +1,14 @@
 import { FragmentSlot } from '../../api/types';
 
-// List slot. Implemented in Session 02.
-export default function ListSlot(_props: { slot: FragmentSlot }) {
-  return null;
+export default function ListSlot({ slot }: { slot: FragmentSlot }) {
+  if (!slot.items?.length) return null;
+  return (
+    <div className="fragment-slot fragment-slot--list">
+      <ul className="fragment-list">
+        {slot.items.map((item, i) => (
+          <li key={i} className="fragment-list__item">{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
 }

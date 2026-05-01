@@ -1,2 +1,256 @@
-/* fragments.css — fragment cards, headers, slots, layouts, contextual menu
-   Implemented in Session 02. */
+/* fragments.css — fragment cards, headers, slots, layouts, contextual menu */
+
+/* ─── Fragment outer wrapper ──────────────────────────────────── */
+
+.fragment {
+  position: absolute;
+  cursor: grab;
+  z-index: 1;
+}
+
+.fragment:active {
+  cursor: grabbing;
+}
+
+/* ─── LOD: compact (colored bar) ─────────────────────────────── */
+
+.fragment--compact {
+  width: 120px;
+  height: 8px;
+  border-radius: 1px;
+}
+
+/* ─── LOD: macro (tiny dot) ──────────────────────────────────── */
+
+.fragment--macro {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* ─── Fragment header (LabelChip) ────────────────────────────── */
+
+.fragment__header {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 24px 8px 8px;
+  font-family: var(--font-primary);
+  font-size: 20px;
+  line-height: 24px;
+  letter-spacing: -0.035em;
+  font-weight: var(--font-weight-regular);
+  border-radius: 0;
+  box-shadow: 2px 2px 14px 0 rgba(0, 0, 0, 0.07);
+  width: fit-content;
+}
+
+.fragment__header--sm {
+  font-size: 16px;
+  padding: 6px 16px 6px 6px;
+}
+
+/* ─── Card body ───────────────────────────────────────────────── */
+
+.fragment__body {
+  background: #ffffff;
+  padding: 12px;
+  box-shadow: 2px 2px 14px 0 rgba(0, 0, 0, 0.07);
+  margin-top: -1px;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+/* ─── Fragment widths ─────────────────────────────────────────── */
+
+.fragment--vertical-flow,
+.fragment--card-split,
+.fragment--timeline,
+.fragment--list-prominent {
+  width: 320px;
+}
+
+.fragment--image-hero {
+  width: 200px;
+}
+
+.fragment--quote-centered {
+  width: 380px;
+}
+
+/* ─── Quote fragment ──────────────────────────────────────────── */
+
+.fragment__quote-body {
+  background: var(--color-fragment-quote-bg);
+  padding: 20px;
+  color: #ffffff;
+  font-family: var(--font-primary);
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  font-weight: var(--font-weight-regular);
+  border-radius: 0;
+  box-shadow: 2px 2px 14px 0 rgba(0, 0, 0, 0.07);
+}
+
+/* ─── Slots ───────────────────────────────────────────────────── */
+
+.fragment-slot--body p {
+  font-family: var(--font-primary);
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.031em;
+  color: #000;
+  font-weight: var(--font-weight-regular);
+  margin: 0;
+}
+
+.fragment-slot--image {
+  padding: 0;
+  overflow: hidden;
+}
+
+.fragment-slot--image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.fragment-slot__image-placeholder {
+  background: var(--color-slot-bg);
+  height: 120px;
+  width: 100%;
+}
+
+.fragment-slot--disclaimer {
+  background: var(--color-disclaimer-bg);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-disclaimer);
+  color: #000;
+  font-weight: var(--font-weight-regular);
+  padding: 4px 8px;
+  margin-top: var(--spacing-sm);
+}
+
+/* ─── Tags ────────────────────────────────────────────────────── */
+
+.fragment-slot--tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.fragment-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: rgb(229, 231, 235);
+  font-family: var(--font-primary);
+  font-size: 13px;
+  letter-spacing: -0.028em;
+  color: rgb(105, 105, 105);
+  border-radius: 0;
+  font-weight: var(--font-weight-regular);
+}
+
+/* ─── List slot ───────────────────────────────────────────────── */
+
+.fragment-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.fragment-list__item {
+  font-family: var(--font-primary);
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.031em;
+  color: #000;
+  font-weight: var(--font-weight-regular);
+  padding: var(--spacing-xxs) 0;
+}
+
+/* ─── Image hero body variant ─────────────────────────────────── */
+
+.fragment__body--image-hero {
+  padding: 0;
+}
+
+.fragment__body--image-hero .fragment-slot--body,
+.fragment__body--image-hero .fragment-slot--tags {
+  padding: 12px;
+}
+
+.fragment__body--image-hero .fragment-slot--image img,
+.fragment__body--image-hero .fragment-slot__image-placeholder {
+  height: 200px;
+}
+
+/* ─── Contextual menubar ──────────────────────────────────────── */
+
+.fragment__menubar {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.05);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.fragment:hover .fragment__menubar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fragment__menubar-item {
+  font-family: var(--font-primary);
+  font-size: 14px;
+  letter-spacing: -0.028em;
+  font-weight: var(--font-weight-regular);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: rgba(0, 0, 0, 0.7);
+  border-radius: 0;
+}
+
+.fragment__menubar-item:hover,
+.fragment__menubar-item--active {
+  background: rgb(238, 238, 238);
+}
+
+/* ─── Loading strip ───────────────────────────────────────────── */
+
+.fragment-loading-strip {
+  height: 40px;
+  background: rgb(255, 204, 204);
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.fragment-loading-strip__progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, rgb(0, 68, 255) 0%, rgb(111, 255, 166) 100%);
+  animation: loadingProgress 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes loadingProgress {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(250%); }
+}

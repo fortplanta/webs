@@ -1,37 +1,65 @@
 import { useEffect, useRef } from 'react';
 import { usePanZoom } from './usePanZoom';
 import { useCanvas, getLOD } from './useCanvas';
+import { CanvasState, Fragment } from '../api/types';
 import CanvasBackground from './CanvasBackground';
 import Cluster from '../clusters/Cluster';
 import ConnectorLayer from '../edges/ConnectorLayer';
-import { fragmentColors } from '../tokens/tokens';
+import FragmentComponent from '../fragments/Fragment';
 import '../styles/connectors.css';
 
-export default function Canvas() {
+interface CanvasProps {
+  projectId: string;
+  initialState: CanvasState;
+  copiedFragment: Fragment | null;
+  onFragmentCopy: (f: Fragment) => void;
+  onFragmentPaste: () => void;
+}
+
+export default function Canvas({
+  projectId,
+  initialState,
+  copiedFragment,
+  onFragmentCopy,
+  onFragmentPaste,
+}: CanvasProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const zoomRef = useRef(0.7);
+  const zoomRef = useRef(initialState.viewport.zoom || 0.7);
   const { transform, setTransform, handleWheel, onMouseDown, onMouseMove, onMouseUp } = usePanZoom();
   const {
     state,
     startDrag, updateDrag, endDrag,
     updateConnectorLabel, deleteConnector, promoteConnector,
-  } = useCanvas();
+    removeFragment, toggleStarFragment,
+    addCluster, addFragment,
+    updateViewport,
+  } = useCanvas(projectId, initialState);
 
   const lod = getLOD(transform.zoom);
 
   // Keep zoom ref current so window drag listeners always use latest zoom
   useEffect(() => { zoomRef.current = transform.zoom; }, [transform.zoom]);
 
-  // Center viewport on canvas origin on mount
+  // Restore viewport from saved state, or center on canvas origin
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
-    setTransform(prev => ({
-      ...prev,
-      x: el.clientWidth / 2,
-      y: el.clientHeight / 2,
-    }));
-  }, [setTransform]);
+    if (initialState.viewport.zoom > 0 && (initialState.viewport.x !== 0 || initialState.viewport.y !== 0)) {
+      setTransform(initialState.viewport);
+    } else {
+      setTransform(prev => ({
+        ...prev,
+        x: el.clientWidth / 2,
+        y: el.clientHeight / 2,
+      }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync pan-zoom transform back into canvas state (for persistence)
+  useEffect(() => {
+    updateViewport(transform);
+  }, [transform, updateViewport]);
 
   // Passive wheel listener for zoom
   useEffect(() => {
@@ -60,6 +88,46 @@ export default function Canvas() {
     };
   }, [updateDrag, endDrag]);
 
+  // Keyboard copy/paste
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      if (!isMod) return;
+
+      if (e.key === 'c') {
+        const hoveredEl = document.querySelector('[data-fragment-id]:hover');
+        if (!hoveredEl) return;
+        const id = hoveredEl.getAttribute('data-fragment-id');
+        if (!id) return;
+        const fragment = state.fragments.find(f => f.id === id);
+        if (fragment) {
+          e.preventDefault();
+          onFragmentCopy(fragment);
+        }
+      }
+
+      if (e.key === 'v' && copiedFragment) {
+        e.preventDefault();
+        const IMPORTED_CLUSTER_ID = 'imported';
+        const hasImportedCluster = state.clusters.some(c => c.id === IMPORTED_CLUSTER_ID);
+        if (!hasImportedCluster) {
+          addCluster({ id: IMPORTED_CLUSTER_ID, x: 0, y: 0, label: 'imported', isSeed: false });
+        }
+        const clone: Fragment = {
+          ...copiedFragment,
+          id: crypto.randomUUID(),
+          clusterId: IMPORTED_CLUSTER_ID,
+          x: 0,
+          y: 0,
+        };
+        addFragment(clone);
+        onFragmentPaste();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [state.fragments, state.clusters, copiedFragment, onFragmentCopy, onFragmentPaste, addCluster, addFragment]);
+
   return (
     <div
       ref={wrapperRef}
@@ -87,26 +155,20 @@ export default function Canvas() {
           onPromote={promoteConnector}
         />
 
-        {/* Fragment placeholders */}
+        {/* Fragments */}
         {state.fragments.map(f => (
-          <div
+          <FragmentComponent
             key={f.id}
-            data-fragment-id={f.id}
-            className={`fragment-placeholder fragment-placeholder--${lod}`}
-            style={{
-              left: f.x,
-              top: f.y,
-              background: fragmentColors[f.type].bg,
-            }}
+            fragment={f}
+            lod={lod}
             onMouseDown={e => {
               e.stopPropagation();
               startDrag(f.id, 'fragment', e.clientX, e.clientY, f.x, f.y);
             }}
-          >
-            {lod === 'full' && (
-              <span className="fragment-placeholder__title">{f.title}</span>
-            )}
-          </div>
+            onDelete={removeFragment}
+            onToggleStar={toggleStarFragment}
+            style={{ left: f.x, top: f.y }}
+          />
         ))}
 
         {/* Cluster spawn points */}

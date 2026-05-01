@@ -1,6 +1,13 @@
-import { Fragment } from '../../api/types';
+import { Fragment as FragmentType, FragmentSlot } from '../../api/types';
 
-// quote-centered layout (quote). Implemented in Session 02.
-export default function QuoteCentered(_props: { fragment: Fragment }) {
-  return null;
+const findSlot = (slots: FragmentSlot[], type: FragmentSlot['type']) =>
+  slots.find(s => s.type === type);
+
+export default function QuoteCentered({ fragment }: { fragment: FragmentType }) {
+  const body = findSlot(fragment.slots, 'body');
+  return (
+    <div className="fragment__quote-body">
+      {body?.content ?? fragment.title}
+    </div>
+  );
 }

@@ -832,16 +832,16 @@ Claude Code updates this table at the end of every session.
 | Custom pan-zoom canvas | DONE | Full implementation: usePanZoom.ts (zoom-toward-cursor, pan), Canvas.tsx (passive wheel via addEventListener), canvas.css (fixed viewport, transform-origin 0 0) | Session 02 |
 | Dot grid background | DONE | SVG pattern in screen space; spacing = 24 * zoom; offset = x mod spacing; fill = --color-canvas-dot | Session 02 |
 | LOD system (macro/compact/full) | DONE | getLOD() exported from useCanvas.ts; thresholds from tokens; lod prop computed once in Canvas.tsx and passed down | Session 03 |
-| Fragment component (structure) | NOT STARTED | Stubs at src/fragments/Fragment.tsx + FragmentHeader.tsx | Session 01 |
-| Fragment layouts — vertical-flow | NOT STARTED | Stub at src/fragments/layouts/VerticalFlow.tsx | Session 01 |
-| Fragment layouts — image-hero | NOT STARTED | Stub at src/fragments/layouts/ImageHero.tsx | Session 01 |
-| Fragment layouts — quote-centered | NOT STARTED | Stub at src/fragments/layouts/QuoteCentered.tsx | Session 01 |
-| Fragment layouts — card-split | NOT STARTED | Stub at src/fragments/layouts/CardSplit.tsx | Session 01 |
-| Fragment layouts — timeline | NOT STARTED | Stub at src/fragments/layouts/Timeline.tsx | Session 01 |
-| Fragment layouts — list-prominent | NOT STARTED | Stub at src/fragments/layouts/ListProminent.tsx | Session 01 |
-| Fragment contextual menu | NOT STARTED | Stub at src/ui/ContextMenu.tsx | Session 01 |
-| Fragment header (floating label) | NOT STARTED | Stub at src/fragments/FragmentHeader.tsx | Session 01 |
-| Slot system | NOT STARTED | Stubs at src/fragments/slots/ (5 files) | Session 01 |
+| Fragment component (structure) | DONE | Fragment.tsx: master component with LOD branching (compact bar / macro dot / full card), layout routing, menubar | Session 05 |
+| Fragment layouts — vertical-flow | DONE | VerticalFlow.tsx: body → tags → list → disclaimer; 320px wide | Session 05 |
+| Fragment layouts — image-hero | DONE | ImageHero.tsx: image placeholder + body + tags; 200px wide, sm chip | Session 05 |
+| Fragment layouts — quote-centered | DONE | QuoteCentered.tsx: full blue card, no chip, 28px text, 380px wide | Session 05 |
+| Fragment layouts — card-split | DONE | CardSplit.tsx: body + tags + disclaimer; 320px wide | Session 05 |
+| Fragment layouts — timeline | DONE | Timeline.tsx: body + list + tags; 320px wide | Session 05 |
+| Fragment layouts — list-prominent | DONE | ListProminent.tsx: list + body + tags; 320px wide | Session 05 |
+| Fragment contextual menu | DONE | Inline menubar in Fragment.tsx; absolutely positioned below card; opacity:0→1 on hover; delete/pivot/fact/star | Session 05 |
+| Fragment header (floating label) | DONE | FragmentHeader.tsx: LabelChip with md/sm sizes; inline CSS var for bg/color; width: fit-content; -1px overlap with card | Session 05 |
+| Slot system | DONE | All 5 slot components implemented: BodySlot, TagsSlot, ListSlot, DisclaimerSlot, ImageSlot; image placeholder uses grey bg | Session 05 |
 | Cluster system | DONE | Cluster.tsx is now a spawn-point marker (dark label box); fragments are independent entities with own x,y; data model overhauled Session 04 | Session 04 |
 | Cluster positioning (orbit) | IN PROGRESS | MOCK_CLUSTERS + MOCK_FRAGMENTS hardcoded in useCanvas.ts; positionClusters() orbit math in generate.ts for API wiring later | Session 04 |
 | Cluster labels (compact/macro) | DONE | ClusterLabel.tsx unchanged; cluster spawn points use .cluster-spawn__label styling | Session 04 |
@@ -852,14 +852,19 @@ Claude Code updates this table at the end of every session.
 | Connector context menu | DONE | Right-click on line or label: Make strong / Make standard / Delete per type; dismissed on window click | Session 04 |
 | Connector creation (drag) | DONE | Drag fragment onto another fragment → standard connector created; position reverted | Session 04 |
 | Fragment drag (independent) | DONE | Window-level mousemove/mouseup; zoom-corrected delta; stopPropagation prevents canvas pan | Session 04 |
+| Session persistence (localStorage) | DONE | useCanvas.ts: debounced 1000ms auto-save to webs-canvas-${projectId}; viewport synced via updateViewport; restored on mount from initialState prop | Session 06 |
+| Multi-tab canvas | DONE | useTabs.ts manages AppState (tabs[], activeTabId) + persists to webs-app-state; Canvas keyed by activeTabId for clean remount on switch; max 20 tabs | Session 06 |
+| Tab strip UI | DONE | TabStrip.tsx: 40px Figma-style strip; active tab has 2px bottom indicator; double-click to rename inline; × close with confirm; + add button | Session 06 |
+| Fragment copy/paste (keyboard) | DONE | Cmd/Ctrl+C copies hovered fragment; Cmd/Ctrl+V pastes clone into active tab at (0,0) with clusterId='imported'; cross-tab via App.tsx copiedFragment state | Session 06 |
+| Projects index (library foundation) | DONE | webs-projects-index in localStorage maintained via updateProjectMeta(); no UI yet — data model ready for future library view | Session 06 |
+| Canvas layout (flex) | DONE | canvas.css: position:fixed→position:relative+flex:1+min-height:0 to sit below tab strip in App.tsx flex column | Session 06 |
 | AI generation pipeline | NOT STARTED | New structure in src/api/generate.ts (claude-sonnet-4-5, cluster/fragment/edge schema); old logic preserved in src/lib/expand.js | Session 01 |
 | Pivot action | NOT STARTED | generatePivot() stub in src/api/generate.ts | Session 01 |
-| Session persistence (localStorage) | NOT STARTED | useCanvas.ts has loadState(); wiring in later session | Session 01 |
 | Sidebar | NOT STARTED | Stub at src/ui/Sidebar.tsx | Session 01 |
 | Status bar | NOT STARTED | Stub at src/ui/StatusBar.tsx | Session 01 |
 | Initial state (blank canvas + input) | NOT STARTED | Stub at src/ui/SearchInput.tsx | Session 01 |
 | Token system (CSS variables) | DONE | src/styles/webs-tokens.css created with full token set; src/tokens/tokens.ts mirrors as JS constants | Session 01 |
-| Mock data (all 8 types + 6 layouts) | DONE | getMockCanvasState() in src/api/generate.ts — covers all 8 types + 5 layouts; list-prominent needs data in Session 02 | Session 01 |
+| Mock data (all 8 types + 6 layouts) | DONE | MOCK_FRAGMENTS in useCanvas.ts: 14 fragments covering all 8 types + all 6 layouts; all slots populated with body + tags; domain type (global south) added Session 05 | Session 05 |
 
 Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKED`
 

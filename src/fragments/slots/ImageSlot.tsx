@@ -1,6 +1,12 @@
 import { FragmentSlot } from '../../api/types';
 
-// Image slot. Implemented in Session 02.
-export default function ImageSlot(_props: { slot: FragmentSlot }) {
-  return null;
+export default function ImageSlot({ slot }: { slot: FragmentSlot }) {
+  return (
+    <div className="fragment-slot fragment-slot--image">
+      {slot.content
+        ? <img src={slot.content} alt="" />
+        : <div className="fragment-slot__image-placeholder" />
+      }
+    </div>
+  );
 }
