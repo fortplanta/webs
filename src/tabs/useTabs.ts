@@ -6,7 +6,7 @@ import {
   saveCanvasState,
   updateProjectMeta,
 } from '../storage/storage';
-import { INITIAL_STATE, EMPTY_CANVAS_STATE } from '../canvas/useCanvas';
+import { EMPTY_CANVAS_STATE } from '../canvas/useCanvas';
 
 const MAX_TABS = 20;
 
@@ -18,10 +18,10 @@ function initAppState(): AppState {
   const saved = loadAppState();
   if (saved && saved.tabs.length > 0) return saved;
 
-  // First ever load — seed with mock canvas
+  // First ever load — seed with empty canvas (user will enter a query)
   const id = crypto.randomUUID();
   const now = Date.now();
-  const canvasState = { ...INITIAL_STATE, createdAt: now };
+  const canvasState = { ...EMPTY_CANVAS_STATE, createdAt: now };
   saveCanvasState(id, canvasState);
   updateProjectMeta({ id, name: 'exploration 1', createdAt: now, updatedAt: now });
   return {

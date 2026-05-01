@@ -1,24 +1,28 @@
 // AI generation pipeline for Webs.
-//
-// Old system (src/lib/expand.js): direct fetch to Anthropic, model claude-haiku-4-5-20251001,
-// generated 14 context categories per anchor node. Preserved in expand.js for reference.
-//
-// New system: generates clusters/fragments/edges matching CanvasState shape.
-// Same direct-fetch pattern and auth headers as the old system.
+// Fetch logic lives here. Prompt construction lives in prompt.ts. Mock data in mock.ts.
 
 import { v4 as uuidv4 } from 'uuid';
 import {
   CanvasState,
   Cluster,
   Fragment,
+  Connector,
   FragmentType,
   LayoutType,
+  FragmentSlot,
   GenerateApiResponse,
 } from './types';
+import { SYSTEM_PROMPT, buildUserMessage } from './prompt';
+import { getMockCanvasState } from './mock';
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-5';
 const MAX_TOKENS = 4000;
+
+const BASE_RADIUS = 700;
+const RADIUS_JITTER = 100;
+const FRAGMENT_COL_W = 360;
+const FRAGMENT_ROW_H = 440;
 
 export const LAYOUT_FOR_TYPE: Record<FragmentType, LayoutType> = {
   person:  'image-hero',
@@ -31,55 +35,36 @@ export const LAYOUT_FOR_TYPE: Record<FragmentType, LayoutType> = {
   domain:  'vertical-flow',
 };
 
-function buildPrompt(query: string): string {
-  return `You are a thinking partner helping someone explore the topic: "${query}"
-
-Generate a knowledge canvas with interconnected clusters of fragments. Each cluster is a thematic group; each fragment is a specific piece of knowledge within that theme.
-
-Return ONLY valid JSON matching this exact shape (no markdown, no commentary):
-{
-  "context": "2-3 sentence grounding paragraph about the topic for the seed node",
-  "clusters": [
-    {
-      "title": "cluster theme title",
-      "fragments": [
-        {
-          "type": "one of: person | concept | thesis | source | event | era | domain | quote",
-          "title": "fragment title",
-          "slots": [
-            { "type": "body", "content": "2-3 sentence explanation" },
-            { "type": "tags", "items": ["tag1", "tag2"] }
-          ]
-        }
-      ]
-    }
-  ],
-  "edges": [
-    { "source": "cluster title", "target": "other cluster title", "label": "verb phrase" }
-  ]
+function jitter(range = 16): number {
+  return (Math.random() - 0.5) * range;
 }
 
-Rules:
-- 5 to 8 clusters
-- 3 to 5 fragments per cluster
-- Every fragment must have at least one "body" slot with meaningful content
-- Do not include "image" slots — images are handled separately
-- Edge labels must be short verb phrases: "shaped by", "resulted in", "challenged by", "enabled", "inspired"
-- Fragment types: person (named individual), concept (idea/framework), thesis (argument/claim), source (book/paper/article), event (historical occurrence), era (time period), domain (field of study/practice), quote (direct quotation)`;
+function buildSlots(f: GenerateApiResponse['clusters'][0]['fragments'][0]): FragmentSlot[] {
+  const slots: FragmentSlot[] = [];
+  if (f.type === 'person') {
+    slots.push({ type: 'image', content: '' });
+  }
+  if (f.body) {
+    slots.push({ type: 'body', content: f.body });
+  }
+  if (f.list && f.list.length > 0) {
+    slots.push({ type: 'list', items: f.list });
+  }
+  if (f.tags && f.tags.length > 0) {
+    slots.push({ type: 'tags', items: f.tags });
+  }
+  return slots;
 }
 
 function positionClusters(clusters: Cluster[]): Cluster[] {
-  const seedIndex = clusters.findIndex(c => c.isSeed);
-  const BASE_RADIUS = 700;
-  const JITTER = 100;
-  const nonSeedCount = clusters.length - 1;
+  const nonSeedCount = clusters.filter(c => !c.isSeed).length;
   const angleStep = (Math.PI * 2) / (nonSeedCount || 1);
   let nonSeedIdx = 0;
 
   return clusters.map((cluster) => {
     if (cluster.isSeed) return { ...cluster, x: 0, y: 0 };
     const angle = angleStep * nonSeedIdx++;
-    const r = BASE_RADIUS + (Math.random() - 0.5) * JITTER;
+    const r = BASE_RADIUS + jitter(RADIUS_JITTER);
     return {
       ...cluster,
       x: Math.cos(angle) * r,
@@ -88,71 +73,106 @@ function positionClusters(clusters: Cluster[]): Cluster[] {
   });
 }
 
-function parseApiResponse(
-  data: GenerateApiResponse,
-  query: string,
-  initialZoom: number
-): CanvasState {
+function fragmentPositions(clusterX: number, clusterY: number, count: number): Array<{ x: number; y: number }> {
+  return Array.from({ length: count }, (_, i) => ({
+    x: clusterX + (i % 2) * FRAGMENT_COL_W - FRAGMENT_COL_W / 2 + jitter(),
+    y: clusterY + Math.floor(i / 2) * FRAGMENT_ROW_H + jitter(),
+  }));
+}
+
+function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState {
+  const seedId = uuidv4();
   const seedCluster: Cluster = {
-    id: uuidv4(),
+    id: seedId,
     x: 0,
     y: 0,
-    title: query.toLowerCase(),
+    label: query.toLowerCase(),
     isSeed: true,
-    fragments: [
-      {
-        id: uuidv4(),
-        type: 'concept',
-        layout: 'vertical-flow',
-        title: query.toLowerCase(),
-        slots: [{ type: 'body', content: data.context }],
-        createdAtZoom: initialZoom,
-        starred: false,
-      },
-    ],
+  };
+  const seedFragment: Fragment = {
+    id: uuidv4(),
+    clusterId: seedId,
+    x: 0,
+    y: 90,
+    type: 'domain',
+    layout: 'vertical-flow',
+    title: query.toLowerCase(),
+    slots: [{ type: 'body', content: data.context }],
+    createdAtZoom: 0.7,
+    starred: false,
   };
 
   const contentClusters: Cluster[] = data.clusters.map(c => ({
     id: uuidv4(),
     x: 0,
     y: 0,
-    title: c.title,
+    label: c.title,
     isSeed: false,
-    fragments: c.fragments.map(f => ({
-      id: uuidv4(),
-      type: f.type,
-      layout: LAYOUT_FOR_TYPE[f.type],
-      title: f.title,
-      slots: f.slots,
-      createdAtZoom: initialZoom,
-      starred: false,
-    })),
   }));
 
   const allClusters = positionClusters([seedCluster, ...contentClusters]);
 
   const clusterByTitle = new Map<string, Cluster>();
-  allClusters.forEach(c => clusterByTitle.set(c.title, c));
+  allClusters.forEach(c => clusterByTitle.set(c.label, c));
 
-  const edges = data.edges
-    .map(e => {
+  const fragments: Fragment[] = [seedFragment];
+  const tethers: Connector[] = [{
+    id: `tether-${seedFragment.id}`,
+    sourceId: seedFragment.id,
+    targetId: seedId,
+    type: 'tether',
+    label: '',
+  }];
+
+  data.clusters.forEach((apiCluster, ci) => {
+    const cluster = allClusters[ci + 1]; // +1 because seed is index 0
+    if (!cluster) return;
+    const positions = fragmentPositions(cluster.x, cluster.y, apiCluster.fragments.length);
+    apiCluster.fragments.forEach((f, fi) => {
+      const fragmentId = uuidv4();
+      const pos = positions[fi];
+      fragments.push({
+        id: fragmentId,
+        clusterId: cluster.id,
+        x: pos.x,
+        y: pos.y,
+        type: f.type,
+        layout: LAYOUT_FOR_TYPE[f.type],
+        title: f.title,
+        slots: buildSlots(f),
+        createdAtZoom: 0.7,
+        starred: false,
+      });
+      tethers.push({
+        id: `tether-${fragmentId}`,
+        sourceId: fragmentId,
+        targetId: cluster.id,
+        type: 'tether',
+        label: '',
+      });
+    });
+  });
+
+  const edgeConnectors: Connector[] = data.edges
+    .flatMap(e => {
       const source = clusterByTitle.get(e.source);
       const target = clusterByTitle.get(e.target);
-      if (!source || !target) return null;
-      return {
+      if (!source || !target) return [];
+      return [{
         id: uuidv4(),
-        sourceClusterId: source.id,
-        targetClusterId: target.id,
+        sourceId: source.id,
+        targetId: target.id,
+        type: 'standard' as const,
         label: e.label,
-      };
-    })
-    .filter((e): e is NonNullable<typeof e> => e !== null);
+      }];
+    });
 
   return {
     clusters: allClusters,
-    edges,
+    fragments,
+    connectors: [...tethers, ...edgeConnectors],
     viewport: { x: 0, y: 0, zoom: 0.7 },
-    query,
+    query: query.toLowerCase(),
     createdAt: Date.now(),
   };
 }
@@ -175,7 +195,8 @@ export async function generateCanvas(query: string): Promise<CanvasState> {
     body: JSON.stringify({
       model: MODEL,
       max_tokens: MAX_TOKENS,
-      messages: [{ role: 'user', content: buildPrompt(query) }],
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: buildUserMessage(query) }],
     }),
   });
 
@@ -186,17 +207,34 @@ export async function generateCanvas(query: string): Promise<CanvasState> {
 
   const data = await response.json() as { content?: Array<{ text?: string }> };
   const text = data.content?.[0]?.text ?? '';
-  const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
-  const parsed = JSON.parse(cleaned) as GenerateApiResponse;
+  const cleaned = text.replace(/^```json\s*|^```\s*|\s*```$/gm, '').trim();
 
-  return parseApiResponse(parsed, query, 0.7);
+  let parsed: GenerateApiResponse;
+  try {
+    parsed = JSON.parse(cleaned) as GenerateApiResponse;
+  } catch (err) {
+    console.error('Failed to parse API response, falling back to mock:', err, '\nRaw text:', text);
+    return getMockCanvasState(query);
+  }
+
+  if (!parsed.context || !Array.isArray(parsed.clusters) || !Array.isArray(parsed.edges)) {
+    console.error('API response missing required fields, falling back to mock');
+    return getMockCanvasState(query);
+  }
+
+  return parseApiResponse(parsed, query);
 }
 
 export async function generatePivot(
   fragmentTitle: string,
   fragmentBody: string,
-  sourceClusterId: string
-): Promise<{ cluster: Cluster; edge: { id: string; sourceClusterId: string; targetClusterId: string; label: string } }> {
+  sourceClusterId: string,
+): Promise<{
+  cluster: Cluster;
+  fragments: Fragment[];
+  connectors: Connector[];
+  edge: Connector;
+}> {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
 
   const prompt = `Generate 3-5 fragments closely related to this idea:
@@ -206,19 +244,26 @@ Context: "${fragmentBody}"
 
 Return ONLY valid JSON:
 {
-  "title": "cluster title for these related fragments",
+  "title": "cluster title for these related fragments (2-4 words)",
   "fragments": [
-    { "type": "concept|person|thesis|source|event|era|domain|quote", "title": "...", "slots": [{ "type": "body", "content": "..." }] }
+    {
+      "type": "concept",
+      "title": "fragment title",
+      "body": "2-4 sentences",
+      "tags": ["tag1", "tag2"]
+    }
   ]
 }`;
 
-  let clusterData: { title: string; fragments: GenerateApiResponse['clusters'][0]['fragments'] };
+  type PivotResponse = { title: string; fragments: GenerateApiResponse['clusters'][0]['fragments'] };
+
+  let pivotData: PivotResponse;
 
   if (!apiKey) {
-    clusterData = {
+    pivotData = {
       title: `related to ${fragmentTitle.toLowerCase()}`,
       fragments: [
-        { type: 'concept', title: 'related concept', slots: [{ type: 'body', content: 'A stub fragment for pivot preview.' }] },
+        { type: 'concept', title: 'related concept', body: 'A stub fragment for pivot preview.', tags: ['stub'] },
       ],
     };
   } else {
@@ -239,111 +284,47 @@ Return ONLY valid JSON:
 
     const data = await response.json() as { content?: Array<{ text?: string }> };
     const text = data.content?.[0]?.text ?? '';
-    const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
-    clusterData = JSON.parse(cleaned) as typeof clusterData;
+    const cleaned = text.replace(/^```json\s*|^```\s*|\s*```$/gm, '').trim();
+    pivotData = JSON.parse(cleaned) as PivotResponse;
   }
 
-  const newCluster: Cluster = {
-    id: uuidv4(),
+  const clusterId = uuidv4();
+  const cluster: Cluster = {
+    id: clusterId,
     x: 0,
     y: 0,
-    title: clusterData.title,
+    label: pivotData.title,
     isSeed: false,
-    fragments: clusterData.fragments.map(f => ({
-      id: uuidv4(),
-      type: f.type,
-      layout: LAYOUT_FOR_TYPE[f.type],
-      title: f.title,
-      slots: f.slots,
-      createdAtZoom: 0.7,
-      starred: false,
-    })),
   };
 
-  const edge = {
+  const fragments: Fragment[] = pivotData.fragments.map(f => ({
     id: uuidv4(),
-    sourceClusterId,
-    targetClusterId: newCluster.id,
+    clusterId,
+    x: 0,
+    y: 0,
+    type: f.type,
+    layout: LAYOUT_FOR_TYPE[f.type],
+    title: f.title,
+    slots: buildSlots(f),
+    createdAtZoom: 0.7,
+    starred: false,
+  }));
+
+  const connectors: Connector[] = fragments.map(f => ({
+    id: `tether-${f.id}`,
+    sourceId: f.id,
+    targetId: clusterId,
+    type: 'tether' as const,
+    label: '',
+  }));
+
+  const edge: Connector = {
+    id: uuidv4(),
+    sourceId: sourceClusterId,
+    targetId: clusterId,
+    type: 'standard',
     label: 'explored via',
   };
 
-  return { cluster: newCluster, edge };
-}
-
-// Mock data — covers all 8 fragment types and all 6 layout types.
-// Shown when VITE_ANTHROPIC_API_KEY is absent.
-export function getMockCanvasState(query: string = 'the printing press'): CanvasState {
-  const seed: Cluster = {
-    id: 'seed',
-    x: 0,
-    y: 0,
-    title: query.toLowerCase(),
-    isSeed: true,
-    fragments: [{
-      id: 'seed-f1',
-      type: 'concept',
-      layout: 'vertical-flow',
-      title: query.toLowerCase(),
-      slots: [{ type: 'body', content: 'The printing press transformed how knowledge spreads, democratising access to ideas that were once controlled by scribes and the church. Its effects rippled across religion, politics, science, and language for centuries.' }],
-      createdAtZoom: 0.7,
-      starred: false,
-    }],
-  };
-
-  const clusters: Cluster[] = [
-    seed,
-    {
-      id: 'c1', x: 700, y: 0, title: 'key figures', isSeed: false,
-      fragments: [
-        { id: 'c1-f1', type: 'person', layout: 'image-hero', title: 'Johannes Gutenberg', slots: [{ type: 'body', content: 'German goldsmith who adapted the screw press to movable type around 1440, making rapid text reproduction practical for the first time.' }, { type: 'tags', items: ['inventor', 'goldsmith', 'Mainz'] }], createdAtZoom: 0.7, starred: false },
-        { id: 'c1-f2', type: 'person', layout: 'image-hero', title: 'William Caxton', slots: [{ type: 'body', content: 'First English printer, who established a press in Westminster in 1476 and played a key role in standardising the English language.' }, { type: 'tags', items: ['England', 'publisher'] }], createdAtZoom: 0.7, starred: false },
-      ],
-    },
-    {
-      id: 'c2', x: 0, y: 700, title: 'core ideas', isSeed: false,
-      fragments: [
-        { id: 'c2-f1', type: 'concept', layout: 'vertical-flow', title: 'information democratisation', slots: [{ type: 'body', content: 'When reproduction costs collapse, control over which ideas spread shifts from gatekeepers to producers. The press was the first mass medium.' }, { type: 'tags', items: ['media', 'access', 'power'] }], createdAtZoom: 0.7, starred: false },
-        { id: 'c2-f2', type: 'thesis', layout: 'vertical-flow', title: 'print created the nation-state', slots: [{ type: 'body', content: 'Benedict Anderson argued that vernacular print capitalism gave people the shared imaginative framework needed to conceive of themselves as a nation.' }, { type: 'disclaimer', content: 'Contested claim — nationalist movements predate widespread literacy in some regions.' }], createdAtZoom: 0.7, starred: false },
-        { id: 'c2-f3', type: 'domain', layout: 'vertical-flow', title: 'media studies', slots: [{ type: 'body', content: 'The academic field examining how communication technologies shape society, cognition, and power — heavily influenced by McLuhan\'s study of print.' }], createdAtZoom: 0.7, starred: false },
-      ],
-    },
-    {
-      id: 'c3', x: -700, y: 0, title: 'primary sources', isSeed: false,
-      fragments: [
-        { id: 'c3-f1', type: 'source', layout: 'card-split', title: 'The Gutenberg Galaxy', slots: [{ type: 'body', content: 'Marshall McLuhan\'s 1962 analysis of how typography reshaped Western thought, introducing the concept of the "global village".' }, { type: 'tags', items: ['McLuhan', '1962', 'media theory'] }], createdAtZoom: 0.7, starred: false },
-        { id: 'c3-f2', type: 'source', layout: 'card-split', title: 'Imagined Communities', slots: [{ type: 'body', content: 'Benedict Anderson\'s 1983 work arguing print capitalism was the foundation of modern nationalist consciousness.' }, { type: 'tags', items: ['Anderson', '1983', 'nationalism'] }], createdAtZoom: 0.7, starred: false },
-      ],
-    },
-    {
-      id: 'c4', x: 0, y: -700, title: 'historical moments', isSeed: false,
-      fragments: [
-        { id: 'c4-f1', type: 'event', layout: 'timeline', title: 'Gutenberg Bible printed', slots: [{ type: 'body', content: 'The first major book printed with movable type in Europe, completed around 1455. Approximately 180 copies were produced — 49 survive today.' }], createdAtZoom: 0.7, starred: false },
-        { id: 'c4-f2', type: 'event', layout: 'timeline', title: 'Luther\'s 95 Theses spread', slots: [{ type: 'body', content: 'Posted in 1517, Luther\'s theses circulated across Europe within weeks due to print — a phenomenon impossible a century earlier. The Reformation followed.' }], createdAtZoom: 0.7, starred: false },
-        { id: 'c4-f3', type: 'era', layout: 'vertical-flow', title: 'the incunabula period', slots: [{ type: 'body', content: 'The first 50 years of European printing (1450–1500), during which over 30,000 distinct editions were produced and the infrastructure of publishing took shape.' }], createdAtZoom: 0.7, starred: false },
-      ],
-    },
-    {
-      id: 'c5', x: 495, y: 495, title: 'voices on media', isSeed: false,
-      fragments: [
-        { id: 'c5-f1', type: 'quote', layout: 'quote-centered', title: 'McLuhan on media', slots: [{ type: 'body', content: '"The medium is the message." — Marshall McLuhan, Understanding Media, 1964' }], createdAtZoom: 0.7, starred: false },
-        { id: 'c5-f2', type: 'quote', layout: 'quote-centered', title: 'Eisenstein on print', slots: [{ type: 'body', content: '"Fixed forms made it possible for readers to disagree with each other and with authors in a new way." — Elizabeth Eisenstein, The Printing Press as an Agent of Change, 1980' }], createdAtZoom: 0.7, starred: false },
-      ],
-    },
-  ];
-
-  const edges = [
-    { id: 'e1', sourceClusterId: 'seed', targetClusterId: 'c1', label: 'driven by' },
-    { id: 'e2', sourceClusterId: 'seed', targetClusterId: 'c2', label: 'produced' },
-    { id: 'e3', sourceClusterId: 'seed', targetClusterId: 'c3', label: 'documented in' },
-    { id: 'e4', sourceClusterId: 'seed', targetClusterId: 'c4', label: 'shaped by' },
-    { id: 'e5', sourceClusterId: 'c2', targetClusterId: 'c5', label: 'inspired' },
-  ];
-
-  return {
-    clusters,
-    edges,
-    viewport: { x: 0, y: 0, zoom: 0.7 },
-    query,
-    createdAt: Date.now(),
-  };
+  return { cluster, fragments, connectors, edge };
 }

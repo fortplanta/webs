@@ -858,13 +858,13 @@ Claude Code updates this table at the end of every session.
 | Fragment copy/paste (keyboard) | DONE | Cmd/Ctrl+C copies hovered fragment; Cmd/Ctrl+V pastes clone into active tab at (0,0) with clusterId='imported'; cross-tab via App.tsx copiedFragment state | Session 06 |
 | Projects index (library foundation) | DONE | webs-projects-index in localStorage maintained via updateProjectMeta(); no UI yet — data model ready for future library view | Session 06 |
 | Canvas layout (flex) | DONE | canvas.css: position:fixed→position:relative+flex:1+min-height:0 to sit below tab strip in App.tsx flex column | Session 06 |
-| AI generation pipeline | NOT STARTED | New structure in src/api/generate.ts (claude-sonnet-4-5, cluster/fragment/edge schema); old logic preserved in src/lib/expand.js | Session 01 |
-| Pivot action | NOT STARTED | generatePivot() stub in src/api/generate.ts | Session 01 |
+| AI generation pipeline | DONE | generateCanvas() in generate.ts; system prompt + user message in prompt.ts; schema fix (Cluster.label, flat fragments); buildSlots() converts flat API fields to FragmentSlot[]; safe JSON parse with mock fallback; positionClusters() + fragmentPositions() for layout | Session 07 |
+| Pivot action | IN PROGRESS | generatePivot() schema fixed (uses label, flat fragments, returns {cluster, fragments, connectors, edge}); not yet wired to Fragment contextual menu | Session 07 |
 | Sidebar | NOT STARTED | Stub at src/ui/Sidebar.tsx | Session 01 |
 | Status bar | NOT STARTED | Stub at src/ui/StatusBar.tsx | Session 01 |
-| Initial state (blank canvas + input) | NOT STARTED | Stub at src/ui/SearchInput.tsx | Session 01 |
+| Initial state (blank canvas + input) | DONE | App.tsx: conditional render — empty tab shows SearchInput on dot-grid; isGenerating shows LoadingCanvas (pink/cobalt strip + query text); non-empty shows Canvas; error state shows LoadingCanvas with retry; new tabs default to EMPTY_CANVAS_STATE | Session 07 |
 | Token system (CSS variables) | DONE | src/styles/webs-tokens.css created with full token set; src/tokens/tokens.ts mirrors as JS constants | Session 01 |
-| Mock data (all 8 types + 6 layouts) | DONE | MOCK_FRAGMENTS in useCanvas.ts: 14 fragments covering all 8 types + all 6 layouts; all slots populated with body + tags; domain type (global south) added Session 05 | Session 05 |
+| Mock data (all 8 types + 6 layouts) | DONE | Moved to src/api/mock.ts; getMockCanvasState(query) overrides seed title with query; correct schema (Cluster.label, flat fragments with clusterId); useTabs seeded with EMPTY_CANVAS_STATE (not mock) so first load shows SearchInput | Session 07 |
 
 Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKED`
 

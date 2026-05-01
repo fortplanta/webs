@@ -99,7 +99,8 @@ export interface AppState {
   activeTabId: string;
 }
 
-// Raw API response shape before client-side processing
+// Raw API response shape before client-side processing.
+// Uses flat fields — client converts to FragmentSlot[] via buildSlots().
 export interface GenerateApiResponse {
   context: string;
   clusters: Array<{
@@ -107,7 +108,10 @@ export interface GenerateApiResponse {
     fragments: Array<{
       type: FragmentType;
       title: string;
-      slots: FragmentSlot[];
+      body: string;
+      tags?: string[];
+      list?: string[];
+      era?: string;
     }>;
   }>;
   edges: Array<{
