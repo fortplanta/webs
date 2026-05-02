@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { usePanZoom } from './usePanZoom';
 import { useCanvas, getLOD } from './useCanvas';
 import { CanvasState, Fragment } from '../api/types';
@@ -122,7 +123,7 @@ export default function Canvas({
         }
         const clone: Fragment = {
           ...copiedFragment,
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           clusterId: IMPORTED_CLUSTER_ID,
           x: 0,
           y: 0,

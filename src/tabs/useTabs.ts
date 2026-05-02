@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { AppState, TabSession } from '../api/types';
 import {
   loadAppState,
@@ -19,15 +20,17 @@ function initAppState(): AppState {
   if (saved && saved.tabs.length > 0) return saved;
 
   // First ever load — seed with empty canvas (user will enter a query)
-  const id = crypto.randomUUID();
+  const id = uuidv4();
   const now = Date.now();
   const canvasState = { ...EMPTY_CANVAS_STATE, createdAt: now };
   saveCanvasState(id, canvasState);
   updateProjectMeta({ id, name: 'exploration 1', createdAt: now, updatedAt: now });
-  return {
+  const initial: AppState = {
     tabs: [makeTabSession(id, 'exploration 1')],
     activeTabId: id,
   };
+  saveAppState(initial);
+  return initial;
 }
 
 export function useTabs() {
@@ -50,7 +53,7 @@ export function useTabs() {
   const addTab = useCallback(() => {
     setAppState(prev => {
       if (prev.tabs.length >= MAX_TABS) return prev;
-      const id = crypto.randomUUID();
+      const id = uuidv4();
       const name = `exploration ${prev.tabs.length + 1}`;
       const now = Date.now();
       const canvasState = { ...EMPTY_CANVAS_STATE, createdAt: now };
