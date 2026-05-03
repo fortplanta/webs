@@ -80,6 +80,8 @@ export interface ProjectMeta {
   name: string;
   createdAt: number;
   updatedAt: number;
+  fragmentCount?: number;
+  clusterCount?: number;
 }
 
 export interface Project extends ProjectMeta {

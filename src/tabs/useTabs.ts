@@ -82,6 +82,23 @@ export function useTabs() {
     });
   }, []);
 
+  const openProject = useCallback((id: string, name: string) => {
+    setAppState(prev => {
+      if (prev.tabs.some(t => t.id === id)) {
+        const next = { ...prev, activeTabId: id };
+        saveAppState(next);
+        return next;
+      }
+      if (prev.tabs.length >= MAX_TABS) return prev;
+      const next: AppState = {
+        tabs: [...prev.tabs, makeTabSession(id, name)],
+        activeTabId: id,
+      };
+      saveAppState(next);
+      return next;
+    });
+  }, []);
+
   const renameTab = useCallback((id: string, name: string) => {
     setAppState(prev => {
       const next: AppState = {
@@ -105,6 +122,7 @@ export function useTabs() {
     canAddTab: appState.tabs.length < MAX_TABS,
     switchTab,
     addTab,
+    openProject,
     closeTab,
     renameTab,
     persist,
