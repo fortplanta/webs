@@ -1,32 +1,42 @@
 /* connectors.css — connector lines, labels, context menu, spawn points, fragment placeholders */
 
-@keyframes connectorPulse {
-  0%, 100% { stroke-opacity: 1; }
-  50%       { stroke-opacity: 0.5; }
+/* ─── Strong connector pulse animation ───────────────────── */
+
+@keyframes connector-pulse {
+  0%, 100% { opacity: var(--base-opacity); }
+  50%       { opacity: calc(var(--base-opacity) * 2); }
 }
 
-/* ─── Connector lines ─────────────────────────────────────── */
+/* ─── Strong connector — 4 stacked layers ────────────────── */
+/* Perf note: CSS blur on SVG paths — monitor paint cost with many strong connectors */
 
-.connector-standard {
-  stroke: rgba(0, 0, 0, 0.35);
-  stroke-width: 1.5;
+.connector-strong-outer-glow {
+  stroke-width: 20;
+  filter: blur(8px);
+  animation: connector-pulse 2.5s ease-in-out infinite;
+  --base-opacity: 0.04;
 }
 
-/* Glow behind strong connector — may have perf impact at scale */
-.connector-strong-glow {
-  stroke: var(--color-fragment-concept-bg);
-  stroke-width: 8;
-  opacity: 0.15;
-  filter: url(#connector-glow-filter);
+.connector-strong-mid-glow {
+  stroke-width: 10;
+  filter: blur(4px);
+  animation: connector-pulse 2.5s ease-in-out infinite;
+  --base-opacity: 0.08;
 }
 
-.connector-strong {
-  stroke: var(--color-fragment-concept-bg);
-  stroke-width: 2.5;
-  animation: connectorPulse 2s ease-in-out infinite;
+.connector-strong-inner-glow {
+  stroke-width: 4;
+  filter: blur(1px);
+  animation: connector-pulse 2.5s ease-in-out infinite;
+  --base-opacity: 0.20;
 }
 
-/* ─── Connector label pill ────────────────────────────────── */
+.connector-strong-core {
+  stroke-width: 2;
+  opacity: 1;
+}
+
+/* ─── Connector label ─────────────────────────────────────── */
 
 .connector-label {
   position: absolute;
@@ -38,32 +48,34 @@
 }
 
 .connector-label--pill {
-  background: var(--color-surface);
-  border: 1px solid var(--color-slot-border);
-  padding: var(--spacing-xxs) var(--spacing-xs);
+  background: rgb(237, 237, 237);
+  padding: 8px 12px;
   font-family: var(--font-primary);
-  font-size: var(--font-size-meta);
+  font-size: 14px;
+  letter-spacing: -0.028em;
+  color: var(--color-text);
   font-weight: var(--font-weight-regular);
   white-space: nowrap;
-  border-radius: 2px;
 }
 
 .connector-label--dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   background: var(--color-edge-midpoint);
   border-radius: 50%;
 }
 
 .connector-label__input {
   font-family: var(--font-primary);
-  font-size: var(--font-size-meta);
+  font-size: 14px;
+  letter-spacing: -0.028em;
   font-weight: var(--font-weight-regular);
   border: none;
   outline: none;
   background: transparent;
-  width: 100px;
+  min-width: 80px;
   padding: 0;
+  color: var(--color-text);
 }
 
 /* ─── Context menu ────────────────────────────────────────── */
@@ -114,9 +126,10 @@
   background: rgba(10, 10, 10, 0.85);
   color: rgba(255, 255, 255, 0.9);
   font-family: var(--font-primary);
-  font-size: var(--font-size-tag);
+  font-size: 16px;
+  letter-spacing: -0.035em;
   font-weight: var(--font-weight-regular);
-  padding: var(--spacing-xxs) var(--spacing-xs);
+  padding: 10px 20px;
   white-space: nowrap;
 }
 

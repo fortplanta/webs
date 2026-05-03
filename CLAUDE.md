@@ -847,10 +847,13 @@ Claude Code updates this table at the end of every session.
 | Cluster labels (compact/macro) | DONE | ClusterLabel.tsx unchanged; cluster spawn points use .cluster-spawn__label styling | Session 04 |
 | Seed fragment | DONE | Seed spawn point uses --color-seed-bg lime green label | Session 04 |
 | Connector system (SVG layer) | DONE | ConnectorLayer.tsx + Connector.tsx; tether/weak/standard/strong types; overflow:visible SVG at canvas origin | Session 04 |
-| Connector tether proximity | DONE | Continuous lerp: opacity 0.2→0.08, dasharray 0→4 6 over 200–600px distance | Session 04 |
-| Connector labels (editable) | DONE | ConnectorLabel.tsx — pill on standard/strong; double-click to edit; Enter/Escape confirm/cancel | Session 04 |
+| Connector bezier curves | DONE | bezier.ts: getBezierPath() + getBezierMidpoint(); all 4 connector types use cubic bezier paths (no straight lines); horizontal-bias control points | Session 10 |
+| Connector tether proximity | DONE | Continuous lerp: opacity 0.25→0.08, strokeWidth 1.5→1, dasharray 0→4 8 over 200–600px distance | Session 10 |
+| Connector strong visual | DONE | 4 stacked CSS-classed paths: outer-glow (20px blur 8px), mid-glow (10px blur 4px), inner-glow (4px blur 1px), core (2px); pulse animation 2.5s; pinch dot at bezier midpoint; source fragment type color or rgba(0,0,0,0.8) fallback | Session 10 |
+| Connector labels (editable) | DONE | ConnectorLabel.tsx — pill on standard/strong; double-click to edit; Enter/Escape confirm/cancel; positioned at bezier midpoint (fixed drift bug) | Session 10 |
 | Connector context menu | DONE | Right-click on line or label: Make strong / Make standard / Delete per type; dismissed on window click | Session 04 |
 | Connector creation (drag) | DONE | Drag fragment onto another fragment → standard connector created; position reverted | Session 04 |
+| Spawn point label padding | DONE | .cluster-spawn__label: padding 10px 20px, font-size 16px, letter-spacing -0.035em | Session 10 |
 | Fragment drag (independent) | DONE | Window-level mousemove/mouseup; zoom-corrected delta; stopPropagation prevents canvas pan | Session 04 |
 | Session persistence (localStorage) | DONE | useCanvas.ts: debounced 1000ms auto-save to webs-canvas-${projectId}; viewport synced via updateViewport; restored on mount from initialState prop | Session 06 |
 | Multi-tab canvas | DONE | useTabs.ts manages AppState (tabs[], activeTabId) + persists to webs-app-state; Canvas keyed by activeTabId for clean remount on switch; max 20 tabs | Session 06 |
