@@ -11,6 +11,7 @@ interface Props {
   clusters: Cluster[];
   transform: Transform;
   onLabelChange: (id: string, label: string) => void;
+  onLabelOffsetChange: (id: string, dx: number, dy: number) => void;
   onDelete: (id: string) => void;
   onPromote: (id: string, type: 'standard' | 'strong') => void;
 }
@@ -30,7 +31,7 @@ const FRAG_COLOR_VAR: Record<string, string> = {
 
 export default function ConnectorLayer({
   connectors, fragments, clusters, transform,
-  onLabelChange, onDelete, onPromote,
+  onLabelChange, onLabelOffsetChange, onDelete, onPromote,
 }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
 
@@ -72,7 +73,7 @@ export default function ConnectorLayer({
         style={{
           position: 'absolute', top: 0, left: 0,
           width: 0, height: 0, overflow: 'visible',
-          pointerEvents: 'none',
+          pointerEvents: 'none', zIndex: 2,
         }}
       >
         {connectors.map(conn => {
@@ -102,13 +103,17 @@ export default function ConnectorLayer({
         const tgt = posById.get(conn.targetId);
         if (!src || !tgt) return null;
         const { mx, my } = getBezierMidpoint(src.x, src.y, tgt.x, tgt.y);
+        const labelX = mx + (conn.labelOffsetX ?? 0);
+        const labelY = my + (conn.labelOffsetY ?? 0);
         return (
           <ConnectorLabel
             key={conn.id}
             connector={conn}
-            midX={mx}
-            midY={my}
+            midX={labelX}
+            midY={labelY}
+            zoom={transform.zoom}
             onLabelChange={onLabelChange}
+            onOffsetChange={(dx, dy) => onLabelOffsetChange(conn.id, dx, dy)}
             onContextMenu={handleContextMenu}
           />
         );

@@ -14,25 +14,25 @@
   stroke-width: 20;
   filter: blur(8px);
   animation: connector-pulse 2.5s ease-in-out infinite;
-  --base-opacity: 0.04;
+  --base-opacity: 0.12;
 }
 
 .connector-strong-mid-glow {
   stroke-width: 10;
   filter: blur(4px);
   animation: connector-pulse 2.5s ease-in-out infinite;
-  --base-opacity: 0.08;
+  --base-opacity: 0.22;
 }
 
 .connector-strong-inner-glow {
   stroke-width: 4;
   filter: blur(1px);
   animation: connector-pulse 2.5s ease-in-out infinite;
-  --base-opacity: 0.20;
+  --base-opacity: 0.45;
 }
 
 .connector-strong-core {
-  stroke-width: 2;
+  stroke-width: 2.5;
   opacity: 1;
 }
 

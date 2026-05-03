@@ -28,7 +28,7 @@ export default function ConnectorLine({ connector, x1, y1, x2, y2, distance, sou
       (distance - TETHER_FULL_DISTANCE) / (TETHER_WEAK_DISTANCE - TETHER_FULL_DISTANCE),
       0, 1
     ));
-    const opacity = lerp(0.25, 0.08, t);
+    const opacity = lerp(0.55, 0.12, t);
     const sw = lerp(1.5, 1, t);
     const dashLen = lerp(0, 4, t);
     const gapLen = lerp(0, 8, t);

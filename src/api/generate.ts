@@ -18,7 +18,7 @@ import { getMockCanvasState, getMockPivotResult } from './mock';
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-5';
-const MAX_TOKENS = 4000;
+const MAX_TOKENS = 8000;
 
 const BASE_RADIUS = 700;
 const RADIUS_JITTER = 100;
@@ -208,7 +208,10 @@ export async function generateCanvas(query: string): Promise<CanvasState> {
 
   const data = await response.json() as { content?: Array<{ text?: string }> };
   const text = data.content?.[0]?.text ?? '';
-  const cleaned = text.replace(/^```json\s*|^```\s*|\s*```$/gm, '').trim();
+  // Extract JSON robustly: find first { and last } to handle any preamble/postamble/fences
+  const jsonStart = text.indexOf('{');
+  const jsonEnd = text.lastIndexOf('}');
+  const cleaned = jsonStart !== -1 && jsonEnd > jsonStart ? text.slice(jsonStart, jsonEnd + 1) : text.trim();
 
   let parsed: GenerateApiResponse;
   try {
@@ -314,7 +317,9 @@ export async function generatePivot(sourceFragment: Fragment, sourceClusterId: s
 
     const data = await response.json() as { content?: Array<{ text?: string }> };
     const text = data.content?.[0]?.text ?? '';
-    const cleaned = text.replace(/^```json\s*|^```\s*|\s*```$/gm, '').trim();
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    const cleaned = jsonStart !== -1 && jsonEnd > jsonStart ? text.slice(jsonStart, jsonEnd + 1) : text.trim();
     const parsed = JSON.parse(cleaned) as PivotApiResponse;
 
     if (!parsed.clusterTitle || !Array.isArray(parsed.fragments) || parsed.fragments.length === 0) {

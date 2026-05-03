@@ -53,6 +53,8 @@ export interface Connector {
   targetId: string;       // fragment id or cluster id
   type: ConnectorType;
   label: string;          // editable verb phrase, empty by default
+  labelOffsetX?: number;  // drag offset from bezier midpoint (canvas-space)
+  labelOffsetY?: number;
 }
 
 export interface CanvasState {

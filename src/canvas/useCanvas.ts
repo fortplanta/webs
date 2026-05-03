@@ -105,6 +105,17 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     }));
   }, []);
 
+  const updateConnectorLabelOffset = useCallback((id: string, dx: number, dy: number) => {
+    setState(prev => ({
+      ...prev,
+      connectors: prev.connectors.map(c =>
+        c.id === id
+          ? { ...c, labelOffsetX: (c.labelOffsetX ?? 0) + dx, labelOffsetY: (c.labelOffsetY ?? 0) + dy }
+          : c
+      ),
+    }));
+  }, []);
+
   const deleteConnector = useCallback((id: string) => {
     setState(prev => ({
       ...prev,
@@ -194,6 +205,7 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     endDrag,
     isDragging,
     updateConnectorLabel,
+    updateConnectorLabelOffset,
     deleteConnector,
     promoteConnector,
     addCluster,
