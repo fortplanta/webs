@@ -145,7 +145,7 @@ export default function Canvas({
 
     try {
       const result = await generatePivot(fragment, fragment.clusterId);
-      addPivotCluster(result.cluster, result.fragments, result.tetherConnectors, result.interConnector);
+      addPivotCluster(result.cluster, result.fragments, result.interConnector);
 
       // Smooth pan to midpoint between source fragment and new cluster
       const midX = (fragment.x + result.cluster.x) / 2;

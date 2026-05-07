@@ -55,6 +55,12 @@ export default function ConnectorLayer({
     return map;
   }, [fragments]);
 
+  const clusterIdByFragId = useMemo(() => {
+    const map = new Map<string, string>();
+    fragments.forEach(f => map.set(f.id, f.clusterId));
+    return map;
+  }, [fragments]);
+
   const handleContextMenu = (e: React.MouseEvent, connectorId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -81,6 +87,10 @@ export default function ConnectorLayer({
           const tgt = posById.get(conn.targetId);
           if (!src || !tgt) return null;
           const dist = Math.hypot(src.x - tgt.x, src.y - tgt.y);
+          const srcCluster = clusterIdByFragId.get(conn.sourceId);
+          const tgtCluster = clusterIdByFragId.get(conn.targetId);
+          const scope: 'intra' | 'inter' =
+            srcCluster && tgtCluster && srcCluster === tgtCluster ? 'intra' : 'inter';
           const srcType = fragTypeById.get(conn.sourceId);
           const sourceColor = srcType ? FRAG_COLOR_VAR[srcType] : undefined;
           return (
@@ -90,6 +100,7 @@ export default function ConnectorLayer({
               x1={src.x} y1={src.y}
               x2={tgt.x} y2={tgt.y}
               distance={dist}
+              scope={scope}
               sourceColor={sourceColor}
               onContextMenu={handleContextMenu}
             />
@@ -127,11 +138,6 @@ export default function ConnectorLayer({
           onMouseDown={e => e.stopPropagation()}
           onClick={e => e.stopPropagation()}
         >
-          {(activeConnector.type === 'tether' || activeConnector.type === 'weak') && (
-            <button onClick={() => { onPromote(activeConnector.id, 'strong'); setContextMenu(null); }}>
-              Make strong
-            </button>
-          )}
           {activeConnector.type === 'standard' && (<>
             <button onClick={() => { onPromote(activeConnector.id, 'strong'); setContextMenu(null); }}>Make strong</button>
             <button onClick={() => { onDelete(activeConnector.id); setContextMenu(null); }}>Delete</button>

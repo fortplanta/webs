@@ -22,6 +22,8 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | 11 | Apr 2026 | Connector visuals | Tether lerp (opacity/weight/dash); strong glow (4 stacked paths + pulse); editable labels; AI MAX_TOKENS 8000 |
 | 12 | Apr 2026 | Canvas polish | SVG visibility fix (width:0→1); cluster container + hover dimming + collapse; NotePanel; Scratchpad; Spark nodes stub |
 | 13 | May 2026 | nd/ design system | nd/ atoms (Button, Spinner, Icon) wired into Sidebar, LoadingCanvas, Fragment; hook warning diagnosed (non-blocking) |
+| 14 | May 2026 | Doc restructure | PROGRESS.md + CHANGELOG.md created; CLAUDE.md stripped of dead Migration Strategy + WIP tracker; README rewritten; 5 dead files deleted; v0.3.0 tagged |
+| 15 | May 2026 | Remove tethers + fix connectors | Tether system fully removed (types, generation, mock data, localStorage filter); standard connectors confirmed rendering; scope opacity intra 0.4 / inter 0.2 |
 | 14 | May 2026 | Connector overhaul | Visual validation of tether / standard / strong at real zoom levels |
 
 ---
@@ -85,7 +87,8 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | nd/ design system integration | DONE | src/nd/ atoms/molecules/organisms ported from Neurodive; webs-tokens.css extended with nd/ token aliases (--surface, --fg, --hairline, --s-1, --font-meta, --ls-small, --shadow-lift, --signal-danger, --ease, --dur-fast, --stroke, --radius-soft, --shadow-toolbar); Button used in Sidebar + LoadingCanvas; Spinner used in LoadingCanvas + Fragment pivot overlay; Icon (lucide-react) used in Fragment menubar (Trash2, Shuffle, Star); FloatingToolbar available but not used directly (token deps met, kept webs menubar CSS) | Session 13 |
 | Connector SVG visibility (re-confirmed) | DONE | Plan file confirmed fix: width:0→1, zIndex:2→0 applied to ConnectorLayer.tsx; 3 bezier tether paths confirmed rendering via DOM inspection; previously marked DONE in Session 12 tracker but fix not yet applied to working tree | Session 13 |
 | Dev-mode hook warnings | NOTES | 8x "Invalid hook call" console errors are a pre-existing Vite 8 + React 19 + @vitejs/plugin-react 6 dev-mode artifact; confirmed present on HEAD with zero nd/ changes; production build is clean (zero errors); not caused by nd/ integration; no fix found — accepted as non-blocking dev noise | Session 13 |
-| Connector visual overhaul | IN PROGRESS | Tether / standard / strong visual validation at real zoom levels; SESSION.md scope | Session 14 |
+| Tether system removal | DONE | ConnectorType narrowed to standard\|strong; tether generation removed from generate.ts, addFragment, addPivotCluster, mock.ts; legacy tethers filtered from localStorage on load | Session 15 |
+| Standard connector scope opacity | DONE | intra-cluster: 0.40 opacity, inter-cluster: 0.20 opacity; scope computed in ConnectorLayer from fragment.clusterId | Session 15 |
 
 Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKED`
 

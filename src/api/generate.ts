@@ -117,13 +117,6 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
   allClusters.forEach(c => clusterByTitle.set(c.label, c));
 
   const fragments: Fragment[] = [seedFragment];
-  const tethers: Connector[] = [{
-    id: `tether-${seedFragment.id}`,
-    sourceId: seedFragment.id,
-    targetId: seedId,
-    type: 'tether',
-    label: '',
-  }];
 
   data.clusters.forEach((apiCluster, ci) => {
     const cluster = allClusters[ci + 1]; // +1 because seed is index 0
@@ -143,13 +136,6 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
         slots: buildSlots(f),
         createdAtZoom: 0.7,
         starred: false,
-      });
-      tethers.push({
-        id: `tether-${fragmentId}`,
-        sourceId: fragmentId,
-        targetId: cluster.id,
-        type: 'tether',
-        label: '',
       });
     });
   });
@@ -171,7 +157,7 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
   return {
     clusters: allClusters,
     fragments,
-    connectors: [...tethers, ...edgeConnectors],
+    connectors: edgeConnectors,
     viewport: { x: 0, y: 0, zoom: 0.7 },
     query: query.toLowerCase(),
     createdAt: Date.now(),
@@ -235,7 +221,6 @@ const PIVOT_OFFSET_Y = -200;
 export interface PivotResult {
   cluster: Cluster;
   fragments: Fragment[];
-  tetherConnectors: Connector[];
   interConnector: Connector;
 }
 
@@ -267,14 +252,6 @@ function buildPivotResult(pivotData: PivotApiResponse, sourceFragment: Fragment,
     starred: false,
   }));
 
-  const tetherConnectors: Connector[] = fragments.map(f => ({
-    id: `tether-${f.id}`,
-    sourceId: f.id,
-    targetId: clusterId,
-    type: 'tether' as const,
-    label: '',
-  }));
-
   const interConnector: Connector = {
     id: uuidv4(),
     sourceId: sourceClusterId,
@@ -283,7 +260,7 @@ function buildPivotResult(pivotData: PivotApiResponse, sourceFragment: Fragment,
     label: pivotData.edgeLabel || 'explored via',
   };
 
-  return { cluster, fragments, tetherConnectors, interConnector };
+  return { cluster, fragments, interConnector };
 }
 
 export interface SparkResult {

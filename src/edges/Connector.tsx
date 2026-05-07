@@ -1,5 +1,4 @@
 import type { Connector } from '../api/types';
-import { TETHER_FULL_DISTANCE, TETHER_WEAK_DISTANCE } from '../canvas/useCanvas';
 import { getBezierPath, getBezierMidpoint } from './bezier';
 
 interface Props {
@@ -9,61 +8,23 @@ interface Props {
   x2: number;
   y2: number;
   distance: number;
+  scope: 'intra' | 'inter';
   sourceColor?: string;
   onContextMenu: (e: React.MouseEvent<SVGElement>, id: string) => void;
 }
 
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t;
-}
-
-export default function ConnectorLine({ connector, x1, y1, x2, y2, distance, sourceColor, onContextMenu }: Props) {
+export default function ConnectorLine({ connector, x1, y1, x2, y2, distance: _distance, scope, sourceColor, onContextMenu }: Props) {
   const handleCtx = (e: React.MouseEvent<SVGElement>) => {
     e.stopPropagation();
     onContextMenu(e, connector.id);
   };
 
-  if (connector.type === 'tether') {
-    const t = Math.min(Math.max(
-      (distance - TETHER_FULL_DISTANCE) / (TETHER_WEAK_DISTANCE - TETHER_FULL_DISTANCE),
-      0, 1
-    ));
-    const opacity = lerp(0.55, 0.12, t);
-    const sw = lerp(1.5, 1, t);
-    const dashLen = lerp(0, 4, t);
-    const gapLen = lerp(0, 8, t);
-    return (
-      <path
-        d={getBezierPath(x1, y1, x2, y2)}
-        stroke={`rgba(0,0,0,${opacity.toFixed(3)})`}
-        strokeWidth={sw}
-        strokeDasharray={t > 0.01 ? `${dashLen.toFixed(2)} ${gapLen.toFixed(2)}` : undefined}
-        fill="none"
-        style={{ pointerEvents: 'stroke', cursor: 'context-menu' }}
-        onContextMenu={handleCtx}
-      />
-    );
-  }
-
-  if (connector.type === 'weak') {
-    return (
-      <path
-        d={getBezierPath(x1, y1, x2, y2)}
-        stroke="rgba(0,0,0,0.08)"
-        strokeWidth={1}
-        strokeDasharray="4 8"
-        fill="none"
-        style={{ pointerEvents: 'stroke', cursor: 'context-menu' }}
-        onContextMenu={handleCtx}
-      />
-    );
-  }
-
   if (connector.type === 'standard') {
+    const opacity = scope === 'intra' ? 0.40 : 0.20;
     return (
       <path
         d={getBezierPath(x1, y1, x2, y2)}
-        stroke="rgba(0,0,0,0.4)"
+        stroke={`rgba(0,0,0,${opacity})`}
         strokeWidth={1.5}
         fill="none"
         style={{ pointerEvents: 'stroke', cursor: 'context-menu' }}

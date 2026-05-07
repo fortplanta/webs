@@ -12,9 +12,6 @@ export function getLOD(zoom: number): LOD {
   return 'macro';
 }
 
-export const TETHER_FULL_DISTANCE = 200;
-export const TETHER_WEAK_DISTANCE = 600;
-
 export { INITIAL_STATE };
 
 export const EMPTY_CANVAS_STATE: CanvasState = {
@@ -36,7 +33,14 @@ type DragState = {
 } | null;
 
 export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS_STATE) {
-  const [state, setState] = useState<CanvasState>(initial);
+  // Filter out legacy tether/weak connectors that may exist in saved state
+  const filteredInitial: CanvasState = {
+    ...initial,
+    connectors: initial.connectors.filter(
+      c => c.type === 'standard' || c.type === 'strong'
+    ),
+  };
+  const [state, setState] = useState<CanvasState>(filteredInitial);
   const dragRef = useRef<DragState>(null);
 
   const startDrag = useCallback((
@@ -137,14 +141,13 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
   const addPivotCluster = useCallback((
     cluster: Cluster,
     fragments: Fragment[],
-    tetherConnectors: Connector[],
     interConnector: Connector,
   ) => {
     setState(prev => ({
       ...prev,
       clusters: [...prev.clusters, cluster],
       fragments: [...prev.fragments, ...fragments],
-      connectors: [...prev.connectors, ...tetherConnectors, interConnector],
+      connectors: [...prev.connectors, interConnector],
     }));
   }, []);
 
@@ -152,13 +155,6 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     setState(prev => ({
       ...prev,
       fragments: [...prev.fragments, fragment],
-      connectors: [...prev.connectors, {
-        id: `tether-${fragment.id}`,
-        sourceId: fragment.id,
-        targetId: fragment.clusterId,
-        type: 'tether' as const,
-        label: '',
-      }],
     }));
   }, []);
 

@@ -19,7 +19,7 @@ export type LayoutType =
   | "timeline"
   | "list-prominent";
 
-export type ConnectorType = "tether" | "weak" | "standard" | "strong";
+export type ConnectorType = "standard" | "strong";
 
 export interface FragmentSlot {
   type: "body" | "image" | "tags" | "list" | "disclaimer";

@@ -83,13 +83,6 @@ const FRAGMENTS: Fragment[] = [
 ];
 
 const CONNECTORS: Connector[] = [
-  ...FRAGMENTS.map(f => ({
-    id: `tether-${f.id}`,
-    sourceId: f.id,
-    targetId: f.clusterId,
-    type: 'tether' as const,
-    label: '',
-  })),
   { id: 'e1', sourceId: 'seed', targetId: 'c1', type: 'standard', label: 'structured by' },
   { id: 'e2', sourceId: 'seed', targetId: 'c2', type: 'standard', label: 'enacted by' },
   { id: 'e3', sourceId: 'seed', targetId: 'c3', type: 'standard', label: 'challenged by' },
