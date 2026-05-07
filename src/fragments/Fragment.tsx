@@ -8,6 +8,8 @@ import ImageHero from './layouts/ImageHero';
 import CardSplit from './layouts/CardSplit';
 import Timeline from './layouts/Timeline';
 import ListProminent from './layouts/ListProminent';
+import { Icon } from '../nd/atoms/Icon/Icon';
+import { Spinner } from '../nd/atoms/Spinner/Spinner';
 
 const LAYOUT_COMPONENTS: Record<LayoutType, React.ComponentType<{ fragment: FragmentType }>> = {
   'vertical-flow':  VerticalFlow,
@@ -87,10 +89,7 @@ export default function Fragment({
         <LayoutComponent fragment={fragment} />
         {isPivoting && (
           <div className="fragment__pivot-overlay">
-            <div className="fragment__pivot-strip">
-              <div className="fragment__pivot-track" />
-              <div className="loading-canvas__head" />
-            </div>
+            <Spinner variant="strip" width={120} />
           </div>
         )}
         {pivotError && !isPivoting && (
@@ -100,22 +99,24 @@ export default function Fragment({
       <div className="fragment__menubar">
         <button
           className="fragment__menubar-item"
+          title="Delete"
           onClick={e => { e.stopPropagation(); onDelete(id); }}
         >
-          delete
+          <Icon name="Trash2" size={14} color="inherit" />
         </button>
         <button
           className={`fragment__menubar-item${pivotButtonDisabled ? ' fragment__menubar-item--disabled' : ''}`}
+          title="Pivot"
           onClick={e => { e.stopPropagation(); if (!pivotButtonDisabled) onPivot?.(id); }}
         >
-          pivot
+          <Icon name="Shuffle" size={14} color="inherit" />
         </button>
-        <button className="fragment__menubar-item">fact</button>
         <button
           className={`fragment__menubar-item${starred ? ' fragment__menubar-item--active' : ''}`}
+          title={starred ? 'Unstar' : 'Star'}
           onClick={e => { e.stopPropagation(); onToggleStar(id); }}
         >
-          star
+          <Icon name="Star" size={14} color="inherit" />
         </button>
       </div>
     </div>

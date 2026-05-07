@@ -1,0 +1,76 @@
+.nd-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.nd-input-wrap label {
+  font-family: var(--font-meta);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  color: var(--fg-3);
+}
+
+.nd-input-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.nd-input {
+  width: 100%;
+  background: var(--surface);
+  border: var(--stroke);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  font-weight: 400;
+  letter-spacing: var(--ls-body);
+  color: var(--fg);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease);
+}
+
+.nd-input::placeholder { color: var(--fg-4); }
+
+.nd-input:focus { border-color: var(--fg-3); }
+
+.nd-input:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: var(--surface-mute);
+}
+
+/* Sizes */
+.nd-input--sm { padding: 5px 8px;  font-size: 13px; height: 28px; }
+.nd-input--md { padding: 7px 10px; font-size: var(--fs-body); height: 36px; }
+.nd-input--lg { padding: 9px 12px; font-size: 18px; height: 44px; }
+
+/* With leading/trailing icon padding */
+.nd-input--has-left  { padding-left: 32px; }
+.nd-input--has-right { padding-right: 32px; }
+
+/* Icon slots */
+.nd-input-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  color: var(--fg-3);
+  pointer-events: none;
+}
+.nd-input-icon--left  { left: 8px; }
+.nd-input-icon--right { right: 8px; }
+
+/* Error state */
+.nd-input-wrap--error .nd-input { border-color: var(--signal-danger); }
+.nd-input-wrap--error label     { color: var(--signal-danger); }
+
+.nd-input-hint {
+  font-family: var(--font-meta);
+  font-size: 12px;
+  color: var(--fg-3);
+  margin-top: 2px;
+}
+.nd-input-wrap--error .nd-input-hint { color: var(--signal-danger); }

@@ -8,7 +8,8 @@ export type FragmentType =
   | "event"
   | "era"
   | "domain"
-  | "quote";
+  | "quote"
+  | "spark";
 
 export type LayoutType =
   | "vertical-flow"
@@ -37,6 +38,10 @@ export interface Fragment {
   slots: FragmentSlot[];
   createdAtZoom: number;
   starred: boolean;
+  note?: string;           // personal annotation, separate from AI body
+  sparkMediaUrl?: string;  // data URL for spark image
+  sparkMediaType?: 'image' | 'text';
+  sparkStatus?: 'idle' | 'processing' | 'done';
 }
 
 export interface Cluster {
@@ -45,6 +50,8 @@ export interface Cluster {
   y: number;
   label: string;
   isSeed: boolean;
+  note?: string;
+  collapsed?: boolean;
 }
 
 export interface Connector {
@@ -68,6 +75,7 @@ export interface CanvasState {
   };
   query: string;
   createdAt: number;
+  scratchpad?: string;
 }
 
 export interface SessionRecord {

@@ -1,4 +1,7 @@
 import '../styles/sidebar.css';
+import '../styles/panels.css';
+import { useRef, useCallback } from 'react';
+import { Button } from '../nd/atoms/Button/Button';
 
 function relativeTime(ms: number): string {
   if (!ms) return '—';
@@ -24,6 +27,8 @@ interface SidebarProps {
   connectorCount: number;
   createdAt: number;
   updatedAt: number;
+  scratchpad: string;
+  onScratchpadChange: (text: string) => void;
   onOpenLibrary: () => void;
   onNewExploration: () => void;
 }
@@ -37,9 +42,19 @@ export default function Sidebar({
   connectorCount,
   createdAt,
   updatedAt,
+  scratchpad,
+  onScratchpadChange,
   onOpenLibrary,
   onNewExploration,
 }: SidebarProps) {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleScratchpad = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => onScratchpadChange(text), 1000);
+  }, [onScratchpadChange]);
+
   return (
     <div className={`sidebar${isOpen ? '' : ' sidebar--collapsed'}`}>
       <button
@@ -58,9 +73,9 @@ export default function Sidebar({
           <p className="sidebar__exploration-name">
             {explorationName || 'untitled'}
           </p>
-          <button className="sidebar__button sidebar__button--secondary" onClick={onOpenLibrary}>
+          <Button variant="ghost" size="sm" onClick={onOpenLibrary}>
             open library
-          </button>
+          </Button>
         </div>
 
         {/* Section 2: Stats */}
@@ -90,18 +105,27 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Section 3: Actions */}
+        {/* Section 3: Scratchpad */}
+        <div className="sidebar__section">
+          <p className="sidebar__label">scratchpad</p>
+          <div className="scratchpad">
+            <textarea
+              className="scratchpad__textarea"
+              defaultValue={scratchpad}
+              onChange={handleScratchpad}
+              placeholder="notes, thoughts, tangents…"
+            />
+          </div>
+        </div>
+
+        {/* Section 4: Actions */}
         <div className="sidebar__section sidebar__section--actions">
-          <button className="sidebar__button" onClick={onNewExploration}>
+          <Button variant="primary" size="sm" onClick={onNewExploration}>
             new exploration
-          </button>
-          <button
-            className="sidebar__button sidebar__button--secondary"
-            disabled
-            title="coming soon"
-          >
+          </Button>
+          <Button variant="ghost" size="sm" disabled title="coming soon">
             export
-          </button>
+          </Button>
         </div>
       </div>
     </div>

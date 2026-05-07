@@ -1,0 +1,49 @@
+.nd-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Strip variant — the Neurodive 3-segment loading bar */
+.nd-spinner--strip {
+  position: relative;
+  height: 40px;
+  overflow: hidden;
+  background: var(--signal-loading-a);
+}
+
+.nd-spinner--strip .nd-spinner__head {
+  position: absolute;
+  left: 0; top: 0;
+  height: 100%;
+  background: var(--signal-loading-b);
+  animation: nd-strip-slide 1.6s var(--ease) infinite;
+}
+
+.nd-spinner--strip .nd-spinner__tip {
+  position: absolute;
+  right: 0; top: 0;
+  width: 12px; height: 100%;
+  background: var(--signal-loading-c);
+}
+
+@keyframes nd-strip-slide {
+  0%   { width: 10%; }
+  60%  { width: 85%; }
+  100% { width: 10%; }
+}
+
+/* Ring variant */
+.nd-spinner--ring svg {
+  animation: nd-spin 700ms linear infinite;
+}
+
+@keyframes nd-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Sizes for ring */
+.nd-spinner--sm svg { width: 14px; height: 14px; }
+.nd-spinner--md svg { width: 20px; height: 20px; }
+.nd-spinner--lg svg { width: 28px; height: 28px; }

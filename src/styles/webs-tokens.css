@@ -88,4 +88,50 @@
   --color-edge:                  rgba(0, 0, 0, 0.15);
   --color-edge-midpoint:         rgba(0, 0, 0, 0.3);
 
+  /* ─── Neurodive component aliases ────────────────────────── */
+  /* Bridge so nd/ components resolve their tokens against webs vars */
+  --surface:      var(--color-surface);
+  --surface-alt:  #ededed;
+  --surface-mute: #f7f7f7;
+  --fg:           var(--color-text);
+  --fg-strong:    #0f172a;
+  --fg-2:         rgba(0,0,0,0.65);
+  --fg-3:         rgba(0,0,0,0.45);
+  --fg-4:         rgba(0,0,0,0.25);
+  --fg-invert:    #ffffff;
+  --fg-mute:      rgba(0,0,0,0.41);
+  --hairline:     rgba(0,0,0,0.1);
+  --hairline-2:   rgba(0,0,0,0.04);
+  --radius:       0;
+  --radius-soft:  4px;
+  --stroke:       1px solid var(--hairline);
+  --stroke-soft:  1px solid var(--hairline-2);
+  --shadow-card:    2px 2px 14px 0 rgba(0,0,0,0.07);
+  --shadow-toolbar: 0 4px 6px -2px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.10);
+  --shadow-lift:    0 1px 2px 0 rgba(0,0,0,0.05);
+  --ease:       cubic-bezier(0.2, 0, 0.2, 1);
+  --dur-fast:   80ms;
+  --dur:        140ms;
+  --dur-slow:   200ms;
+  --focus-ring: 1px dashed rgb(138,56,245);
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px;
+  --s-12: 48px;
+  --font-sans:  var(--font-primary);
+  --font-meta:  var(--font-primary);
+  --font-mono:  "Menlo", "SF Mono", ui-monospace, monospace;
+  --fs-body:    var(--font-size-body);
+  --fs-small:   var(--font-size-tag);
+  --fs-h4:      20px;
+  --ls-body:    var(--tracking-normal);
+  --ls-small:   var(--tracking-normal);
+  --ls-h4:      var(--tracking-tight);
+  --lh-body:    var(--line-height-normal);
+  /* Neurodive signal colors */
+  --signal-danger:    #FF0207;
+  --signal-highlight: #001EFF;
+  --signal-loading-a: rgb(255,204,204);
+  --signal-loading-b: rgb(0,68,255);
+  --signal-loading-c: rgb(111,255,166);
+
 }

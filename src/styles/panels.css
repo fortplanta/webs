@@ -1,0 +1,124 @@
+/* panels.css — note panel, scratchpad */
+
+/* ─── Note panel ──────────────────────────────────────────── */
+
+.note-panel {
+  position: fixed;
+  right: 0;
+  top: 40px;       /* below tab strip */
+  bottom: 32px;    /* above status bar */
+  width: 320px;
+  background: #fff;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
+}
+
+.note-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-base) var(--spacing-base) var(--spacing-sm);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.note-panel__label {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.4);
+  font-weight: var(--font-weight-regular);
+}
+
+.note-panel__title {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  letter-spacing: -0.031em;
+  color: var(--color-text);
+  font-weight: var(--font-weight-regular);
+  margin: 0;
+  padding: var(--spacing-xs) var(--spacing-base);
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-panel__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-primary);
+  font-size: 18px;
+  color: rgba(0, 0, 0, 0.4);
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.note-panel__close:hover {
+  color: var(--color-text);
+}
+
+.note-panel__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-base);
+  min-height: 0;
+}
+
+.note-panel__textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-relaxed);
+  letter-spacing: -0.031em;
+  color: var(--color-text);
+  background: transparent;
+  font-weight: var(--font-weight-regular);
+}
+
+.note-panel__textarea::placeholder {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+/* ─── Scratchpad (in sidebar) ─────────────────────────────── */
+
+.scratchpad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.scratchpad__textarea {
+  background: rgba(0, 0, 0, 0.03);
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-relaxed);
+  letter-spacing: -0.031em;
+  color: var(--color-text);
+  font-weight: var(--font-weight-regular);
+  padding: var(--spacing-sm);
+  min-height: 120px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.scratchpad__textarea::placeholder {
+  color: rgba(0, 0, 0, 0.25);
+}

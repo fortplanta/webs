@@ -72,8 +72,8 @@ export default function ConnectorLayer({
       <svg
         style={{
           position: 'absolute', top: 0, left: 0,
-          width: 0, height: 0, overflow: 'visible',
-          pointerEvents: 'none', zIndex: 2,
+          width: 1, height: 1, overflow: 'visible',
+          pointerEvents: 'none', zIndex: 0,
         }}
       >
         {connectors.map(conn => {

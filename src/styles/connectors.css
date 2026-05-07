@@ -108,36 +108,6 @@
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* ─── Cluster spawn point ─────────────────────────────────── */
-
-.cluster-spawn {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  cursor: grab;
-  z-index: 1;
-}
-
-.cluster-spawn:active {
-  cursor: grabbing;
-}
-
-.cluster-spawn__label {
-  display: inline-block;
-  background: rgba(10, 10, 10, 0.85);
-  color: rgba(255, 255, 255, 0.9);
-  font-family: var(--font-primary);
-  font-size: 16px;
-  letter-spacing: -0.035em;
-  font-weight: var(--font-weight-regular);
-  padding: 10px 20px;
-  white-space: nowrap;
-}
-
-.cluster-spawn--seed .cluster-spawn__label {
-  background: var(--color-seed-bg);
-  color: var(--color-seed-text);
-}
-
 /* ─── Fragment placeholders ───────────────────────────────── */
 
 .fragment-placeholder {

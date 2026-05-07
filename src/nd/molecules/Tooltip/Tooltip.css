@@ -1,0 +1,30 @@
+.nd-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.nd-tooltip {
+  position: absolute;
+  z-index: 200;
+  background: var(--fg);
+  color: var(--fg-invert);
+  font-family: var(--font-meta);
+  font-size: 12px;
+  letter-spacing: var(--ls-small);
+  padding: 4px 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  animation: nd-tooltip-in var(--dur-fast) var(--ease);
+}
+
+@keyframes nd-tooltip-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.nd-tooltip--top    { bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
+.nd-tooltip--bottom { top: calc(100% + 6px);    left: 50%; transform: translateX(-50%); }
+.nd-tooltip--left   { right: calc(100% + 6px);  top: 50%;  transform: translateY(-50%); }
+.nd-tooltip--right  { left: calc(100% + 6px);   top: 50%;  transform: translateY(-50%); }

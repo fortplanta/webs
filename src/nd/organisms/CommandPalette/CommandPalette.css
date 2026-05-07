@@ -1,0 +1,84 @@
+.nd-command-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 600;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  animation: nd-backdrop-in var(--dur-fast) var(--ease);
+}
+
+.nd-command {
+  width: 560px;
+  max-width: calc(100vw - 48px);
+  background: var(--surface);
+  box-shadow: var(--shadow-toolbar);
+  border: var(--stroke);
+  animation: nd-modal-in var(--dur-fast) var(--ease);
+}
+
+.nd-command__input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: var(--stroke);
+}
+
+.nd-command__input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-body);
+  color: var(--fg);
+}
+
+.nd-command__input::placeholder { color: var(--fg-4); }
+
+.nd-command__results {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--s-1) 0;
+}
+
+.nd-command__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 8px var(--s-3);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  letter-spacing: var(--ls-small);
+  color: var(--fg);
+  text-transform: lowercase;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.nd-command__item:hover,
+.nd-command__item--focused { background: var(--hairline-2); }
+
+.nd-command__item-label { flex: 1; }
+
+.nd-command__item-hint {
+  font-family: var(--font-meta);
+  font-size: 11px;
+  color: var(--fg-4);
+}
+
+.nd-command__empty {
+  padding: var(--s-6) var(--s-3);
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  color: var(--fg-4);
+}

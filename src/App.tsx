@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './styles/webs-tokens.css';
 import './styles/index.css';
 import './styles/canvas.css';
 import './styles/fragments.css';
+import './styles/clusters.css';
+import './styles/panels.css';
 import './styles/ui.css';
 import './styles/tabs.css';
 import './styles/sidebar.css';
@@ -33,15 +35,24 @@ export default function App() {
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [currentQuery, setCurrentQuery] = useState('');
 
+  const [scratchpad, setScratchpad] = useState(() => (loadCanvasState(activeTabId) ?? EMPTY_CANVAS_STATE).scratchpad ?? '');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [projectsMeta, setProjectsMeta] = useState<ProjectMeta[]>(() => loadProjectsIndex());
 
   // When the active tab changes, load its saved state
   useEffect(() => {
-    setTabState(loadCanvasState(activeTabId) ?? EMPTY_CANVAS_STATE);
+    const saved = loadCanvasState(activeTabId) ?? EMPTY_CANVAS_STATE;
+    setTabState(saved);
+    setScratchpad(saved.scratchpad ?? '');
     setIsGenerating(false);
     setGenerateError(null);
+  }, [activeTabId]);
+
+  const handleScratchpadChange = useCallback((text: string) => {
+    setScratchpad(text);
+    const current = loadCanvasState(activeTabId) ?? EMPTY_CANVAS_STATE;
+    saveCanvasState(activeTabId, { ...current, scratchpad: text });
   }, [activeTabId]);
 
   // Keyboard shortcuts: ⌘L / Ctrl+L toggles library; Escape closes it
@@ -126,6 +137,8 @@ export default function App() {
           connectorCount={tabState.connectors.length}
           createdAt={tabState.createdAt}
           updatedAt={activeMeta?.updatedAt ?? tabState.createdAt}
+          scratchpad={scratchpad}
+          onScratchpadChange={handleScratchpadChange}
           onOpenLibrary={() => setLibraryOpen(true)}
           onNewExploration={addTab}
         />

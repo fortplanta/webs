@@ -1,0 +1,35 @@
+.nd-view-switcher {
+  display: inline-flex;
+  background: var(--surface-alt);
+  padding: 2px;
+  gap: 2px;
+  border: var(--stroke);
+}
+
+.nd-view-switcher__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 5px var(--s-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-meta);
+  font-size: 12px;
+  letter-spacing: var(--ls-small);
+  color: var(--fg-3);
+  text-transform: lowercase;
+  border-radius: var(--radius-soft);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.nd-view-switcher__btn:hover:not(.nd-view-switcher__btn--active) {
+  background: var(--hairline);
+  color: var(--fg-2);
+}
+
+.nd-view-switcher__btn--active {
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--shadow-lift);
+}

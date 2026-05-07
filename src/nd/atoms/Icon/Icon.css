@@ -1,0 +1,11 @@
+.nd-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.nd-icon--neutral { color: var(--fg-3); }
+.nd-icon--active  { color: var(--fg); }
+.nd-icon--muted   { color: var(--fg-4); }

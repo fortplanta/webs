@@ -1,3 +1,6 @@
+import { Spinner } from '../nd/atoms/Spinner/Spinner';
+import { Button } from '../nd/atoms/Button/Button';
+
 interface LoadingCanvasProps {
   query: string;
   error?: string | null;
@@ -12,15 +15,14 @@ export default function LoadingCanvas({ query, error, onRetry }: LoadingCanvasPr
         <div className="loading-canvas__error">
           <span>{error}</span>
           {onRetry && (
-            <button className="loading-canvas__retry" onClick={onRetry}>
+            <Button variant="secondary" size="sm" onClick={onRetry}>
               try again
-            </button>
+            </Button>
           )}
         </div>
       ) : (
         <div className="loading-canvas__strip">
-          <div className="loading-canvas__track" />
-          <div className="loading-canvas__head" />
+          <Spinner variant="strip" width={240} />
         </div>
       )}
     </div>

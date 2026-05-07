@@ -286,6 +286,48 @@ function buildPivotResult(pivotData: PivotApiResponse, sourceFragment: Fragment,
   return { cluster, fragments, tetherConnectors, interConnector };
 }
 
+export interface SparkResult {
+  cluster: Cluster;
+  fragments: Fragment[];
+  connector: Connector;
+}
+
+// TODO: replace with real API call (OCR / image analysis)
+export async function generateSparkExplode(
+  sourceFragment: Fragment,
+  _action: 'summarise' | 'extract-entities',
+): Promise<SparkResult> {
+  await new Promise(resolve => setTimeout(resolve, 1500));
+
+  const clusterId = uuidv4();
+  const clusterX = sourceFragment.x + 500 + jitter(80);
+  const clusterY = sourceFragment.y + jitter(80);
+
+  const cluster: Cluster = {
+    id: clusterId,
+    x: clusterX,
+    y: clusterY,
+    label: 'from spark',
+    isSeed: false,
+  };
+
+  const mockFragments: Fragment[] = [
+    { id: uuidv4(), clusterId, x: clusterX - 160 + jitter(), y: clusterY + 80 + jitter(), type: 'concept', layout: 'vertical-flow', title: 'visual element', slots: [{ type: 'body', content: 'A key concept identified in the spark image.' }], createdAtZoom: 0.7, starred: false },
+    { id: uuidv4(), clusterId, x: clusterX + 200 + jitter(), y: clusterY + 80 + jitter(), type: 'thesis',  layout: 'vertical-flow', title: 'central argument', slots: [{ type: 'body', content: 'A thesis extracted from the visual content.' }], createdAtZoom: 0.7, starred: false },
+    { id: uuidv4(), clusterId, x: clusterX + 20  + jitter(), y: clusterY + 480 + jitter(), type: 'source',  layout: 'card-split',    title: 'related source', slots: [{ type: 'body', content: 'A source suggested by the visual content.' }], createdAtZoom: 0.7, starred: false },
+  ];
+
+  const connector: Connector = {
+    id: uuidv4(),
+    sourceId: sourceFragment.clusterId,
+    targetId: clusterId,
+    type: 'standard',
+    label: 'extracted from',
+  };
+
+  return { cluster, fragments: mockFragments, connector };
+}
+
 export async function generatePivot(sourceFragment: Fragment, sourceClusterId: string): Promise<PivotResult> {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
 

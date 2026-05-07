@@ -1,0 +1,36 @@
+.nd-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface);
+  box-shadow: var(--shadow-toolbar);
+  padding: var(--s-1);
+  border: var(--stroke);
+}
+
+.nd-toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--fg-3);
+  border-radius: var(--radius-soft);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+}
+
+.nd-toolbar__btn:hover:not(:disabled)  { background: var(--hairline-2); color: var(--fg); }
+.nd-toolbar__btn--active               { background: var(--hairline); color: var(--fg); }
+.nd-toolbar__btn:disabled              { opacity: 0.35; cursor: not-allowed; }
+
+.nd-toolbar__separator {
+  width: 1px;
+  height: 20px;
+  background: var(--hairline);
+  margin: 0 2px;
+  flex-shrink: 0;
+}

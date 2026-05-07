@@ -1,0 +1,67 @@
+.nd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-meta);
+  font-weight: 400;
+  letter-spacing: var(--ls-small);
+  white-space: nowrap;
+  border-radius: var(--radius-soft);
+  transition: background var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease);
+  text-transform: lowercase;
+}
+
+.nd-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Sizes */
+.nd-btn--sm { font-size: 12px; padding: 5px 10px;  height: 28px; }
+.nd-btn--md { font-size: 14px; padding: 7px 14px;  height: 36px; }
+.nd-btn--lg { font-size: 16px; padding: 9px 18px;  height: 44px; }
+
+/* Variants */
+.nd-btn--primary {
+  background: var(--fg);
+  color: var(--fg-invert);
+}
+.nd-btn--primary:hover:not(:disabled) { background: var(--fg-strong); }
+
+.nd-btn--secondary {
+  background: var(--surface-alt);
+  color: var(--fg);
+  box-shadow: var(--shadow-lift);
+}
+.nd-btn--secondary:hover:not(:disabled) { background: var(--hairline); }
+
+.nd-btn--ghost {
+  background: transparent;
+  color: var(--fg-2);
+}
+.nd-btn--ghost:hover:not(:disabled) { background: var(--hairline-2); color: var(--fg); }
+
+.nd-btn--danger {
+  background: var(--signal-danger);
+  color: #fff;
+}
+.nd-btn--danger:hover:not(:disabled) { opacity: 0.85; }
+
+/* Loading state */
+.nd-btn--loading { cursor: wait; opacity: 0.7; }
+
+.nd-btn__spinner {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: nd-spin 600ms linear infinite;
+}
+
+@keyframes nd-spin {
+  to { transform: rotate(360deg); }
+}
