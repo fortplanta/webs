@@ -36,46 +36,52 @@
   opacity: 1;
 }
 
-/* ─── Connector label ─────────────────────────────────────── */
+/* ─── Connector label (foreignObject) ────────────────────── */
 
-.connector-label {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  pointer-events: auto;
-  z-index: 2;
+.connector-label-fo {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   user-select: none;
 }
 
-.connector-label--pill {
+.connector-label-fo__pill {
+  display: inline-block;
   background: rgb(237, 237, 237);
-  padding: 8px 12px;
+  padding: 5px 10px;
   font-family: var(--font-primary);
-  font-size: 14px;
-  letter-spacing: -0.028em;
+  font-size: 13px;
+  letter-spacing: -0.025em;
   color: var(--color-text);
   font-weight: var(--font-weight-regular);
   white-space: nowrap;
+  pointer-events: auto;
 }
 
-.connector-label--dot {
-  width: 8px;
-  height: 8px;
-  background: var(--color-edge-midpoint);
+.connector-label-fo__empty {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
+  background: rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
 }
 
-.connector-label__input {
+.connector-label-fo__input {
   font-family: var(--font-primary);
-  font-size: 14px;
-  letter-spacing: -0.028em;
+  font-size: 13px;
+  letter-spacing: -0.025em;
   font-weight: var(--font-weight-regular);
   border: none;
   outline: none;
-  background: transparent;
-  min-width: 80px;
-  padding: 0;
+  background: rgb(237, 237, 237);
+  padding: 5px 10px;
   color: var(--color-text);
+  min-width: 80px;
+  pointer-events: auto;
 }
 
 /* ─── Context menu ────────────────────────────────────────── */

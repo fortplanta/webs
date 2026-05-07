@@ -1,9 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { Connector, Fragment, Cluster } from '../api/types';
 import type { Transform } from '../canvas/usePanZoom';
-import ConnectorLine from './Connector';
-import ConnectorLabel from './ConnectorLabel';
-import { getBezierMidpoint } from './bezier';
+import ConnectorEdge from './Connector';
 
 interface Props {
   connectors: Connector[];
@@ -11,7 +9,6 @@ interface Props {
   clusters: Cluster[];
   transform: Transform;
   onLabelChange: (id: string, label: string) => void;
-  onLabelOffsetChange: (id: string, dx: number, dy: number) => void;
   onDelete: (id: string) => void;
   onPromote: (id: string, type: 'standard' | 'strong') => void;
 }
@@ -31,7 +28,7 @@ const FRAG_COLOR_VAR: Record<string, string> = {
 
 export default function ConnectorLayer({
   connectors, fragments, clusters, transform,
-  onLabelChange, onLabelOffsetChange, onDelete, onPromote,
+  onLabelChange, onDelete, onPromote,
 }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
 
@@ -86,7 +83,6 @@ export default function ConnectorLayer({
           const src = posById.get(conn.sourceId);
           const tgt = posById.get(conn.targetId);
           if (!src || !tgt) return null;
-          const dist = Math.hypot(src.x - tgt.x, src.y - tgt.y);
           const srcCluster = clusterIdByFragId.get(conn.sourceId);
           const tgtCluster = clusterIdByFragId.get(conn.targetId);
           const scope: 'intra' | 'inter' =
@@ -94,43 +90,20 @@ export default function ConnectorLayer({
           const srcType = fragTypeById.get(conn.sourceId);
           const sourceColor = srcType ? FRAG_COLOR_VAR[srcType] : undefined;
           return (
-            <ConnectorLine
+            <ConnectorEdge
               key={conn.id}
               connector={conn}
               x1={src.x} y1={src.y}
               x2={tgt.x} y2={tgt.y}
-              distance={dist}
               scope={scope}
               sourceColor={sourceColor}
+              onLabelChange={onLabelChange}
               onContextMenu={handleContextMenu}
             />
           );
         })}
       </svg>
 
-      {/* Labels for standard and strong connectors only */}
-      {connectors.filter(c => c.type === 'standard' || c.type === 'strong').map(conn => {
-        const src = posById.get(conn.sourceId);
-        const tgt = posById.get(conn.targetId);
-        if (!src || !tgt) return null;
-        const { mx, my } = getBezierMidpoint(src.x, src.y, tgt.x, tgt.y);
-        const labelX = mx + (conn.labelOffsetX ?? 0);
-        const labelY = my + (conn.labelOffsetY ?? 0);
-        return (
-          <ConnectorLabel
-            key={conn.id}
-            connector={conn}
-            midX={labelX}
-            midY={labelY}
-            zoom={transform.zoom}
-            onLabelChange={onLabelChange}
-            onOffsetChange={(dx, dy) => onLabelOffsetChange(conn.id, dx, dy)}
-            onContextMenu={handleContextMenu}
-          />
-        );
-      })}
-
-      {/* Context menu */}
       {contextMenu && activeConnector && (
         <div
           className="connector-context-menu"
