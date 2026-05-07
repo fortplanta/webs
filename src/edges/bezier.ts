@@ -1,14 +1,56 @@
-export function getBezierPath(x1: number, y1: number, x2: number, y2: number): string {
-  const dx = Math.abs(x2 - x1) * 0.5;
-  return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+import type { ConnectorRenderType } from '../api/types';
+
+export function getPath(
+  x1: number, y1: number,
+  x2: number, y2: number,
+  type: ConnectorRenderType = 'bezier',
+): string {
+  switch (type) {
+    case 'straight':
+      return `M ${x1} ${y1} L ${x2} ${y2}`;
+
+    case 'step': {
+      const mx = (x1 + x2) / 2;
+      return `M ${x1} ${y1} H ${mx} V ${y2} H ${x2}`;
+    }
+
+    case 'smoothstep': {
+      const mx = (x1 + x2) / 2;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const r = Math.min(Math.abs(dx) / 4, Math.abs(dy) / 2, 12);
+      if (r < 0.5) return `M ${x1} ${y1} H ${mx} V ${y2} H ${x2}`;
+      const sx = dx >= 0 ? 1 : -1;
+      const sy = dy >= 0 ? 1 : -1;
+      return [
+        `M ${x1} ${y1}`,
+        `H ${mx - r * sx}`,
+        `Q ${mx} ${y1} ${mx} ${y1 + r * sy}`,
+        `V ${y2 - r * sy}`,
+        `Q ${mx} ${y2} ${mx + r * sx} ${y2}`,
+        `H ${x2}`,
+      ].join(' ');
+    }
+
+    case 'bezier':
+    default: {
+      const dx = Math.abs(x2 - x1) * 0.5;
+      return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+    }
+  }
 }
 
-export function getBezierMidpoint(x1: number, y1: number, x2: number, y2: number) {
-  const dx = Math.abs(x2 - x1) * 0.5;
-  const cp1x = x1 + dx, cp1y = y1;
-  const cp2x = x2 - dx, cp2y = y2;
-  return {
-    mx: 0.125 * x1 + 0.375 * cp1x + 0.375 * cp2x + 0.125 * x2,
-    my: 0.125 * y1 + 0.375 * cp1y + 0.375 * cp2y + 0.125 * y2,
-  };
+// Midpoint is always the geometric center regardless of render type.
+// For bezier: B(0.5) = (x1+x2)/2, (y1+y2)/2 (symmetric horizontal-bias curve).
+// For step: walking half the path length also lands at ((x1+x2)/2, (y1+y2)/2).
+// For straight/smoothstep: trivially the same.
+export function getMidpoint(x1: number, y1: number, x2: number, y2: number) {
+  return { mx: (x1 + x2) / 2, my: (y1 + y2) / 2 };
 }
+
+// Backward-compatible aliases
+export const getBezierPath = (x1: number, y1: number, x2: number, y2: number) =>
+  getPath(x1, y1, x2, y2, 'bezier');
+
+export const getBezierMidpoint = (x1: number, y1: number, x2: number, y2: number) =>
+  getMidpoint(x1, y1, x2, y2);

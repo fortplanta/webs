@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
-import type { Connector, Fragment, Cluster } from '../api/types';
+import type { Connector, ConnectorRenderType, Fragment, Cluster } from '../api/types';
 import type { Transform } from '../canvas/usePanZoom';
 import ConnectorEdge from './Connector';
+
+const RENDER_TYPES: ConnectorRenderType[] = ['bezier', 'straight', 'step', 'smoothstep'];
 
 interface Props {
   connectors: Connector[];
@@ -9,6 +11,7 @@ interface Props {
   clusters: Cluster[];
   transform: Transform;
   onLabelChange: (id: string, label: string) => void;
+  onRenderTypeChange: (id: string, renderType: ConnectorRenderType) => void;
   onDelete: (id: string) => void;
   onPromote: (id: string, type: 'standard' | 'strong') => void;
 }
@@ -28,7 +31,7 @@ const FRAG_COLOR_VAR: Record<string, string> = {
 
 export default function ConnectorLayer({
   connectors, fragments, clusters, transform,
-  onLabelChange, onDelete, onPromote,
+  onLabelChange, onRenderTypeChange, onDelete, onPromote,
 }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
 
@@ -111,14 +114,27 @@ export default function ConnectorLayer({
           onMouseDown={e => e.stopPropagation()}
           onClick={e => e.stopPropagation()}
         >
-          {activeConnector.type === 'standard' && (<>
+          {RENDER_TYPES.map(rt => {
+            const current = (activeConnector.renderType ?? 'bezier') === rt;
+            return (
+              <button
+                key={rt}
+                className={current ? 'connector-context-menu__item--checked' : ''}
+                onClick={() => { onRenderTypeChange(activeConnector.id, rt); setContextMenu(null); }}
+              >
+                <span className="connector-context-menu__check">{current ? '✓' : ''}</span>
+                {rt}
+              </button>
+            );
+          })}
+          <div className="connector-context-menu__divider" />
+          {activeConnector.type === 'standard' && (
             <button onClick={() => { onPromote(activeConnector.id, 'strong'); setContextMenu(null); }}>Make strong</button>
-            <button onClick={() => { onDelete(activeConnector.id); setContextMenu(null); }}>Delete</button>
-          </>)}
-          {activeConnector.type === 'strong' && (<>
+          )}
+          {activeConnector.type === 'strong' && (
             <button onClick={() => { onPromote(activeConnector.id, 'standard'); setContextMenu(null); }}>Make standard</button>
-            <button onClick={() => { onDelete(activeConnector.id); setContextMenu(null); }}>Delete</button>
-          </>)}
+          )}
+          <button onClick={() => { onDelete(activeConnector.id); setContextMenu(null); }}>Delete</button>
         </div>
       )}
     </>

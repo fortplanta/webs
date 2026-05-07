@@ -20,6 +20,7 @@ export type LayoutType =
   | "list-prominent";
 
 export type ConnectorType = "standard" | "strong";
+export type ConnectorRenderType = "bezier" | "straight" | "step" | "smoothstep";
 
 export interface FragmentSlot {
   type: "body" | "image" | "tags" | "list" | "disclaimer";
@@ -59,6 +60,7 @@ export interface Connector {
   sourceId: string;       // fragment id or cluster id
   targetId: string;       // fragment id or cluster id
   type: ConnectorType;
+  renderType?: ConnectorRenderType; // default "bezier"
   label: string;          // editable verb phrase, empty by default
 }
 

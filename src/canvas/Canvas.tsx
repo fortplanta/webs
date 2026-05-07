@@ -32,7 +32,7 @@ export default function Canvas({
   const {
     state,
     startDrag, updateDrag, endDrag,
-    updateConnectorLabel, deleteConnector, promoteConnector,
+    updateConnectorLabel, updateConnectorRenderType, deleteConnector, promoteConnector,
     removeFragment, toggleStarFragment,
     addCluster, addFragment, addPivotCluster,
     updateViewport,
@@ -200,6 +200,7 @@ export default function Canvas({
           clusters={state.clusters}
           transform={transform}
           onLabelChange={updateConnectorLabel}
+          onRenderTypeChange={updateConnectorRenderType}
           onDelete={deleteConnector}
           onPromote={promoteConnector}
         />

@@ -114,6 +114,19 @@
   background: rgba(0, 0, 0, 0.05);
 }
 
+.connector-context-menu__check {
+  display: inline-block;
+  width: 14px;
+  margin-right: 4px;
+  font-size: 10px;
+}
+
+.connector-context-menu__divider {
+  height: 1px;
+  background: var(--color-slot-border);
+  margin: var(--spacing-xxs) 0;
+}
+
 /* ─── Fragment placeholders ───────────────────────────────── */
 
 .fragment-placeholder {

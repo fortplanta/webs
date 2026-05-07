@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Connector } from '../api/types';
-import { getBezierPath, getBezierMidpoint } from './bezier';
+import { getPath, getMidpoint } from './bezier';
 
 interface Props {
   connector: Connector;
@@ -29,8 +29,9 @@ export default function ConnectorEdge({
     if (editing) inputRef.current?.focus();
   }, [editing]);
 
-  const d = getBezierPath(x1, y1, x2, y2);
-  const { mx, my } = getBezierMidpoint(x1, y1, x2, y2);
+  const renderType = connector.renderType ?? 'bezier';
+  const d = getPath(x1, y1, x2, y2, renderType);
+  const { mx, my } = getMidpoint(x1, y1, x2, y2);
 
   const startEdit = (e: React.MouseEvent) => {
     e.stopPropagation();

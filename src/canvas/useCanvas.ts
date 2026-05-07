@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { CanvasState, Cluster, Fragment, Connector } from '../api/types';
+import { CanvasState, Cluster, Fragment, Connector, ConnectorRenderType } from '../api/types';
 import { zoom as zoomTokens } from '../tokens/tokens';
 import { saveCanvasState } from '../storage/storage';
 import { INITIAL_STATE } from '../api/mock';
@@ -123,6 +123,13 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     }));
   }, []);
 
+  const updateConnectorRenderType = useCallback((id: string, renderType: ConnectorRenderType) => {
+    setState(prev => ({
+      ...prev,
+      connectors: prev.connectors.map(c => c.id === id ? { ...c, renderType } : c),
+    }));
+  }, []);
+
   const addCluster = useCallback((cluster: Cluster) => {
     setState(prev => ({ ...prev, clusters: [...prev.clusters, cluster] }));
   }, []);
@@ -190,6 +197,7 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     endDrag,
     isDragging,
     updateConnectorLabel,
+    updateConnectorRenderType,
     deleteConnector,
     promoteConnector,
     addCluster,
