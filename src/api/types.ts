@@ -9,7 +9,8 @@ export type FragmentType =
   | "era"
   | "domain"
   | "quote"
-  | "spark";
+  | "spark"
+  | "text-note";
 
 export type LayoutType =
   | "vertical-flow"
@@ -17,7 +18,8 @@ export type LayoutType =
   | "quote-centered"
   | "card-split"
   | "timeline"
-  | "list-prominent";
+  | "list-prominent"
+  | "text-note";
 
 export type ConnectorType = "standard" | "strong";
 export type ConnectorRenderType = "bezier" | "straight" | "step" | "smoothstep";
@@ -39,7 +41,8 @@ export interface Fragment {
   slots: FragmentSlot[];
   createdAtZoom: number;
   starred: boolean;
-  note?: string;           // personal annotation, separate from AI body
+  width?: number;           // only set if user explicitly resized
+  note?: string;            // personal annotation, separate from AI body
   sparkMediaUrl?: string;  // data URL for spark image
   sparkMediaType?: 'image' | 'text';
   sparkStatus?: 'idle' | 'processing' | 'done';

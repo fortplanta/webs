@@ -102,6 +102,20 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
 
   const isDragging = useCallback(() => dragRef.current !== null, []);
 
+  const updateFragmentWidth = useCallback((id: string, width: number) => {
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f => f.id === id ? { ...f, width } : f),
+    }));
+  }, []);
+
+  const updateFragmentTitle = useCallback((id: string, title: string) => {
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f => f.id === id ? { ...f, title } : f),
+    }));
+  }, []);
+
   const updateConnectorLabel = useCallback((id: string, label: string) => {
     setState(prev => ({
       ...prev,
@@ -196,6 +210,8 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     updateDrag,
     endDrag,
     isDragging,
+    updateFragmentWidth,
+    updateFragmentTitle,
     updateConnectorLabel,
     updateConnectorRenderType,
     deleteConnector,

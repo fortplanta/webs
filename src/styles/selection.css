@@ -1,0 +1,103 @@
+/* selection.css — selection outline, resize handles, selection rect */
+
+/* ─── Canvas cursor states ──────────────────────────────────── */
+
+.canvas--select-tool { cursor: default; }
+.canvas--text-tool   { cursor: crosshair; }
+
+.canvas--select-tool .fragment:hover { cursor: grab; }
+.canvas--select-tool .fragment--dragging { cursor: grabbing; }
+.canvas--select-tool .fragment--text-note:hover { cursor: text; }
+
+/* ─── Selection outline ─────────────────────────────────────── */
+
+.fragment--selected {
+  outline: 2px solid #0D99FF;
+  outline-offset: 2px;
+}
+
+/* ─── Resize handles ────────────────────────────────────────── */
+
+.resize-handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.resize-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border: 1.5px solid #0D99FF;
+  border-radius: 0;
+  pointer-events: auto;
+}
+
+.resize-handle--nw { top: -4px;    left: -4px;   cursor: nwse-resize; transform: translate(-50%, -50%); }
+.resize-handle--n  { top: -4px;    left: 50%;    cursor: ns-resize;   transform: translate(-50%, -50%); }
+.resize-handle--ne { top: -4px;    right: -4px;  cursor: nesw-resize; transform: translate(50%, -50%); }
+.resize-handle--e  { top: 50%;     right: -4px;  cursor: ew-resize;   transform: translate(50%, -50%); }
+.resize-handle--se { bottom: -4px; right: -4px;  cursor: nwse-resize; transform: translate(50%, 50%); }
+.resize-handle--s  { bottom: -4px; left: 50%;    cursor: ns-resize;   transform: translate(-50%, 50%); }
+.resize-handle--sw { bottom: -4px; left: -4px;   cursor: nesw-resize; transform: translate(-50%, 50%); }
+.resize-handle--w  { top: 50%;     left: -4px;   cursor: ew-resize;   transform: translate(-50%, -50%); }
+
+/* ─── Selection rectangle (marquee) ────────────────────────── */
+
+.selection-rect {
+  position: absolute;
+  border: 1px solid #0D99FF;
+  background: rgba(13, 153, 255, 0.05);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ─── Text note layout ──────────────────────────────────────── */
+
+.fragment--text-note {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-width: 120px;
+  max-width: 400px;
+  width: auto;
+}
+
+.text-note__content {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--tracking-normal);
+  color: #000;
+  padding: 4px 0;
+  cursor: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.text-note__placeholder {
+  color: rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.text-note__input {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--tracking-normal);
+  color: #000;
+  padding: 4px 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  min-width: 120px;
+  resize: none;
+}
+
+.fragment--text-note.fragment--selected .text-note__content {
+  background: rgba(13, 153, 255, 0.04);
+  outline: 2px solid #0D99FF;
+  outline-offset: 4px;
+}

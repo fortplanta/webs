@@ -1,0 +1,58 @@
+/* toolbar.css — floating tool selector */
+
+.toolbar {
+  position: fixed;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  padding: 4px;
+}
+
+.toolbar__btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.toolbar__btn--active {
+  background: rgba(0, 0, 0, 0.06);
+  color: #000;
+}
+
+.toolbar__btn:hover:not(.toolbar__btn--active) {
+  background: rgba(0, 0, 0, 0.03);
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.toolbar__tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000;
+  color: #fff;
+  font-family: var(--font-primary);
+  font-size: 11px;
+  padding: 4px 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.toolbar__btn:hover .toolbar__tooltip {
+  opacity: 1;
+}
