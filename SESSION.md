@@ -1,114 +1,57 @@
 # SESSION.md
-# Webs — Session 01: Migration Foundation
-# April 2026
+# Webs — Session 14: Connector Overhaul
+# May 2026
 
 ## Goal
-Strip out React Flow and Ant Design, establish the new folder structure, and get the token system in place — so every subsequent session builds on a clean foundation.
+Make connectors clearly visible and visually distinct by type. Tether lines should read as delicate proximity indicators. Standard connectors should read as meaningful relationships. Strong connectors should read as primary structure.
 
 ## Context
-The repo contains a working React Flow prototype. We are rebuilding the canvas layer from scratch without React Flow or any other canvas/diagram library. This session does not build any visible features. It creates the conditions for all future sessions to work cleanly.
+The SVG rendering bug (width:0) was fixed in Session 13 — connectors now technically render. But they have never been visually validated. Tether opacity is currently 12% (nearly invisible). Labels may not sit correctly on the path. The visual language distinguishing tether / standard / strong has not been tested at real zoom levels with real canvas content. This session validates and fixes the visual execution. Do not touch anything else.
 
 ## In scope
 
-```
-package.json                          ← remove react flow + antd, run install
 src/
-  styles/
-    webs-tokens.css                   ← extend with full token set from CLAUDE.md
-    index.css                         ← global base styles, font loading
-    canvas.css                        ← empty, ready for canvas styles
-    fragments.css                     ← empty, ready for fragment styles
-    ui.css                            ← empty, ready for UI styles
-  api/
-    types.ts                          ← all TypeScript interfaces from CLAUDE.md
-    generate.ts                       ← port existing AI pipeline, stub if needed
-  tokens/
-    tokens.ts                         ← JS token constants mirroring CSS vars
-  canvas/
-    Canvas.tsx                        ← stub: empty div with pan-zoom wiring placeholder
-    usePanZoom.ts                     ← stub: hook with transform state, wheel handler
-    useCanvas.ts                      ← stub: canvas state (clusters, edges, viewport)
-    CanvasBackground.tsx              ← stub: dot grid SVG
-  fragments/                          ← create folder structure only, no implementation
-    Fragment.tsx
-    FragmentHeader.tsx
-    slots/
-      BodySlot.tsx
-      ImageSlot.tsx
-      TagsSlot.tsx
-      ListSlot.tsx
-      DisclaimerSlot.tsx
-    layouts/
-      VerticalFlow.tsx
-      ImageHero.tsx
-      QuoteCentered.tsx
-      CardSplit.tsx
-      Timeline.tsx
-      ListProminent.tsx
-  clusters/
-    Cluster.tsx
-    ClusterLabel.tsx
   edges/
-    Edge.tsx
-    EdgeLabel.tsx
-    EdgeMidpoint.tsx
-  ui/
-    Sidebar.tsx
-    StatusBar.tsx
-    SearchInput.tsx
-    ContextMenu.tsx
-  App.tsx                             ← strip React Flow and Ant Design wiring
-  main.tsx                            ← keep as-is unless it imports removed packages
-```
+    ConnectorLayer.tsx
+    Connector.tsx
+    ConnectorLabel.tsx
+    bezier.ts
+  styles/
+    connectors.css
 
 ## Off limits
 
-Do not implement any of the following this session. Create the files as stubs only:
-
-- Fragment layouts (no visual implementation)
-- Cluster positioning logic
-- Edge rendering
-- Sidebar visual design
-- Status bar visual design
-- AI generation prompt changes
-- Session persistence
-- Any interaction logic
-
-Everything outside the folder structure listed above is off limits.
+Everything not listed above. Specifically:
+- Fragment components and layouts
+- Cluster system
+- Canvas pan-zoom or transform
+- Sidebar, StatusBar, SearchInput, NotePanel
+- AI generation pipeline
+- Session persistence / localStorage
+- nd/ design system components
+- App.tsx, useCanvas.ts, usePanZoom.ts
 
 ## Specific goals
 
-1. `@xyflow/react` is fully uninstalled and zero imports remain in the codebase
-2. `antd` is fully uninstalled and zero imports remain in the codebase
-3. The app still runs (`npm run dev`) without errors after removal — even if it renders nothing
-4. `webs-tokens.css` contains the complete token set from CLAUDE.md (spacing, sizes, typography, colors, prominence)
-5. `tokens.ts` mirrors the CSS token values as JS constants
-6. `types.ts` contains all TypeScript interfaces from CLAUDE.md (FragmentType, LayoutType, Fragment, Cluster, Edge, CanvasState, etc.)
-7. All new folders and stub files exist with correct imports/exports — no broken references
-8. The existing AI generation logic is extracted into `src/api/generate.ts` and still functions (or is clearly stubbed with a comment explaining what was preserved)
-9. `App.tsx` mounts without React Flow or Ant Design — even if it only renders a plain `<div>`
-10. `SESSION.md` added to `.gitignore`
+1. Tether connectors are visible at default zoom (0.7) — opacity and stroke weight are legible without being heavy
+2. Standard connectors are clearly distinguishable from tethers — different stroke style, weight, or opacity rhythm
+3. Strong connectors are clearly distinguishable from standard — glow or weight or both
+4. Connector labels sit on the bezier midpoint and don't overlap the line
+5. All three types look correct at zoom 0.3 (macro) and zoom 1.2 (detail)
 
 ## Design intent
 
-None this session. This is infrastructure only. Do not make any visual decisions.
-
-## Reference
-
-Full token values and TypeScript interfaces are in CLAUDE.md. Use those exactly — do not invent values.
+Tethers: thin, dashed, low opacity — they imply proximity not connection. They should barely be there.
+Standard: solid, mid-weight, clearly intentional — a real relationship.
+Strong: heavier, glowing, dominant — the primary structure of the map.
 
 ## Known constraints
 
-- The existing AI pipeline must be preserved. Extract it cleanly, do not rewrite the prompt or the API call logic.
-- Font loading must continue to work. Do not touch font imports in `index.css` or `main.tsx`.
-- Netlify config (`netlify.toml` or `_redirects`) must not be touched.
-- Vite config must not be touched unless a removed package requires it.
+- SVG is width:1 height:1 overflow:visible — do not change this
+- Tether opacity currently lerps 0.55→0.12 over 200–600px distance
+- Strong connector uses 4 stacked paths (outer-glow / mid-glow / inner-glow / core)
+- Labels use labelOffsetX/Y for independent drag — do not break this
 
 ## Definition of done
 
-- `npm run dev` starts without errors
-- `npm run build` completes without errors
-- Zero imports of `@xyflow/react` anywhere in the codebase (verify with grep)
-- Zero imports of `antd` anywhere in the codebase (verify with grep)
-- All stub files exist and export valid (even if empty) components or functions
-- WIP tracker in CLAUDE.md updated to reflect Session 01 completion
+Open the app with a canvas that has tether, standard, and strong connectors all visible. At zoom 0.7 all three types are immediately legible as distinct. No connector is invisible. Labels sit cleanly on their lines.

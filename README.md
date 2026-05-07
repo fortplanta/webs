@@ -1,16 +1,30 @@
-# React + Vite
+# Webs
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A spatial thinking tool for associative, non-linear minds. Scatter fragments of interest on an infinite canvas. Clusters form by theme. The AI surfaces connections you haven't made yet.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Vite 8 + React 19 + TypeScript
+- Custom pan-zoom canvas (no diagram library)
+- Anthropic API (claude-sonnet-4-5)
+- Plain CSS with custom properties
 
-## React Compiler
+## Run locally
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+cp .env.example .env.local   # add VITE_ANTHROPIC_API_KEY
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Without an API key, the app falls back to mock data covering all fragment types and layouts.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Docs
+
+- `CLAUDE.md` — architecture, component specs, token system, session protocol
+- `PROGRESS.md` — work-in-progress tracker, session history
+- `SESSION.md` — current session scope (gitignored, overwritten each session)
+
+## Versioning
+
+See `CHANGELOG.md`.

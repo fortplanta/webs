@@ -1,23 +1,25 @@
-# WEBS — Claude Code Handoff Brief
-# For use with Claude Code Plan Mode
-# April 2026
+# WEBS — Claude Code Architecture Brief
+# May 2026
 
 ---
 
 ## READ THIS FIRST
 
-This document is the single source of truth for building Webs. Read it completely before entering plan mode. Do not make architectural decisions not covered here — ask instead.
+This document is the architecture and constraints reference for Webs. Read it completely before writing code. Do not make architectural decisions not covered here — ask instead.
 
-Before writing a single line of code:
-1. Read this document in full
-2. Locate `/skills/` in the repo root. Unzip the skills archive.
-3. Read `SKILL.md` and `README.md` inside the skills folder
-4. Study the images in `/skills/inspiration/`, `/skills/colors/`, and `/skills/type/`
-5. Read `type.css` and all files in `/skills/ui-kit/`
-6. Read the existing `CLAUDE.md` in the repo root
-7. Only then begin planning
+**Three documents to read at session start:**
+1. `CLAUDE.md` (this file) — architecture, component specs, token system, quality gates
+2. `PROGRESS.md` — feature tracker and session history; check what is done and what isn't
+3. `SESSION.md` — current session scope, goals, files in/out of scope
 
-The visual language of this app is entirely defined by the skills folder. Do not invent aesthetic decisions. Do not use generic defaults. Every colour, spacing choice, typographic decision must be traceable to something in the skills folder or this document.
+**Session start protocol:**
+1. Read all three documents above
+2. Identify files listed as in-scope in SESSION.md
+3. Confirm you will not touch files listed as off-limits
+4. State your understanding of today's goal in one sentence
+5. Only then begin
+
+Design decisions are made in Claude Chat before a session begins. The output of that design conversation becomes SESSION.md. Claude Code executes. It does not design. If you encounter an ambiguity about visual design or interaction behaviour, stop and surface it rather than deciding.
 
 ---
 
@@ -45,58 +47,6 @@ Do not build any of the following. If a feature isn't in this document, it doesn
 - ❌ A search-first interface
 - ❌ A mobile app
 - ❌ A social/sharing platform
-
----
-
-## MIGRATION STRATEGY
-
-### Current State
-The repo contains a working React Flow prototype. It has:
-- Working AI generation pipeline (Anthropic API call, cluster/fragment generation)
-- Node positioning logic (orbit-based, jitter)
-- Session save/load
-- Ant Design component library
-- Sidebar, status bar, view panel UI components
-- `webs-tokens.css` design token file
-- Vite + React + TypeScript scaffold
-- Font loading (Neue Haas Unica)
-- Netlify deploy config
-
-### What to Keep
-| Item | Action |
-|------|--------|
-| Vite + React + TypeScript scaffold | Keep exactly |
-| Font loading (Neue Haas Unica) | Keep exactly |
-| Netlify config | Keep exactly |
-| `CLAUDE.md` | Keep, update after build |
-| AI generation pipeline logic | Extract and port — keep the API call, prompt, and response parsing |
-| Session save/load state shape | Extract data model, port to new state management |
-| Orbit positioning math | Extract the math, port to new canvas system |
-| `webs-tokens.css` | Keep, extend with new tokens from this brief |
-
-### What to Remove
-| Item | Action |
-|------|--------|
-| React Flow (`@xyflow/react`) | Remove entirely — uninstall package |
-| All React Flow node components | Delete |
-| All React Flow edge components | Delete |
-| React Flow canvas wrapper | Delete |
-| Ant Design (`antd`) | Remove — replace with plain CSS |
-| Ant Design ConfigProvider | Delete |
-| All Ant Design component usage | Replace with native HTML + CSS |
-| Any hardcoded hex values in components | Remove, replace with token variables |
-
-### Migration Order
-1. Create new folder structure (see below)
-2. Remove React Flow and Ant Design from `package.json`, run install
-3. Build custom pan-zoom canvas layer
-4. Port AI generation pipeline into new architecture
-5. Build Fragment component system
-6. Build Cluster positioning system
-7. Build edge/connection system
-8. Port session save/load
-9. Rebuild sidebar, status bar with plain CSS
-10. Final token audit — no hardcoded values
 
 ---
 
@@ -733,38 +683,27 @@ The following are intentionally left open. Claude Code must surface these to the
 
 This project is built in targeted sessions. Each session focuses on one specific part of the app — not the whole thing. This is intentional. Do not scope-creep into adjacent systems.
 
-### Two-Document System
+### Three-document system
 
-There are always two documents in play:
+**`CLAUDE.md`** — architecture, component specs, token system, quality gates, constraints. Does not change session to session except for the architecture sections themselves.
 
-**`CLAUDE.md`** (repo root, permanent) — the full architecture, token system, quality gates, what not to touch. This document. It is the source of truth for the entire project. It does not change session to session — it accumulates. At the end of each session, Claude Code updates the WIP tracker table in this file to reflect what was completed, what is in progress, and what hasn't been started.
+**`PROGRESS.md`** — feature tracker and session log. Updated at the end of every session. This is where Claude Code records what was done, what is in progress, and any decisions that affect future sessions.
 
-**`SESSION.md`** (repo root, gitignored) — created fresh before each session. Defines the scope of the current session only. Files in scope, files off-limits, specific goals, design intent, reference images if any. Claude Code reads both documents on every session start. SESSION.md takes priority for scope. CLAUDE.md takes priority for architecture and constraints.
+**`SESSION.md`** — created fresh before each session, gitignored. Defines scope of the current session only: files in/out of scope, specific goals, design intent. Takes priority over CLAUDE.md for scope. CLAUDE.md takes priority for architecture and constraints.
 
-### Session Start Protocol (Claude Code must follow this every time)
-
-```
-1. Read CLAUDE.md in full
-2. Read SESSION.md in full
-3. Check the WIP tracker — understand what is done and what isn't
-4. Identify all files listed as in-scope in SESSION.md
-5. Confirm you will not touch files listed as off-limits
-6. State your understanding of today's goal in one sentence
-7. Only then begin
-```
-
-### Session End Protocol (Claude Code must follow this every time)
+### Session end protocol (Claude Code must follow this every time)
 
 ```
-1. Update the WIP tracker in CLAUDE.md with current status of all touched features
-2. Note any decisions made during the session that affect architecture
-3. Note any open questions that arose
-4. Do not leave the WIP tracker stale
+1. Update the feature tracker in PROGRESS.md with current status of all touched features
+2. Add a row to the session log table in PROGRESS.md
+3. Note any architectural decisions made during the session in CLAUDE.md if they affect future sessions
+4. Note any open questions that arose
+5. Do not leave PROGRESS.md stale
 ```
 
-### Design Decision Pipeline
+### Design decision pipeline
 
-Design decisions are made in a separate Claude chat (claude.ai) before a session begins — not during a Claude Code session. The output of that design chat becomes the content of SESSION.md. Claude Code executes. It does not design.
+Design decisions are made in Claude Chat before a session begins. The output of that conversation becomes SESSION.md. Claude Code executes. It does not design.
 
 If Claude Code encounters an ambiguity about visual design or interaction behaviour during a session, it must stop and surface it as a question rather than making a decision.
 
@@ -821,81 +760,6 @@ Everything not listed above is off limits, specifically:
 
 ---
 
-## WORK IN PROGRESS TRACKER
+## FEATURE TRACKER
 
-Claude Code updates this table at the end of every session.
-
-| Feature | Status | Notes | Last touched |
-|---------|--------|-------|--------------|
-| React Flow removal | DONE | @xyflow/react uninstalled; all node/edge components deleted; zero imports in src/ | Session 01 |
-| Ant Design removal | DONE | antd + antd-style uninstalled; ConfigProvider stripped from main.jsx; zero imports in src/ | Session 01 |
-| Custom pan-zoom canvas | DONE | Full implementation: usePanZoom.ts (zoom-toward-cursor, pan), Canvas.tsx (passive wheel via addEventListener), canvas.css (fixed viewport, transform-origin 0 0) | Session 02 |
-| Dot grid background | DONE | SVG pattern in screen space; spacing = 24 * zoom; offset = x mod spacing; fill = --color-canvas-dot | Session 02 |
-| LOD system (macro/compact/full) | DONE | getLOD() exported from useCanvas.ts; thresholds from tokens; lod prop computed once in Canvas.tsx and passed down | Session 03 |
-| Fragment component (structure) | DONE | Fragment.tsx: master component with LOD branching (compact bar / macro dot / full card), layout routing, menubar | Session 05 |
-| Fragment layouts — vertical-flow | DONE | VerticalFlow.tsx: body → tags → list → disclaimer; 320px wide | Session 05 |
-| Fragment layouts — image-hero | DONE | ImageHero.tsx: image placeholder + body + tags; 200px wide, sm chip | Session 05 |
-| Fragment layouts — quote-centered | DONE | QuoteCentered.tsx: full blue card, no chip, 28px text, 380px wide | Session 05 |
-| Fragment layouts — card-split | DONE | CardSplit.tsx: body + tags + disclaimer; 320px wide | Session 05 |
-| Fragment layouts — timeline | DONE | Timeline.tsx: body + list + tags; 320px wide | Session 05 |
-| Fragment layouts — list-prominent | DONE | ListProminent.tsx: list + body + tags; 320px wide | Session 05 |
-| Fragment contextual menu | DONE | Inline menubar in Fragment.tsx; absolutely positioned below card; opacity:0→1 on hover; delete/pivot/fact/star | Session 05 |
-| Fragment header (floating label) | DONE | FragmentHeader.tsx: LabelChip with md/sm sizes; inline CSS var for bg/color; width: fit-content; -1px overlap with card | Session 05 |
-| Slot system | DONE | All 5 slot components implemented: BodySlot, TagsSlot, ListSlot, DisclaimerSlot, ImageSlot; image placeholder uses grey bg | Session 05 |
-| Cluster system | DONE | Cluster.tsx is now a spawn-point marker (dark label box); fragments are independent entities with own x,y; data model overhauled Session 04 | Session 04 |
-| Cluster positioning (orbit) | IN PROGRESS | MOCK_CLUSTERS + MOCK_FRAGMENTS hardcoded in useCanvas.ts; positionClusters() orbit math in generate.ts for API wiring later | Session 04 |
-| Cluster labels (compact/macro) | DONE | ClusterLabel.tsx unchanged; cluster spawn points use .cluster-spawn__label styling | Session 04 |
-| Seed fragment | DONE | Seed spawn point uses --color-seed-bg lime green label | Session 04 |
-| Connector system (SVG layer) | DONE | ConnectorLayer.tsx + Connector.tsx; tether/weak/standard/strong types; overflow:visible SVG at canvas origin; SVG width:1 height:1 (width:0 collapsed coordinate system — was root cause of connectors never rendering until Session 12) | Session 04 |
-| Connector bezier curves | DONE | bezier.ts: getBezierPath() + getBezierMidpoint(); all 4 connector types use cubic bezier paths (no straight lines); horizontal-bias control points | Session 10 |
-| Connector tether proximity | DONE | Continuous lerp: opacity 0.55→0.12, strokeWidth 1.5→1, dasharray 0→4 8 over 200–600px distance; opacity raised from 0.25 (was invisible on light canvas) | Session 11 |
-| Connector strong visual | DONE | 4 stacked CSS-classed paths: outer-glow (20px blur 8px), mid-glow (10px blur 4px), inner-glow (4px blur 1px), core (2.5px); pulse animation 2.5s; pinch dot at bezier midpoint; glow opacity raised 3× | Session 11 |
-| Connector labels (editable) | DONE | ConnectorLabel.tsx — pill on standard/strong; double-click to edit; Enter/Escape confirm/cancel; positioned at bezier midpoint; independently draggable via window mousemove/mouseup + zoom-corrected delta + labelOffsetX/Y on Connector type | Session 11 |
-| Connector context menu | DONE | Right-click on line or label: Make strong / Make standard / Delete per type; dismissed on window click | Session 04 |
-| Connector creation (drag) | DONE | Drag fragment onto another fragment → standard connector created; position reverted | Session 04 |
-| Connector SVG visibility bug | DONE | SVG width:0 height:0 collapsed coordinate system to zero (scale factor 0 → all paths map to a single point); fix: width:1 height:1 restores 1:1 user-unit-to-px mapping; connectors had never rendered since Session 04 | Session 12 |
-| Connector z-index stacking | DONE | SVG lowered from z-index:2 to z-index:0; lines now render below fragment cards (z-index:1) and cluster labels (z-index:1); connector label divs are separate siblings at z-index:2 and still float above cards | Session 12 |
-| Spawn point label padding | DONE | .cluster-spawn__label: padding 10px 20px, font-size 16px, letter-spacing -0.035em | Session 10 |
-| Fragment drag (independent) | DONE | Window-level mousemove/mouseup; zoom-corrected delta; stopPropagation prevents canvas pan | Session 04 |
-| Session persistence (localStorage) | DONE | useCanvas.ts: debounced 1000ms auto-save to webs-canvas-${projectId}; viewport synced via updateViewport; restored on mount from initialState prop | Session 06 |
-| Multi-tab canvas | DONE | useTabs.ts manages AppState (tabs[], activeTabId) + persists to webs-app-state; Canvas keyed by activeTabId for clean remount on switch; max 20 tabs | Session 06 |
-| Tab strip UI | DONE | TabStrip.tsx: 40px Figma-style strip; active tab has 2px bottom indicator; double-click to rename inline; × close with confirm; + add button | Session 06 |
-| Fragment copy/paste (keyboard) | DONE | Cmd/Ctrl+C copies hovered fragment; Cmd/Ctrl+V pastes clone into active tab at (0,0) with clusterId='imported'; cross-tab via App.tsx copiedFragment state | Session 06 |
-| Projects index (library foundation) | DONE | webs-projects-index in localStorage maintained via updateProjectMeta(); no UI yet — data model ready for future library view | Session 06 |
-| Canvas layout (flex) | DONE | canvas.css: position:fixed→position:relative+flex:1+min-height:0 to sit below tab strip in App.tsx flex column | Session 06 |
-| AI generation pipeline | DONE | generateCanvas() in generate.ts; system prompt + user message in prompt.ts; schema fix (Cluster.label, flat fragments); buildSlots() converts flat API fields to FragmentSlot[]; safe JSON parse with mock fallback; positionClusters() + fragmentPositions() for layout. MAX_TOKENS raised to 8000 (4000 caused truncated JSON → mock fallback for large topics) | Session 11 |
-| Pivot action | DONE | generatePivot() fully implemented; new signature takes Fragment + sourceClusterId; buildPivotPrompt() + getMockPivotResult() added; addPivotCluster() atomic action in useCanvas; loading overlay + error state in Fragment.tsx; smooth 400ms viewport pan after spawn; chain pivoting verified | Session 08 |
-| Sidebar | DONE | Sidebar.tsx: 240px, 3 sections (identity / stats / actions); collapsible with 200ms CSS transition; toggle button at edge stays visible when collapsed; stats from App.tsx tabState (fragment/cluster/connector count + created/modified); "open library" + "new exploration" + disabled export stub | Session 09 |
-| Library view | DONE | LibraryView.tsx + LibraryCard.tsx: full-screen overlay over canvas area; grid of ProjectMeta cards with thumbnail placeholder, title, relative date, fragment+cluster stats; empty state; ⌘L toggle + Escape to close; "open library" in sidebar; clicking card calls openProject() and closes view | Session 09 |
-| Library — open project from card | DONE | openProject() added to useTabs.ts: switches to existing tab if already open, otherwise adds new tab with the project's id; App.tsx wires card click to openProject + setLibraryOpen(false) | Session 09 |
-| ProjectMeta stats fields | DONE | fragmentCount/clusterCount added as optional fields to ProjectMeta in types.ts; App.tsx handleQuery writes them via updateProjectMeta after generation | Session 09 |
-| Status bar | DONE | StatusBar.tsx: 32px strip, absolute bottom of canvas-wrapper; zoom level (live), fragment count, cluster count, online/offline dot; derives state from Canvas.tsx directly | Session 08 |
-| Initial state (blank canvas + input) | DONE | App.tsx: conditional render — empty tab shows SearchInput on dot-grid; isGenerating shows LoadingCanvas (pink/cobalt strip + query text); non-empty shows Canvas; error state shows LoadingCanvas with retry; new tabs default to EMPTY_CANVAS_STATE | Session 07 |
-| Token system (CSS variables) | DONE | src/styles/webs-tokens.css created with full token set; src/tokens/tokens.ts mirrors as JS constants | Session 01 |
-| Mock data (all 8 types + 6 layouts) | DONE | Moved to src/api/mock.ts; getMockCanvasState(query) overrides seed title with query; correct schema (Cluster.label, flat fragments with clusterId); useTabs seeded with EMPTY_CANVAS_STATE (not mock) so first load shows SearchInput | Session 07 |
-| Cluster group container visual | DONE | Cluster.tsx computes bounding box from fragment positions + per-layout size approximations (FRAG_SIZE record); renders .cluster-container div (rgba(0,0,0,0.025) bg, 1px border) absolutely positioned behind fragments; pointer-events:none | Session 12 |
-| Cluster hover emphasis | DONE | Canvas.tsx tracks hoveredClusterId state; non-hovered clusters get dimmed=true prop; .cluster-container--dimmed (opacity 0.4) + fragment .fragment--dimmed (opacity 0.25, 150ms transition) applied when another cluster is hovered | Session 12 |
-| Cluster collapse (pill) | DONE | collapseCluster action in useCanvas; Cluster.tsx renders .cluster-pill (label + count + expand chevron) when cluster.collapsed=true; cluster-container shows − collapse button on hover; collapsed cluster's fragments filtered out of Canvas render | Session 12 |
-| Note panel | DONE | NotePanel.tsx: position:fixed right panel 320px wide; debounced onChange 500ms; Escape closes; onMouseDown stops propagation; updateFragmentNote/updateClusterNote actions in useCanvas; note button in Fragment menubar toggles noteTarget in Canvas.tsx | Session 12 |
-| Scratchpad | DONE | Sidebar Section 3: .scratchpad__textarea in panels.css; App.tsx manages scratchpad state initialized from localStorage; handleScratchpadChange saves directly via saveCanvasState; tab switch effect resets scratchpad state | Session 12 |
-| Spark nodes (stub) | DONE | "spark" FragmentType added to types.ts; sparkMediaUrl/sparkMediaType/sparkStatus fields on Fragment; SparkSlot.tsx renders image thumbnail + action buttons; addSparkFragment atomic action in useCanvas; Canvas.tsx handles drag-and-drop (dragover/drop), converts screen coords to canvas-space; generateSparkExplode() in generate.ts returns mock 3-fragment cluster (TODO: real OCR/image API) | Session 12 |
-| nd/ design system integration | DONE | src/nd/ atoms/molecules/organisms ported from Neurodive; webs-tokens.css extended with nd/ token aliases (--surface, --fg, --hairline, --s-1, --font-meta, --ls-small, --shadow-lift, --signal-danger, --ease, --dur-fast, --stroke, --radius-soft, --shadow-toolbar); Button used in Sidebar + LoadingCanvas; Spinner used in LoadingCanvas + Fragment pivot overlay; Icon (lucide-react) used in Fragment menubar (Trash2, Shuffle, Star); FloatingToolbar available but not used directly (token deps met, kept webs menubar CSS) | Session 13 |
-| Connector SVG visibility (re-confirmed) | DONE | Plan file confirmed fix: width:0→1, zIndex:2→0 applied to ConnectorLayer.tsx; 3 bezier tether paths confirmed rendering via DOM inspection; previously marked DONE in Session 12 tracker but fix not yet applied to working tree | Session 13 |
-| Dev-mode hook warnings | NOTES | 8x "Invalid hook call" console errors are a pre-existing Vite 8 + React 19 + @vitejs/plugin-react 6 dev-mode artifact; confirmed present on HEAD with zero nd/ changes; production build is clean (zero errors); not caused by nd/ integration; no fix found — accepted as non-blocking dev noise | Session 13 |
-
-Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKED`
-
----
-
-## PLAN MODE INSTRUCTION
-
-Enter plan mode. Read the full brief above, including the workflow section. Then:
-
-1. Audit the existing repo — list every file that will be deleted, kept, or modified
-2. List every new file that will be created
-3. Describe the build sequence (what gets built in what order and why)
-4. Check the WIP tracker — note current state of all features
-5. Identify any ambiguities or missing information before starting
-6. Propose the plan for designer approval before writing any code
-
-Do not write code in plan mode. Surface the plan only.
+See `PROGRESS.md`. Updated at the end of every session.
