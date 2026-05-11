@@ -40,19 +40,26 @@ function jitter(range = 16): number {
   return (Math.random() - 0.5) * range;
 }
 
+// Normalize a value that should be string[] but may arrive as a comma-string from the AI
+function normalizeArray(val: string[] | string | undefined | null): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.filter(Boolean);
+  return String(val).split(',').map(s => s.trim()).filter(Boolean);
+}
+
 function buildSlots(f: GenerateApiResponse['clusters'][0]['fragments'][0]): FragmentSlot[] {
   const slots: FragmentSlot[] = [];
-  if (f.type === 'person') {
-    slots.push({ type: 'image', content: '' });
-  }
+  // person image slots are intentionally omitted — we have no image URLs from the API
   if (f.body) {
     slots.push({ type: 'body', content: f.body });
   }
-  if (f.list && f.list.length > 0) {
-    slots.push({ type: 'list', items: f.list });
+  const list = normalizeArray(f.list as string[] | string | undefined);
+  if (list.length > 0) {
+    slots.push({ type: 'list', items: list });
   }
-  if (f.tags && f.tags.length > 0) {
-    slots.push({ type: 'tags', items: f.tags });
+  const tags = normalizeArray(f.tags as string[] | string | undefined);
+  if (tags.length > 0) {
+    slots.push({ type: 'tags', items: tags });
   }
   return slots;
 }

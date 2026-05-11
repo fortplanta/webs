@@ -5,7 +5,7 @@ import { useCanvas, getLOD } from './useCanvas';
 import { useTools } from './useTools';
 import { useSelection, MIN_FRAGMENT_WIDTH, MAX_FRAGMENT_WIDTH } from './useSelection';
 import type { ResizeHandle } from './useSelection';
-import { CanvasState, Fragment, LayoutType } from '../api/types';
+import { CanvasState, ConnectorRenderType, Fragment, LayoutType } from '../api/types';
 import { generatePivot } from '../api/generate';
 import CanvasBackground from './CanvasBackground';
 import Cluster from '../clusters/Cluster';
@@ -27,6 +27,8 @@ const LAYOUT_WIDTHS: Partial<Record<LayoutType, number>> = {
   'list-prominent': 480,
   'text-note':      200,
 };
+
+const RENDER_TYPES: ConnectorRenderType[] = ['bezier', 'straight', 'step', 'smoothstep'];
 
 interface CanvasProps {
   projectId: string;
@@ -56,6 +58,8 @@ export default function Canvas({
     removeFragment, toggleStarFragment,
     addCluster, addFragment, addPivotCluster,
     updateViewport,
+    pushUndo,
+    undo,
   } = useCanvas(projectId, initialState);
 
   const { activeTool, switchTo } = useTools();
@@ -74,6 +78,14 @@ export default function Canvas({
 
   // Text note editing state
   const [editingFragmentId, setEditingFragmentId] = useState<string | null>(null);
+
+  // Connector context menu state — stored in screen coords so it can use position: fixed
+  const connectorMenuRef = useRef<HTMLDivElement>(null);
+  const [connectorMenu, setConnectorMenu] = useState<{
+    connectorId: string;
+    screenX: number;
+    screenY: number;
+  } | null>(null);
 
   // Resize drag ref
   const resizeDragRef = useRef<{
@@ -115,6 +127,28 @@ export default function Canvas({
     return () => el.removeEventListener('wheel', handleWheel);
   }, [handleWheel]);
 
+  // Close connector context menu on outside mousedown
+  useEffect(() => {
+    if (!connectorMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (connectorMenuRef.current?.contains(e.target as Node)) return;
+      setConnectorMenu(null);
+    };
+    window.addEventListener('mousedown', handler);
+    return () => window.removeEventListener('mousedown', handler);
+  }, [connectorMenu]);
+
+  // Convert viewport-relative coords to canvas-space coords
+  // Must subtract wrapperRef's bounding rect because transform.x/y are wrapper-relative
+  const toCanvas = (clientX: number, clientY: number) => {
+    const rect = wrapperRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
+    const t = transformRef.current;
+    return {
+      x: (clientX - rect.left - t.x) / t.zoom,
+      y: (clientY - rect.top - t.y) / t.zoom,
+    };
+  };
+
   // Window-level mouse handlers — fragment drag, resize drag, selection rect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -124,17 +158,13 @@ export default function Canvas({
         const delta = rd.isLeft ? -rawDx : rawDx;
         const newWidth = Math.max(MIN_FRAGMENT_WIDTH, Math.min(MAX_FRAGMENT_WIDTH, rd.origWidth + delta));
         updateFragmentWidth(rd.fragmentId, newWidth);
-        if (rd.isLeft) {
-          // Also shift x so the right edge stays anchored
-          // newX = origX + rawDx
-          // (we update via updateDrag which only works for fragment-kind drags; skip x shift for now)
-        }
         return;
       }
       if (selectionDragging.current) {
+        const rect = wrapperRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
         const t = transformRef.current;
-        const cx = (e.clientX - t.x) / t.zoom;
-        const cy = (e.clientY - t.y) / t.zoom;
+        const cx = (e.clientX - rect.left - t.x) / t.zoom;
+        const cy = (e.clientY - rect.top - t.y) / t.zoom;
         updateRect(cx, cy);
         return;
       }
@@ -178,13 +208,20 @@ export default function Canvas({
     };
   }, [updateDrag, endDrag, updateFragmentWidth, updateRect, finishRect, selectMany, state.fragments]);
 
-  // Keyboard: copy/paste + delete selected
+  // Keyboard: copy/paste + delete selected + undo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true';
 
       const isMod = e.metaKey || e.ctrlKey;
+
+      if (isMod && e.key === 'z') {
+        e.preventDefault();
+        undo();
+        return;
+      }
+
       if (isMod && e.key === 'c') {
         const hoveredEl = document.querySelector('[data-fragment-id]:hover');
         if (!hoveredEl) return;
@@ -213,7 +250,7 @@ export default function Canvas({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.fragments, state.clusters, copiedFragment, selectedIds, onFragmentCopy, onFragmentPaste, addCluster, addFragment, removeFragment, deselectAll]);
+  }, [state.fragments, state.clusters, copiedFragment, selectedIds, onFragmentCopy, onFragmentPaste, addCluster, addFragment, removeFragment, deselectAll, undo]);
 
   // Canvas background mouse down — select tool starts rect, text tool places note
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -224,9 +261,7 @@ export default function Canvas({
 
     if (activeTool === 'select') {
       deselectAll();
-      const t = transformRef.current;
-      const cx = (e.clientX - t.x) / t.zoom;
-      const cy = (e.clientY - t.y) / t.zoom;
+      const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
       startRect(cx, cy);
       selectionDragging.current = true;
       return;
@@ -240,9 +275,7 @@ export default function Canvas({
     if ((e.target as HTMLElement).closest('[data-fragment-id]')) return;
     if (activeTool !== 'text') return;
 
-    const t = transformRef.current;
-    const cx = (e.clientX - t.x) / t.zoom;
-    const cy = (e.clientY - t.y) / t.zoom;
+    const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
 
     const TEXT_NOTES_CLUSTER = 'text-notes';
     if (!state.clusters.some(c => c.id === TEXT_NOTES_CLUSTER)) {
@@ -259,7 +292,7 @@ export default function Canvas({
       layout: 'text-note',
       title: '',
       slots: [],
-      createdAtZoom: t.zoom,
+      createdAtZoom: transformRef.current.zoom,
       starred: false,
     });
 
@@ -299,6 +332,7 @@ export default function Canvas({
   };
 
   const handleResizeStart = (fragment: Fragment, handle: ResizeHandle, e: React.MouseEvent) => {
+    pushUndo(); // capture state before resize
     const isLeft = handle === 'nw' || handle === 'w' || handle === 'sw';
     resizeDragRef.current = {
       fragmentId: fragment.id,
@@ -318,6 +352,23 @@ export default function Canvas({
     }
     setEditingFragmentId(null);
   };
+
+  const handleFragmentDoubleClick = (id: string) => {
+    const fragment = state.fragments.find(f => f.id === id);
+    if (fragment?.layout === 'text-note') {
+      setEditingFragmentId(id);
+    }
+  };
+
+  const handleConnectorContextMenu = (e: React.MouseEvent, connectorId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setConnectorMenu({ connectorId, screenX: e.clientX, screenY: e.clientY });
+  };
+
+  const activeConnector = connectorMenu
+    ? state.connectors.find(c => c.id === connectorMenu.connectorId)
+    : null;
 
   const canvasClass = `canvas-wrapper canvas--${activeTool}-tool`;
 
@@ -343,11 +394,8 @@ export default function Canvas({
           connectors={state.connectors}
           fragments={state.fragments}
           clusters={state.clusters}
-          transform={transform}
           onLabelChange={updateConnectorLabel}
-          onRenderTypeChange={updateConnectorRenderType}
-          onDelete={deleteConnector}
-          onPromote={promoteConnector}
+          onContextMenu={handleConnectorContextMenu}
         />
 
         {state.fragments.map(f => (
@@ -371,6 +419,7 @@ export default function Canvas({
             isSelected={selectedIds.has(f.id)}
             isEditing={editingFragmentId === f.id}
             onTitleChange={handleTitleChange}
+            onDoubleClick={handleFragmentDoubleClick}
             onResizeStart={(handle, e) => handleResizeStart(f, handle, e)}
             style={{ left: f.x, top: f.y }}
           />
@@ -399,6 +448,39 @@ export default function Canvas({
           />
         )}
       </div>
+
+      {/* Connector context menu — fixed position, outside canvas-content transform */}
+      {connectorMenu && activeConnector && (
+        <div
+          ref={connectorMenuRef}
+          className="connector-context-menu"
+          style={{ position: 'fixed', left: connectorMenu.screenX, top: connectorMenu.screenY }}
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
+        >
+          {RENDER_TYPES.map(rt => {
+            const current = (activeConnector.renderType ?? 'straight') === rt;
+            return (
+              <button
+                key={rt}
+                className={current ? 'connector-context-menu__item--checked' : ''}
+                onClick={() => { updateConnectorRenderType(activeConnector.id, rt); setConnectorMenu(null); }}
+              >
+                <span className="connector-context-menu__check">{current ? '✓' : ''}</span>
+                {rt}
+              </button>
+            );
+          })}
+          <div className="connector-context-menu__divider" />
+          {activeConnector.type === 'standard' && (
+            <button onClick={() => { promoteConnector(activeConnector.id, 'strong'); setConnectorMenu(null); }}>Make strong</button>
+          )}
+          {activeConnector.type === 'strong' && (
+            <button onClick={() => { promoteConnector(activeConnector.id, 'standard'); setConnectorMenu(null); }}>Make standard</button>
+          )}
+          <button onClick={() => { deleteConnector(activeConnector.id); setConnectorMenu(null); }}>Delete</button>
+        </div>
+      )}
 
       <Toolbar activeTool={activeTool} onSelect={switchTo} />
 

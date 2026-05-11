@@ -39,6 +39,7 @@ interface FragmentProps {
   isSelected?: boolean;
   isEditing?: boolean;
   onTitleChange?: (id: string, title: string) => void;
+  onDoubleClick?: (id: string) => void;
   onResizeStart?: (handle: ResizeHandle, e: React.MouseEvent) => void;
   style?: React.CSSProperties;
 }
@@ -56,6 +57,7 @@ export default function Fragment({
   isSelected,
   isEditing,
   onTitleChange,
+  onDoubleClick,
   onResizeStart,
   style,
 }: FragmentProps) {
@@ -67,6 +69,9 @@ export default function Fragment({
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
+      // Auto-size to content on mount
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = inputRef.current.scrollHeight + 'px';
     }
   }, [isEditing]);
 
@@ -115,6 +120,12 @@ export default function Fragment({
           className="text-note__input"
           defaultValue={title}
           rows={1}
+          onMouseDown={e => e.stopPropagation()}
+          onInput={e => {
+            const el = e.currentTarget;
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+          }}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
@@ -137,6 +148,7 @@ export default function Fragment({
       className={`fragment fragment--${layout}${selectedClass}`}
       style={widthStyle}
       onMouseDown={onMouseDown}
+      onDoubleClick={isTextNote ? (e => { e.stopPropagation(); onDoubleClick?.(id); }) : undefined}
     >
       {!isQuote && !isTextNote && (
         <FragmentHeader type={type} title={title} small={isImageHero} />

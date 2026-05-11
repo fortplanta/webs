@@ -30,7 +30,10 @@ type DragState = {
   startMouseY: number;
   origX: number;
   origY: number;
+  preDragSnapshot: CanvasState;
 } | null;
+
+const MAX_UNDO = 50;
 
 export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS_STATE) {
   // Filter out legacy tether/weak connectors that may exist in saved state
@@ -43,6 +46,25 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
   const [state, setState] = useState<CanvasState>(filteredInitial);
   const dragRef = useRef<DragState>(null);
 
+  // Synchronous ref to current state — safe to read inside any callback
+  const stateRef = useRef<CanvasState>(filteredInitial);
+  stateRef.current = state; // updated every render before any callbacks run
+
+  const undoStack = useRef<CanvasState[]>([]);
+
+  // Stable — reads refs only, no deps needed
+  const pushUndo = useCallback(() => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
+  }, []);
+
+  const undo = useCallback(() => {
+    const prev = undoStack.current[undoStack.current.length - 1];
+    if (!prev) return;
+    undoStack.current = undoStack.current.slice(0, -1);
+    // Restore content but preserve current viewport
+    setState(cur => ({ ...prev, viewport: cur.viewport }));
+  }, []);
+
   const startDrag = useCallback((
     id: string,
     kind: 'fragment' | 'cluster',
@@ -51,7 +73,12 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     origX: number,
     origY: number,
   ) => {
-    dragRef.current = { id, kind, startMouseX: mouseX, startMouseY: mouseY, origX, origY };
+    dragRef.current = {
+      id, kind,
+      startMouseX: mouseX, startMouseY: mouseY,
+      origX, origY,
+      preDragSnapshot: stateRef.current,
+    };
   }, []);
 
   const updateDrag = useCallback((mouseX: number, mouseY: number, zoom: number) => {
@@ -78,11 +105,14 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     }
   }, []);
 
-  // targetFragmentId: if set and differs from dragged fragment, creates a standard connector
+  // targetFragmentId: if set and differs from dragged fragment, creates a connector
   const endDrag = useCallback((targetFragmentId?: string) => {
     const drag = dragRef.current;
-    if (!drag) { return; }
+    if (!drag) return;
+
     if (targetFragmentId && drag.kind === 'fragment' && targetFragmentId !== drag.id) {
+      // Drop-to-connect: use pre-drag snapshot as undo point
+      undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), drag.preDragSnapshot];
       setState(prev => ({
         ...prev,
         fragments: prev.fragments.map(f =>
@@ -96,6 +126,14 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
           label: '',
         }],
       }));
+    } else {
+      // Plain move: push undo only if position meaningfully changed
+      const curItem = drag.kind === 'fragment'
+        ? stateRef.current.fragments.find(f => f.id === drag.id)
+        : stateRef.current.clusters.find(c => c.id === drag.id);
+      if (curItem && (Math.abs(curItem.x - drag.origX) > 2 || Math.abs(curItem.y - drag.origY) > 2)) {
+        undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), drag.preDragSnapshot];
+      }
     }
     dragRef.current = null;
   }, []);
@@ -124,6 +162,7 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
   }, []);
 
   const deleteConnector = useCallback((id: string) => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
     setState(prev => ({
       ...prev,
       connectors: prev.connectors.filter(c => c.id !== id),
@@ -153,6 +192,7 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     fragments: Fragment[],
     interConnector: Connector,
   ) => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
     setState(prev => ({
       ...prev,
       clusters: [...prev.clusters, cluster],
@@ -162,6 +202,7 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
   }, []);
 
   const addFragment = useCallback((fragment: Fragment) => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
     setState(prev => ({
       ...prev,
       fragments: [...prev.fragments, fragment],
@@ -178,6 +219,7 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
   }, []);
 
   const removeFragment = useCallback((fragmentId: string) => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
     setState(prev => ({
       ...prev,
       fragments: prev.fragments.filter(f => f.id !== fragmentId),
@@ -223,5 +265,7 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     removeFragment,
     loadState,
     updateViewport,
+    pushUndo,
+    undo,
   };
 }

@@ -94,10 +94,7 @@
   width: 100%;
   min-width: 120px;
   resize: none;
+  overflow: hidden;
+  display: block;
 }
 
-.fragment--text-note.fragment--selected .text-note__content {
-  background: rgba(13, 153, 255, 0.04);
-  outline: 2px solid #0D99FF;
-  outline-offset: 4px;
-}

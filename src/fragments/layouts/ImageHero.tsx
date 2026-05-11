@@ -13,7 +13,7 @@ export default function ImageHero({ fragment }: { fragment: FragmentType }) {
 
   return (
     <div className="fragment__body fragment__body--image-hero">
-      {image && <ImageSlot slot={image} />}
+      {image?.content && <ImageSlot slot={image} />}
       {body && <BodySlot slot={body} />}
       {tags && <TagsSlot slot={tags} />}
     </div>
