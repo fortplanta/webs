@@ -7,25 +7,26 @@ import './styles/clusters.css';
 import './styles/panels.css';
 import './styles/ui.css';
 import './styles/tabs.css';
-import './styles/sidebar.css';
 import './styles/library.css';
+import './styles/prompt-sidebar.css';
+import './styles/nav-rail.css';
+import './styles/nav-panel.css';
+import './styles/modal.css';
 import { CanvasState, Fragment, ProjectMeta } from './api/types';
 import { generateCanvas } from './api/generate';
 import { EMPTY_CANVAS_STATE } from './canvas/useCanvas';
 import Canvas from './canvas/Canvas';
-import CanvasBackground from './canvas/CanvasBackground';
 import TabStrip from './tabs/TabStrip';
 import { useTabs } from './tabs/useTabs';
 import { loadCanvasState, saveCanvasState, updateProjectMeta, loadProjectsIndex } from './storage/storage';
-import SearchInput from './ui/SearchInput';
 import LoadingCanvas from './ui/LoadingCanvas';
-import Sidebar from './ui/Sidebar';
+import NavRail, { NavPanel as NavPanelType } from './ui/NavRail';
+import NavPanel from './ui/NavPanel';
+import ExplorationModal from './ui/ExplorationModal';
 import LibraryView from './ui/LibraryView';
 
-const STATIC_TRANSFORM = { x: 0, y: 0, zoom: 1 };
-
 export default function App() {
-  const { tabs, activeTabId, canAddTab, switchTab, addTab, openProject, closeTab, renameTab } = useTabs();
+  const { tabs, activeTabId, canAddTab, switchTab, addTab, addTabGetId, openProject, closeTab, renameTab } = useTabs();
   const [copiedFragment, setCopiedFragment] = useState<Fragment | null>(null);
 
   const [tabState, setTabState] = useState<CanvasState>(() =>
@@ -36,7 +37,9 @@ export default function App() {
   const [currentQuery, setCurrentQuery] = useState('');
 
   const [scratchpad, setScratchpad] = useState(() => (loadCanvasState(activeTabId) ?? EMPTY_CANVAS_STATE).scratchpad ?? '');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [generationCount, setGenerationCount] = useState(0);
+  const [activePanel, setActivePanel] = useState<NavPanelType | null>('exploration');
+  const [explorationModalOpen, setExplorationModalOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [projectsMeta, setProjectsMeta] = useState<ProjectMeta[]>(() => loadProjectsIndex());
 
@@ -55,32 +58,48 @@ export default function App() {
     saveCanvasState(activeTabId, { ...current, scratchpad: text });
   }, [activeTabId]);
 
-  // Keyboard shortcuts: ⌘L / Ctrl+L toggles library; Escape closes it
+  const togglePanel = (panel: NavPanelType) => {
+    setActivePanel(prev => prev === panel ? null : panel);
+  };
+
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
         e.preventDefault();
         setLibraryOpen(prev => !prev);
       }
-      if (e.key === 'Escape' && libraryOpen) {
-        setLibraryOpen(false);
+      if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
+        e.preventDefault();
+        setActivePanel(prev => prev === 'prompts' ? null : 'prompts');
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        setExplorationModalOpen(true);
+      }
+      if (e.key === 'Escape') {
+        if (explorationModalOpen) { setExplorationModalOpen(false); return; }
+        if (libraryOpen) setLibraryOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [libraryOpen]);
+  }, [libraryOpen, explorationModalOpen]);
 
   const handleQuery = async (query: string) => {
     setCurrentQuery(query);
     setIsGenerating(true);
     setGenerateError(null);
+    // Use the current tab if it's empty; otherwise create a new one.
+    const isEmpty = tabState.clusters.length === 0 && tabState.fragments.length === 0;
+    const targetTabId = isEmpty ? activeTabId : addTabGetId();
     try {
       const state = await generateCanvas(query);
       const name = query.slice(0, 40);
-      saveCanvasState(activeTabId, state);
-      renameTab(activeTabId, name);
+      saveCanvasState(targetTabId, state);
+      renameTab(targetTabId, name);
       updateProjectMeta({
-        id: activeTabId,
+        id: targetTabId,
         name,
         createdAt: state.createdAt,
         updatedAt: Date.now(),
@@ -89,6 +108,7 @@ export default function App() {
       });
       setProjectsMeta(loadProjectsIndex());
       setTabState(state);
+      setGenerationCount(c => c + 1);
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : 'Generation failed');
     } finally {
@@ -112,9 +132,12 @@ export default function App() {
     setLibraryOpen(false);
   };
 
-  const isEmpty = tabState.clusters.length === 0;
   const activeTabName = tabs.find(t => t.id === activeTabId)?.name ?? '';
   const activeMeta = projectsMeta.find(p => p.id === activeTabId);
+
+  const handleNewExploration = () => {
+    setExplorationModalOpen(true);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -128,9 +151,9 @@ export default function App() {
         onRename={renameTab}
       />
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <Sidebar
-          isOpen={sidebarOpen}
-          onToggle={() => setSidebarOpen(o => !o)}
+        <NavRail activePanel={activePanel} onToggle={togglePanel} />
+        <NavPanel
+          activePanel={activePanel}
           explorationName={activeTabName}
           fragmentCount={tabState.fragments.length}
           clusterCount={tabState.clusters.length}
@@ -139,30 +162,40 @@ export default function App() {
           updatedAt={activeMeta?.updatedAt ?? tabState.createdAt}
           scratchpad={scratchpad}
           onScratchpadChange={handleScratchpadChange}
-          onOpenLibrary={() => setLibraryOpen(true)}
-          onNewExploration={addTab}
+          onNewExploration={handleNewExploration}
+          projects={projectsMeta}
+          openTabIds={tabs.map(t => t.id)}
+          canAddTab={canAddTab}
+          onOpenProject={handleOpenFromLibrary}
+          onViewAllLibrary={() => setLibraryOpen(true)}
         />
         <div className="canvas-area" style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-          {isEmpty && <CanvasBackground transform={STATIC_TRANSFORM} />}
-          {isEmpty && !isGenerating && !generateError && (
-            <SearchInput onSubmit={handleQuery} />
+          <Canvas
+            key={`${activeTabId}-${generationCount}`}
+            projectId={activeTabId}
+            initialState={tabState}
+            copiedFragment={copiedFragment}
+            onFragmentCopy={setCopiedFragment}
+            onFragmentPaste={() => setCopiedFragment(null)}
+            onNewExploration={handleNewExploration}
+          />
+          {isGenerating && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 300 }}>
+              <LoadingCanvas
+                query={currentQuery}
+                error={generateError}
+                onRetry={() => handleQuery(currentQuery)}
+              />
+            </div>
           )}
-          {isEmpty && (isGenerating || generateError) && (
-            <LoadingCanvas
-              query={currentQuery}
-              error={generateError}
-              onRetry={() => handleQuery(currentQuery)}
-            />
-          )}
-          {!isEmpty && (
-            <Canvas
-              key={activeTabId}
-              projectId={activeTabId}
-              initialState={tabState}
-              copiedFragment={copiedFragment}
-              onFragmentCopy={setCopiedFragment}
-              onFragmentPaste={() => setCopiedFragment(null)}
-            />
+          {generateError && !isGenerating && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 300 }}>
+              <LoadingCanvas
+                query={currentQuery}
+                error={generateError}
+                onRetry={() => handleQuery(currentQuery)}
+              />
+            </div>
           )}
           {libraryOpen && (
             <LibraryView
@@ -175,6 +208,12 @@ export default function App() {
           )}
         </div>
       </div>
+      {explorationModalOpen && (
+        <ExplorationModal
+          onSubmit={handleQuery}
+          onClose={() => setExplorationModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

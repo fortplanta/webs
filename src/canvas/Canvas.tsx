@@ -5,8 +5,11 @@ import { useCanvas, getLOD } from './useCanvas';
 import { useTools } from './useTools';
 import { useSelection, MIN_FRAGMENT_WIDTH, MAX_FRAGMENT_WIDTH } from './useSelection';
 import type { ResizeHandle } from './useSelection';
-import { CanvasState, ConnectorRenderType, Fragment, LayoutType } from '../api/types';
-import { generatePivot } from '../api/generate';
+import { CanvasState, ConnectorRenderType, Fragment, LayoutType, SlotType } from '../api/types';
+import { generatePivot, runPromptOnSlot } from '../api/generate';
+import { PROMPTS, PromptDefinition } from '../prompts/prompts';
+import CommandMenu, { CommandMenuTarget } from '../ui/CommandMenu';
+import TimelineBanner from '../ui/TimelineBanner';
 import CanvasBackground from './CanvasBackground';
 import Cluster from '../clusters/Cluster';
 import ConnectorLayer from '../edges/ConnectorLayer';
@@ -16,6 +19,7 @@ import Toolbar from '../ui/Toolbar';
 import '../styles/connectors.css';
 import '../styles/selection.css';
 import '../styles/toolbar.css';
+import '../styles/timeline.css';
 
 // Default widths per layout (mirrors CSS) — used for resize start width when fragment.width is unset
 const LAYOUT_WIDTHS: Partial<Record<LayoutType, number>> = {
@@ -36,6 +40,7 @@ interface CanvasProps {
   copiedFragment: Fragment | null;
   onFragmentCopy: (f: Fragment) => void;
   onFragmentPaste: () => void;
+  onNewExploration?: () => void;
 }
 
 export default function Canvas({
@@ -44,6 +49,7 @@ export default function Canvas({
   copiedFragment,
   onFragmentCopy,
   onFragmentPaste,
+  onNewExploration,
 }: CanvasProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef(initialState.viewport.zoom || 0.7);
@@ -57,6 +63,7 @@ export default function Canvas({
     updateConnectorLabel, updateConnectorRenderType, deleteConnector, promoteConnector,
     removeFragment, toggleStarFragment,
     addCluster, addFragment, addPivotCluster,
+    updateFragmentSlot, navigateSlotHistory,
     updateViewport,
     pushUndo,
     undo,
@@ -78,6 +85,15 @@ export default function Canvas({
 
   // Text note editing state
   const [editingFragmentId, setEditingFragmentId] = useState<string | null>(null);
+
+  // Prompt running state
+  const [promptingFragmentIds, setPromptingFragmentIds] = useState<Set<string>>(new Set());
+
+  // Command menu state
+  const [commandMenu, setCommandMenu] = useState<CommandMenuTarget | null>(null);
+
+  // Timeline highlight state
+  const [highlightedFragmentId, setHighlightedFragmentId] = useState<string | null>(null);
 
   // Connector context menu state — stored in screen coords so it can use position: fixed
   const connectorMenuRef = useRef<HTMLDivElement>(null);
@@ -331,6 +347,48 @@ export default function Canvas({
     }
   };
 
+  const handlePromptDrop = async (fragmentId: string, promptId: string) => {
+    if (promptingFragmentIds.has(fragmentId)) return;
+    const fragment = state.fragments.find(f => f.id === fragmentId);
+    const prompt = PROMPTS.find(p => p.id === promptId);
+    if (!fragment || !prompt) return;
+
+    const targetSlotType: SlotType = prompt.allowedOutputSlots[0];
+    setPromptingFragmentIds(prev => new Set(prev).add(fragmentId));
+    try {
+      const result = await runPromptOnSlot(fragment, prompt, targetSlotType);
+      updateFragmentSlot(fragmentId, result.slotType, result.content, result.items, promptId);
+    } catch (err) {
+      console.error('Prompt run failed:', err);
+    } finally {
+      setPromptingFragmentIds(prev => {
+        const next = new Set(prev);
+        next.delete(fragmentId);
+        return next;
+      });
+    }
+  };
+
+  const handleCommandMenuSelect = async (fragmentId: string, slotType: SlotType, prompt: PromptDefinition) => {
+    if (promptingFragmentIds.has(fragmentId)) return;
+    const fragment = state.fragments.find(f => f.id === fragmentId);
+    if (!fragment) return;
+
+    setPromptingFragmentIds(prev => new Set(prev).add(fragmentId));
+    try {
+      const result = await runPromptOnSlot(fragment, prompt, slotType);
+      updateFragmentSlot(fragmentId, result.slotType, result.content, result.items, prompt.id);
+    } catch (err) {
+      console.error('Prompt run failed:', err);
+    } finally {
+      setPromptingFragmentIds(prev => {
+        const next = new Set(prev);
+        next.delete(fragmentId);
+        return next;
+      });
+    }
+  };
+
   const handleResizeStart = (fragment: Fragment, handle: ResizeHandle, e: React.MouseEvent) => {
     pushUndo(); // capture state before resize
     const isLeft = handle === 'nw' || handle === 'w' || handle === 'sw';
@@ -358,6 +416,22 @@ export default function Canvas({
     if (fragment?.layout === 'text-note') {
       setEditingFragmentId(id);
     }
+  };
+
+  const handleNavigateToFragment = (fragmentId: string) => {
+    const fragment = state.fragments.find(f => f.id === fragmentId);
+    if (!fragment || !wrapperRef.current) return;
+    const { clientWidth: w, clientHeight: h } = wrapperRef.current;
+    const currentZoom = transformRef.current.zoom;
+    const newZoom = currentZoom < 0.4 ? 0.8 : currentZoom;
+    const newX = w / 2 - fragment.x * newZoom;
+    const newY = h / 2 - fragment.y * newZoom;
+    setIsTransitioning(true);
+    setTransform({ x: newX, y: newY, zoom: newZoom });
+    setTimeout(() => setIsTransitioning(false), 400);
+    // Pulse highlight
+    setHighlightedFragmentId(fragmentId);
+    setTimeout(() => setHighlightedFragmentId(null), 600);
   };
 
   const handleConnectorContextMenu = (e: React.MouseEvent, connectorId: string) => {
@@ -421,6 +495,13 @@ export default function Canvas({
             onTitleChange={handleTitleChange}
             onDoubleClick={handleFragmentDoubleClick}
             onResizeStart={(handle, e) => handleResizeStart(f, handle, e)}
+            onPromptDrop={handlePromptDrop}
+            onNavigateSlotHistory={navigateSlotHistory}
+            onEmptySlotDblClick={(fragmentId, slotType, x, y) =>
+              setCommandMenu({ fragmentId, slotType, x, y })
+            }
+            isRunningPrompt={promptingFragmentIds.has(f.id)}
+            isHighlighted={highlightedFragmentId === f.id}
             style={{ left: f.x, top: f.y }}
           />
         ))}
@@ -482,13 +563,23 @@ export default function Canvas({
         </div>
       )}
 
-      <Toolbar activeTool={activeTool} onSelect={switchTo} />
+      <TimelineBanner fragments={state.fragments} onNavigateTo={handleNavigateToFragment} />
+
+      <Toolbar activeTool={activeTool} onSelect={switchTo} onNewExploration={onNewExploration} />
 
       <StatusBar
         zoom={transform.zoom}
         fragmentCount={state.fragments.length}
         clusterCount={state.clusters.length}
       />
+
+      {commandMenu && (
+        <CommandMenu
+          target={commandMenu}
+          onSelect={handleCommandMenuSelect}
+          onClose={() => setCommandMenu(null)}
+        />
+      )}
     </div>
   );
 }

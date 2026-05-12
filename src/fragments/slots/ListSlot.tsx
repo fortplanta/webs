@@ -1,14 +1,29 @@
+import { useRef, useLayoutEffect } from 'react';
 import { FragmentSlot } from '../../api/types';
+import SlotHistory from './SlotHistory';
 
 export default function ListSlot({ slot }: { slot: FragmentSlot }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const maxHeightRef = useRef(0);
+
+  useLayoutEffect(() => {
+    if (!slot.history?.length) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const h = el.scrollHeight;
+    if (h > maxHeightRef.current) maxHeightRef.current = h;
+    el.style.minHeight = maxHeightRef.current + 'px';
+  });
+
   if (!slot.items?.length) return null;
   return (
-    <div className="fragment-slot fragment-slot--list">
+    <div ref={containerRef} className="fragment-slot fragment-slot--list">
       <ul className="fragment-list">
         {slot.items.map((item, i) => (
           <li key={i} className="fragment-list__item">{item}</li>
         ))}
       </ul>
+      <SlotHistory slot={slot} slotType="list" />
     </div>
   );
 }

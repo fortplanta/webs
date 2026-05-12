@@ -25,6 +25,8 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | 14 | May 2026 | Doc restructure | PROGRESS.md + CHANGELOG.md created; CLAUDE.md stripped of dead Migration Strategy + WIP tracker; README rewritten; 5 dead files deleted; v0.3.0 tagged |
 | 15 | May 2026 | Remove tethers + fix connectors | Tether system fully removed (types, generation, mock data, localStorage filter); standard connectors confirmed rendering; scope opacity intra 0.4 / inter 0.2 |
 | 14 | May 2026 | Connector overhaul | Visual validation of tether / standard / strong at real zoom levels |
+| 16 | May 2026 | Prompt sidebar + slot history | PromptSidebar (⌘P / toggle button); 6 draggable prompt cards; runPromptOnSlot API; slot history (back/forward nav); empty slot placeholders; command menu on double-tap; FragmentActionsContext; mock fallback for all prompts |
+| 17 | May 2026 | Nav rail + startup flow + timeline | NavRail (48px icon strip); NavPanel (280px collapsible); ExplorationPanel, PromptsPanel, LibraryPanel; ExplorationModal (⌘N / + button); TimelineBanner (chronological fragments with historicalEra); Canvas always mounted; SearchInput removed; PromptSidebar removed |
 
 ---
 
@@ -89,6 +91,27 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | Dev-mode hook warnings | NOTES | 8x "Invalid hook call" console errors are a pre-existing Vite 8 + React 19 + @vitejs/plugin-react 6 dev-mode artifact; confirmed present on HEAD with zero nd/ changes; production build is clean (zero errors); not caused by nd/ integration; no fix found — accepted as non-blocking dev noise | Session 13 |
 | Tether system removal | DONE | ConnectorType narrowed to standard\|strong; tether generation removed from generate.ts, addFragment, addPivotCluster, mock.ts; legacy tethers filtered from localStorage on load | Session 15 |
 | Standard connector scope opacity | DONE | intra-cluster: 0.40 opacity, inter-cluster: 0.20 opacity; scope computed in ConnectorLayer from fragment.clusterId | Session 15 |
+| Prompt sidebar | DONE | PromptSidebar.tsx: 280px right panel; toggle button in canvas top-right; ⌘P shortcut; shows when canvas non-empty | Session 16 |
+| Prompt cards (draggable) | DONE | PromptCard.tsx: 6 cards (explain simply / visual learning / fact check / find similarities / steelman / challenge); HTML5 drag API with promptid dataTransfer key | Session 16 |
+| Prompt drop on fragment | DONE | Fragment.tsx adds dragOver/drop handlers; fragment--drag-over outline class; Canvas.tsx handles runPromptOnSlot; per-fragment promptingFragmentIds set; loading overlay while running | Session 16 |
+| runPromptOnSlot API | DONE | generate.ts: builds API call via PROMPT_SYSTEM_PROMPT + buildPromptOnSlotMessage(); getMockPromptResult() per prompt id; falls back to mock when no API key | Session 16 |
+| Slot history system | DONE | SlotVersion interface; history/historyIndex on FragmentSlot; updateFragmentSlot action pushes old content to history (cap 10); navigateSlotHistory action changes historyIndex and restores version content | Session 16 |
+| Slot history nav UI | DONE | SlotHistory.tsx: back/forward chevrons + count label; shown on slot hover via CSS; reads/writes via FragmentActionsContext; added to BodySlot + ListSlot | Session 16 |
+| Empty slot placeholders | DONE | EmptySlot.tsx: dashed placeholder with uppercase type label; double-click opens command menu; emptySlots field on Fragment; added in parseApiResponse (image slot for non-quote) and getMockCanvasState | Session 16 |
+| Command menu | DONE | CommandMenu.tsx: fixed overlay at cursor position; lists prompts filtered by allowedOutputSlots; click runs prompt on specific slot; Escape/click-outside to close; wired via FragmentActionsContext → Canvas.tsx | Session 16 |
+| FragmentActionsContext | DONE | React context providing navigateSlotHistory + openCommandMenu callbacks scoped to a fragment; Fragment.tsx sets up provider; slot components consume without prop drilling | Session 16 |
+| Nav rail | DONE | NavRail.tsx: 48px far-left strip; 3 icon buttons (Compass/explore, Sparkle/prompts, Clock/library); toggle logic (click active collapses panel); nav-rail.css | Session 17 |
+| Nav panel | DONE | NavPanel.tsx: 280px collapsible panel (width:0 when null); CSS width transition 0.2s; EXPLORATION/PROMPTS/LIBRARY header; body scrollable; nav-panel.css | Session 17 |
+| Exploration panel | DONE | ExplorationPanel.tsx: wordmark, exploration name, stats, scratchpad, new exploration + open library buttons; replaces old Sidebar.tsx in left rail | Session 17 |
+| Prompts panel | DONE | PromptsPanel.tsx: "Analysis" category label + 6 PromptCard components; replaces PromptSidebar.tsx (deleted) | Session 17 |
+| Library panel | DONE | LibraryPanel.tsx: condensed list of past explorations; "view all →" link opens full LibraryView; item = name + fragment count + relative time | Session 17 |
+| Exploration modal | DONE | ExplorationModal.tsx: fixed overlay; "what do you want to explore?" label; large underline-only input; "explore →" submit; Escape/overlay-click to close; focus trap; triggered by ⌘N and + toolbar button | Session 17 |
+| Timeline banner | DONE | TimelineBanner.tsx: absolute-positioned strip at top of canvas area; shows fragments with historicalEra sorted chronologically (parseEraYear handles plain years, ranges, BCE, decades); colored dot + era + title per event; hidden when no events; timeline.css | Session 17 |
+| Timeline viewport navigation | DONE | Clicking timeline event calls handleNavigateToFragment in Canvas.tsx; pans to fragment center (w/2 - fx*zoom, h/2 - fy*zoom); zooms to 0.8 if below 0.4; 400ms CSS transition; 600ms pulse highlight via fragment--timeline-highlight CSS animation | Session 17 |
+| historicalEra on Fragment | DONE | historicalEra?: string added to Fragment interface and GenerateApiResponse fragment shape; prompt.ts instructs AI to include for all fragment types; parseApiResponse maps it; mock.ts seeded with 6 era values | Session 17 |
+| Canvas always mounted | DONE | App.tsx no longer conditionally renders Canvas vs SearchInput; Canvas always mounted with EMPTY_CANVAS_STATE on blank tab; generationCount key bumped on generation to force remount and pick up new state | Session 17 |
+| SearchInput removal | DONE | SearchInput.tsx deleted; replaced by ExplorationModal flow | Session 17 |
+| Toolbar + button | DONE | Toolbar.tsx: + button as first item separated from tool buttons by .toolbar__divider (1px vertical line); onNewExploration? prop; opens ExplorationModal via Canvas→App callback | Session 17 |
 
 Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKED`
 
@@ -100,7 +123,7 @@ Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKE
 |------|-------|
 | Spark nodes (OCR/image) | generateSparkExplode() returns mock data; real image analysis API not wired |
 | Cluster positioning (orbit) | positionClusters() implemented but mock data still hardcoded in useCanvas.ts |
-| Dev-mode hook warnings | 8x "Invalid hook call" in Vite 8 + React 19 dev mode; production clean; non-blocking |
+| Dev-mode hook warnings | HMR-only — hook count changes during an editing session show "Invalid hook call" in dev console; count is stable across the editing session (not growing during interactions); production build clean; non-blocking |
 | Image slots | Images not fetched; placeholder grey bg only |
 | Export | Button present in sidebar but disabled; no implementation |
 | Fact check | Icon in fragment menubar but not wired to API |

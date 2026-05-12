@@ -1,7 +1,8 @@
 // Prompt construction for Webs AI generation.
 // Kept separate from fetch logic in generate.ts.
 
-import { Fragment } from './types';
+import { Fragment, SlotType } from './types';
+import { PromptDefinition } from '../prompts/prompts';
 
 export const SYSTEM_PROMPT = `You are a knowledge canvas generator. The user gives you a topic and you return a JSON object describing interconnected clusters of intellectual fragments.
 
@@ -46,11 +47,51 @@ Rules:
 - "tags": required on all fragments except type "quote". 2-4 tags, lowercase, short words.
 - "list": optional. Only include for concept, thesis, domain, source fragments. 3-6 items if used.
 - "era": only for event and era fragment types. A year or short date range like "1789" or "1914–1918".
+- "historicalEra": optional for ALL fragment types. If the fragment relates to a specific historical period, include a short year/range/era (e.g. "1066", "1789–1799", "300 BCE", "1960s"). Omit if conceptual or contemporary with no clear historical anchor.
 - Quote fragments: body field only (verbatim quote + attribution). No tags, no list, no era.
 - Edge labels must be verb phrases, not nouns: "shaped by", "resulted in", "challenged by", "enabled", "inspired".
 - Edge source and target must EXACTLY match cluster titles in your response.
 - Do not include image fields.
 - Return raw JSON only. No markdown. No code fences. Start with { and end with }.`;
+}
+
+export const PROMPT_SYSTEM_PROMPT = `You are a knowledge assistant. The user gives you a fragment of knowledge and a transformation prompt. You return a JSON object with updated slot content.
+
+CRITICAL: Return ONLY valid JSON. No markdown code fences. No preamble. No explanation. Your response must start with { and end with }.`;
+
+export function buildPromptOnSlotMessage(
+  fragment: Fragment,
+  prompt: PromptDefinition,
+  targetSlotType: SlotType,
+): string {
+  const bodySlot = fragment.slots.find(s => s.type === 'body');
+  const body = bodySlot?.content ?? '';
+
+  const slotInstructions: Record<string, string> = {
+    'explain-simple': `Rewrite the body content so a five-year-old could understand it. Keep it short, concrete, and vivid. Return slotType "body" and a "content" string.`,
+    'visual-learning': `Rewrite the body content using vivid sensory language — imagery, metaphor, texture, and feeling. Make it memorable. Return slotType "body" and a "content" string.`,
+    'fact-check': `Evaluate the factual claims in the fragment. Return slotType "${targetSlotType}" — if "body", summarise accuracy and caveats; if "disclaimer", write a 1-2 sentence factual caveat. Return a "content" string.`,
+    'find-similarities': `List 4–6 things this fragment connects to, across disciplines or domains. Return slotType "list" and an "items" array of short strings.`,
+    'steelman': `Write the strongest possible case for the idea in this fragment. Be charitable and rigorous. Return slotType "body" and a "content" string.`,
+    'challenge': `Identify the weakest points or strongest objections to the idea in this fragment. Return slotType "${targetSlotType}" — if "list", give 3–5 crisp objections as an "items" array; if "body", write a short critical paragraph as "content".`,
+  };
+
+  const instruction = slotInstructions[prompt.id] ?? `Apply the "${prompt.label}" transformation to this fragment's content.`;
+
+  return `Fragment title: "${fragment.title}"
+Fragment type: ${fragment.type}
+Body: "${body}"
+
+Task: ${instruction}
+
+Return ONLY valid JSON matching this shape:
+{
+  "slotType": "${targetSlotType}",
+  "content": "string — omit if producing items",
+  "items": ["array", "of", "strings", "— omit if producing content"]
+}
+
+Return raw JSON only. Start with { and end with }.`;
 }
 
 export const PIVOT_SYSTEM_PROMPT = `You are a knowledge canvas generator. The user gives you a fragment of knowledge and you return a JSON object describing a new cluster of related intellectual fragments.

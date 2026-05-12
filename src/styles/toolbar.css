@@ -56,3 +56,11 @@
 .toolbar__btn:hover .toolbar__tooltip {
   opacity: 1;
 }
+
+.toolbar__divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0 4px;
+  flex-shrink: 0;
+}

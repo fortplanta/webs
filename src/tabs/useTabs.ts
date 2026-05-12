@@ -68,6 +68,27 @@ export function useTabs() {
     });
   }, []);
 
+  // Like addTab but returns the new tab ID synchronously so callers can target it.
+  // Plain function (no useCallback) — functional updater never reads stale state.
+  const addTabGetId = (): string => {
+    const id = uuidv4();
+    setAppState(prev => {
+      if (prev.tabs.length >= MAX_TABS) return prev;
+      const name = `exploration ${prev.tabs.length + 1}`;
+      const now = Date.now();
+      const canvasState = { ...EMPTY_CANVAS_STATE, createdAt: now };
+      saveCanvasState(id, canvasState);
+      updateProjectMeta({ id, name, createdAt: now, updatedAt: now });
+      const next: AppState = {
+        tabs: [...prev.tabs, makeTabSession(id, name)],
+        activeTabId: id,
+      };
+      saveAppState(next);
+      return next;
+    });
+    return id;
+  };
+
   const closeTab = useCallback((id: string) => {
     setAppState(prev => {
       if (prev.tabs.length <= 1) return prev;
@@ -122,6 +143,7 @@ export function useTabs() {
     canAddTab: appState.tabs.length < MAX_TABS,
     switchTab,
     addTab,
+    addTabGetId,
     openProject,
     closeTab,
     renameTab,
