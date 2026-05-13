@@ -5,8 +5,11 @@ import { useCanvas, getLOD } from './useCanvas';
 import { useTools } from './useTools';
 import { useSelection, MIN_FRAGMENT_WIDTH, MAX_FRAGMENT_WIDTH } from './useSelection';
 import type { ResizeHandle } from './useSelection';
-import { CanvasState, ConnectorRenderType, Fragment, FragmentType, LayoutType, AccordionSlot } from '../api/types';
-import { generatePivot } from '../api/generate';
+import { CanvasState, ConnectorRenderType, Fragment, FragmentType, LayoutType, AccordionSlot, SlotType } from '../api/types';
+import { generatePivot, runPromptOnSlot } from '../api/generate';
+import { PROMPTS, PromptDefinition } from '../prompts/prompts';
+import CommandMenu, { CommandMenuTarget } from '../ui/CommandMenu';
+import TimelineBanner from '../ui/TimelineBanner';
 import CanvasBackground from './CanvasBackground';
 import Cluster from '../clusters/Cluster';
 import ConnectorLayer from '../edges/ConnectorLayer';
@@ -18,6 +21,7 @@ import '../styles/connectors.css';
 import '../styles/selection.css';
 import '../styles/toolbar.css';
 import '../styles/command-menu.css';
+import '../styles/timeline.css';
 
 // Default widths per layout (mirrors CSS) — used for resize start width when fragment.width is unset
 const LAYOUT_WIDTHS: Partial<Record<LayoutType, number>> = {
@@ -38,6 +42,7 @@ interface CanvasProps {
   copiedFragment: Fragment | null;
   onFragmentCopy: (f: Fragment) => void;
   onFragmentPaste: () => void;
+  onNewExploration?: () => void;
 }
 
 export default function Canvas({
@@ -46,6 +51,7 @@ export default function Canvas({
   copiedFragment,
   onFragmentCopy,
   onFragmentPaste,
+  onNewExploration,
 }: CanvasProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef(initialState.viewport.zoom || 0.7);
@@ -60,6 +66,7 @@ export default function Canvas({
     removeFragment, toggleStarFragment,
     addCluster, addFragment, addPivotCluster,
     addConnector, addEmptyFragment, addAccordionSlot,
+    updateFragmentSlot, navigateSlotHistory,
     duplicateFragment, pinFragment, moveFragmentToCluster,
     updateViewport,
     pushUndo,
@@ -83,7 +90,7 @@ export default function Canvas({
   // Text note editing state
   const [editingFragmentId, setEditingFragmentId] = useState<string | null>(null);
 
-  // Connector dot drag state
+  // Connector dot drag state (Session 18)
   const dotDragRef = useRef<{
     sourceFragmentId: string;
     x1: number;
@@ -92,10 +99,19 @@ export default function Canvas({
   const [dotDragPreview, setDotDragPreview] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [dotDraggingFragmentId, setDotDraggingFragmentId] = useState<string | null>(null);
 
-  // Canvas command menu (from connector dot drop on empty canvas)
-  const [commandMenu, setCommandMenu] = useState<{
+  // Canvas drop menu (connector dot → empty canvas) — canvas-space coords
+  const [canvasDropMenu, setCanvasDropMenu] = useState<{
     x: number; y: number; sourceFragmentId: string;
   } | null>(null);
+
+  // Prompt running state (Session 17)
+  const [promptingFragmentIds, setPromptingFragmentIds] = useState<Set<string>>(new Set());
+
+  // Slot command menu (empty slot double-click) — screen coords
+  const [commandMenu, setCommandMenu] = useState<CommandMenuTarget | null>(null);
+
+  // Timeline highlight state (Session 17)
+  const [highlightedFragmentId, setHighlightedFragmentId] = useState<string | null>(null);
 
   // Connector context menu state — stored in screen coords so it can use position: fixed
   const connectorMenuRef = useRef<HTMLDivElement>(null);
@@ -218,9 +234,9 @@ export default function Canvas({
         if (targetId && targetId !== sourceFragmentId) {
           addConnector(sourceFragmentId, targetId);
         } else {
-          // Dropped on empty canvas — show command menu in canvas space
+          // Dropped on empty canvas — show canvas drop command menu
           const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
-          setCommandMenu({ x: cx, y: cy, sourceFragmentId });
+          setCanvasDropMenu({ x: cx, y: cy, sourceFragmentId });
         }
         return;
       }
@@ -383,6 +399,64 @@ export default function Canvas({
     }
   };
 
+  // Session 17: run a prompt on a fragment's slot via drag-drop
+  const handlePromptDrop = async (fragmentId: string, promptId: string) => {
+    if (promptingFragmentIds.has(fragmentId)) return;
+    const fragment = state.fragments.find(f => f.id === fragmentId);
+    const prompt = PROMPTS.find(p => p.id === promptId);
+    if (!fragment || !prompt) return;
+
+    const targetSlotType: SlotType = prompt.allowedOutputSlots[0];
+    setPromptingFragmentIds(prev => new Set(prev).add(fragmentId));
+    try {
+      const result = await runPromptOnSlot(fragment, prompt, targetSlotType);
+      updateFragmentSlot(fragmentId, result.slotType, result.content, result.items, promptId);
+    } catch (err) {
+      console.error('Prompt run failed:', err);
+    } finally {
+      setPromptingFragmentIds(prev => {
+        const next = new Set(prev);
+        next.delete(fragmentId);
+        return next;
+      });
+    }
+  };
+
+  // Session 17: run a prompt from the slot command menu
+  const handleCommandMenuSelect = async (fragmentId: string, slotType: SlotType, prompt: PromptDefinition) => {
+    if (promptingFragmentIds.has(fragmentId)) return;
+    const fragment = state.fragments.find(f => f.id === fragmentId);
+    if (!fragment) return;
+
+    setPromptingFragmentIds(prev => new Set(prev).add(fragmentId));
+    try {
+      const result = await runPromptOnSlot(fragment, prompt, slotType);
+      updateFragmentSlot(fragmentId, result.slotType, result.content, result.items, prompt.id);
+    } catch (err) {
+      console.error('Prompt run failed:', err);
+    } finally {
+      setPromptingFragmentIds(prev => {
+        const next = new Set(prev);
+        next.delete(fragmentId);
+        return next;
+      });
+    }
+  };
+
+  // Session 18: add an accordion slot (stub content, no API call)
+  const handleAddAccordion = async (fragmentId: string, promptId: string) => {
+    const frag = state.fragments.find(f => f.id === fragmentId);
+    if (!frag) return;
+    const slot: AccordionSlot = {
+      id: uuidv4(),
+      promptId,
+      promptLabel: promptId.replace(/-/g, ' '),
+      content: `Generated response for "${frag.title}" using prompt "${promptId}".`,
+      createdAt: Date.now(),
+    };
+    addAccordionSlot(fragmentId, slot);
+  };
+
   const handleResizeStart = (fragment: Fragment, handle: ResizeHandle, e: React.MouseEvent) => {
     pushUndo(); // capture state before resize
     const isLeft = handle === 'nw' || handle === 'w' || handle === 'sw';
@@ -405,24 +479,27 @@ export default function Canvas({
     setEditingFragmentId(null);
   };
 
-  const handleAddAccordion = async (fragmentId: string, promptId: string) => {
-    const frag = state.fragments.find(f => f.id === fragmentId);
-    if (!frag) return;
-    const slot: AccordionSlot = {
-      id: uuidv4(),
-      promptId,
-      promptLabel: promptId.replace(/-/g, ' '),
-      content: `Generated response for "${frag.title}" using prompt "${promptId}".`,
-      createdAt: Date.now(),
-    };
-    addAccordionSlot(fragmentId, slot);
-  };
-
   const handleFragmentDoubleClick = (id: string) => {
     const fragment = state.fragments.find(f => f.id === id);
     if (fragment?.layout === 'text-note') {
       setEditingFragmentId(id);
     }
+  };
+
+  // Session 17: navigate to fragment from timeline banner
+  const handleNavigateToFragment = (fragmentId: string) => {
+    const fragment = state.fragments.find(f => f.id === fragmentId);
+    if (!fragment || !wrapperRef.current) return;
+    const { clientWidth: w, clientHeight: h } = wrapperRef.current;
+    const currentZoom = transformRef.current.zoom;
+    const newZoom = currentZoom < 0.4 ? 0.8 : currentZoom;
+    const newX = w / 2 - fragment.x * newZoom;
+    const newY = h / 2 - fragment.y * newZoom;
+    setIsTransitioning(true);
+    setTransform({ x: newX, y: newY, zoom: newZoom });
+    setTimeout(() => setIsTransitioning(false), 400);
+    setHighlightedFragmentId(fragmentId);
+    setTimeout(() => setHighlightedFragmentId(null), 600);
   };
 
   const handleConnectorContextMenu = (e: React.MouseEvent, connectorId: string) => {
@@ -485,6 +562,11 @@ export default function Canvas({
             onMoveToCluster={moveFragmentToCluster}
             onAddAccordion={handleAddAccordion}
             onConnectorDotStart={handleConnectorDotStart}
+            onPromptDrop={handlePromptDrop}
+            onNavigateSlotHistory={navigateSlotHistory}
+            onEmptySlotDblClick={(fragmentId, slotType, x, y) =>
+              setCommandMenu({ fragmentId, slotType, x, y })
+            }
             isPivoting={f.id === pivotingFragmentId}
             pivotDisabled={pivotingFragmentId !== null && f.id !== pivotingFragmentId}
             pivotError={pivotErrors[f.id] ?? null}
@@ -494,6 +576,8 @@ export default function Canvas({
             onDoubleClick={handleFragmentDoubleClick}
             onResizeStart={(handle, e) => handleResizeStart(f, handle, e)}
             dotDragging={dotDraggingFragmentId === f.id}
+            isRunningPrompt={promptingFragmentIds.has(f.id)}
+            isHighlighted={highlightedFragmentId === f.id}
             style={{ left: f.x, top: f.y }}
           />
         ))}
@@ -508,19 +592,19 @@ export default function Canvas({
           />
         ))}
 
-        {/* Canvas command menu — inside transform so it pans with canvas */}
-        {commandMenu && (
+        {/* Canvas drop menu — inside transform so it pans with canvas */}
+        {canvasDropMenu && (
           <CanvasCommandMenu
-            x={commandMenu.x}
-            y={commandMenu.y}
-            sourceFragmentId={commandMenu.sourceFragmentId}
+            x={canvasDropMenu.x}
+            y={canvasDropMenu.y}
+            sourceFragmentId={canvasDropMenu.sourceFragmentId}
             onCreateFragment={(type: FragmentType, x: number, y: number) => {
               const FALLBACK_CLUSTER = 'canvas-drops';
               if (!state.clusters.some(c => c.id === FALLBACK_CLUSTER)) {
                 addCluster({ id: FALLBACK_CLUSTER, x: 0, y: 0, label: 'canvas drops', isSeed: false });
               }
               const newId = addEmptyFragment(type, x, y, FALLBACK_CLUSTER);
-              addConnector(commandMenu.sourceFragmentId, newId);
+              addConnector(canvasDropMenu.sourceFragmentId, newId);
             }}
             onCreateTextNote={(x: number, y: number) => {
               const TEXT_NOTES_CLUSTER = 'text-notes';
@@ -529,7 +613,7 @@ export default function Canvas({
               }
               const newId = uuidv4();
               addFragment({ id: newId, clusterId: TEXT_NOTES_CLUSTER, x, y, type: 'text-note', layout: 'text-note', title: '', slots: [], createdAtZoom: transformRef.current.zoom, starred: false });
-              addConnector(commandMenu.sourceFragmentId, newId);
+              addConnector(canvasDropMenu.sourceFragmentId, newId);
               setEditingFragmentId(newId);
             }}
             onPivot={handlePivot}
@@ -537,7 +621,7 @@ export default function Canvas({
               const newClusterId = uuidv4();
               addCluster({ id: newClusterId, x, y, label: 'new cluster', isSeed: false });
             }}
-            onClose={() => setCommandMenu(null)}
+            onClose={() => setCanvasDropMenu(null)}
           />
         )}
 
@@ -588,13 +672,24 @@ export default function Canvas({
         </div>
       )}
 
-      <Toolbar activeTool={activeTool} onSelect={switchTo} />
+      <TimelineBanner fragments={state.fragments} onNavigateTo={handleNavigateToFragment} />
+
+      <Toolbar activeTool={activeTool} onSelect={switchTo} onNewExploration={onNewExploration} />
 
       <StatusBar
         zoom={transform.zoom}
         fragmentCount={state.fragments.length}
         clusterCount={state.clusters.length}
       />
+
+      {/* Slot command menu — fixed position */}
+      {commandMenu && (
+        <CommandMenu
+          target={commandMenu}
+          onSelect={handleCommandMenuSelect}
+          onClose={() => setCommandMenu(null)}
+        />
+      )}
     </div>
   );
 }

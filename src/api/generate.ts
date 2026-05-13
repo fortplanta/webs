@@ -10,10 +10,12 @@ import {
   FragmentType,
   LayoutType,
   FragmentSlot,
+  SlotType,
   GenerateApiResponse,
   PivotApiResponse,
 } from './types';
-import { SYSTEM_PROMPT, buildUserMessage, PIVOT_SYSTEM_PROMPT, buildPivotUserMessage } from './prompt';
+import { SYSTEM_PROMPT, buildUserMessage, PIVOT_SYSTEM_PROMPT, buildPivotUserMessage, PROMPT_SYSTEM_PROMPT, buildPromptOnSlotMessage } from './prompt';
+import { PromptDefinition } from '../prompts/prompts';
 import { getMockCanvasState, getMockPivotResult } from './mock';
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
@@ -132,6 +134,8 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
     apiCluster.fragments.forEach((f, fi) => {
       const fragmentId = uuidv4();
       const pos = positions[fi];
+      const builtSlots = buildSlots(f);
+      const hasImage = builtSlots.some(s => s.type === 'image');
       fragments.push({
         id: fragmentId,
         clusterId: cluster.id,
@@ -140,9 +144,11 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
         type: f.type,
         layout: LAYOUT_FOR_TYPE[f.type],
         title: f.title,
-        slots: buildSlots(f),
+        slots: builtSlots,
         createdAtZoom: 0.7,
         starred: false,
+        emptySlots: hasImage || f.type === 'quote' ? [] : ['image'],
+        historicalEra: f.historicalEra,
       });
     });
   });
@@ -310,6 +316,84 @@ export async function generateSparkExplode(
   };
 
   return { cluster, fragments: mockFragments, connector };
+}
+
+export interface PromptResult {
+  slotType: SlotType;
+  content?: string;
+  items?: string[];
+}
+
+function getMockPromptResult(fragment: Fragment, prompt: PromptDefinition): PromptResult {
+  const title = fragment.title;
+  switch (prompt.id) {
+    case 'explain-simple':
+      return { slotType: 'body', content: `Imagine ${title} is like a big toy that lots of smart people built together. It helps us do things faster and easier, like how a bicycle helps you go faster than walking.` };
+    case 'visual-learning':
+      return { slotType: 'body', content: `Picture ${title} as a vast, shimmering web stretched across a dark room — each thread a glowing connection, humming with invisible energy whenever a thought travels along it.` };
+    case 'fact-check':
+      return { slotType: 'body', content: `The core claims about ${title} are broadly accurate based on current knowledge, though some specifics may vary by context or have evolved since initial publication.` };
+    case 'find-similarities':
+      return { slotType: 'list', items: [`${title} parallels systems theory`, 'Similar emergence in biological networks', 'Echoes in economic complexity', 'Related to feedback loops in ecology', 'Connects to information theory'] };
+    case 'steelman':
+      return { slotType: 'body', content: `The strongest case for ${title} is its explanatory power: it unifies disparate phenomena under a single coherent framework, making accurate predictions and offering a foundation for further inquiry.` };
+    case 'challenge':
+      return { slotType: 'list', items: [`${title} may oversimplify edge cases`, 'Empirical support is thinner than claimed', 'Alternative explanations are underexplored', 'Assumes conditions that rarely hold in practice'] };
+    default:
+      return { slotType: 'body', content: `Transformed content for "${title}" via "${prompt.label}".` };
+  }
+}
+
+export async function runPromptOnSlot(
+  fragment: Fragment,
+  prompt: PromptDefinition,
+  targetSlotType: SlotType,
+): Promise<PromptResult> {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+
+  if (!apiKey) {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return getMockPromptResult(fragment, prompt);
+  }
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1000,
+        system: PROMPT_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildPromptOnSlotMessage(fragment, prompt, targetSlotType) }],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Prompt API error', response.status, '— falling back to mock');
+      return getMockPromptResult(fragment, prompt);
+    }
+
+    const data = await response.json() as { content?: Array<{ text?: string }> };
+    const text = data.content?.[0]?.text ?? '';
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    const cleaned = jsonStart !== -1 && jsonEnd > jsonStart ? text.slice(jsonStart, jsonEnd + 1) : text.trim();
+    const parsed = JSON.parse(cleaned) as PromptResult;
+
+    if (!parsed.slotType) {
+      return getMockPromptResult(fragment, prompt);
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error('Prompt run failed — falling back to mock:', err);
+    return getMockPromptResult(fragment, prompt);
+  }
 }
 
 export async function generatePivot(sourceFragment: Fragment, sourceClusterId: string): Promise<PivotResult> {

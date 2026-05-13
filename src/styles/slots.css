@@ -1,0 +1,93 @@
+/* Empty slot placeholder */
+.slot--empty {
+  border: 1.5px dashed rgba(0, 0, 0, 0.12);
+  padding: 12px var(--spacing-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.slot--empty:hover {
+  border-color: rgba(0, 0, 0, 0.25);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.slot--empty__label {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.2);
+}
+
+/* Drag-over state on fragment */
+.fragment--drag-over {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+}
+
+/* Slot history nav — fixed to bottom-right of slot regardless of content */
+.fragment-slot {
+  position: relative;
+}
+
+.slot-history-nav {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.fragment-slot:hover .slot-history-nav {
+  opacity: 1;
+}
+
+.slot-history-nav__btn {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.06);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.5);
+  line-height: 1;
+  padding: 0;
+}
+
+.slot-history-nav__btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.slot-history-nav__btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.slot-history-nav__count {
+  font-family: var(--font-primary);
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.3);
+}
+
+/* Fragment loading state while prompt runs */
+.fragment__prompt-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}

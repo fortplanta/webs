@@ -1,5 +1,14 @@
 // All core types for Webs. Single source of truth for data shapes.
 
+export type SlotType = "body" | "image" | "tags" | "list" | "disclaimer";
+
+export interface SlotVersion {
+  content?: string;
+  items?: string[];
+  promptId?: string;
+  producedAt: number;
+}
+
 export type FragmentType =
   | "person"
   | "concept"
@@ -25,9 +34,11 @@ export type ConnectorType = "standard" | "strong";
 export type ConnectorRenderType = "bezier" | "straight" | "step" | "smoothstep";
 
 export interface FragmentSlot {
-  type: "body" | "image" | "tags" | "list" | "disclaimer";
+  type: SlotType;
   content?: string;
   items?: string[];
+  history?: SlotVersion[];
+  historyIndex?: number;
 }
 
 export interface FragmentSource {
@@ -64,6 +75,8 @@ export interface Fragment {
   sparkMediaUrl?: string;  // data URL for spark image
   sparkMediaType?: 'image' | 'text';
   sparkStatus?: 'idle' | 'processing' | 'done';
+  emptySlots?: SlotType[];
+  historicalEra?: string;  // e.g. "1066", "1839–1860", "300 BCE", "1960s"
 }
 
 export interface Cluster {
@@ -81,7 +94,7 @@ export interface Connector {
   sourceId: string;       // fragment id or cluster id
   targetId: string;       // fragment id or cluster id
   type: ConnectorType;
-  renderType?: ConnectorRenderType; // default "straight"
+  renderType?: ConnectorRenderType; // default "bezier"
   label: string;          // editable verb phrase, empty by default
 }
 
@@ -159,6 +172,7 @@ export interface GenerateApiResponse {
       tags?: string[];
       list?: string[];
       era?: string;
+      historicalEra?: string;
     }>;
   }>;
   edges: Array<{

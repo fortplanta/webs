@@ -41,7 +41,10 @@
       "Bash(git rebase *)",
       "Bash(GIT_EDITOR=true git rebase --continue)",
       "Bash(find /Users/anton/Downloads/webs-main -name \"SESSION.md\" -not -path \"*/.git/*\" 2>/dev/null)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(npx tsc *)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/vite build *)"
     ]
   }
 }

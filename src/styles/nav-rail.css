@@ -1,0 +1,36 @@
+.nav-rail {
+  width: 48px;
+  background: #fff;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 4px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.nav-rail__item {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.3);
+  border: none;
+  background: transparent;
+  transition: color 0.15s, background 0.15s;
+  border-radius: 6px;
+}
+
+.nav-rail__item:hover {
+  color: #000;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.nav-rail__item--active {
+  color: #000;
+  background: rgba(0, 0, 0, 0.06);
+}

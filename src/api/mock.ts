@@ -21,7 +21,7 @@ const FRAGMENTS: Fragment[] = [
   ], createdAtZoom: 0.7, starred: false },
 
   // c1 — economic systems
-  { id: 'c1f1', clusterId: 'c1',  x: 620,  y: -130, type: 'concept', title: 'mercantilism',          layout: 'vertical-flow',  slots: [
+  { id: 'c1f1', clusterId: 'c1',  x: 620,  y: -130, type: 'concept', title: 'mercantilism',          layout: 'vertical-flow',  historicalEra: '1500s–1700s', slots: [
     { type: 'body', content: 'Economic theory that dominated European thinking from the 16th–18th centuries, emphasising trade surpluses and the accumulation of bullion as national wealth.' },
     { type: 'tags', items: ['economics', 'trade', '16th century'] },
   ], createdAtZoom: 0.7, starred: false },
@@ -35,23 +35,23 @@ const FRAGMENTS: Fragment[] = [
   ], createdAtZoom: 0.7, starred: false },
 
   // c2 — key figures
-  { id: 'c2f1', clusterId: 'c2',  x: -730, y: 140,  type: 'person',  title: 'leopold II',            layout: 'image-hero',     slots: [
+  { id: 'c2f1', clusterId: 'c2',  x: -730, y: 140,  type: 'person',  title: 'leopold II',            layout: 'image-hero',     historicalEra: '1885–1908', slots: [
     { type: 'image', content: '' },
     { type: 'body', content: 'King of Belgium who privately owned the Congo Free State 1885–1908, overseeing a brutal rubber extraction regime responsible for millions of deaths.' },
     { type: 'tags', items: ['Belgium', 'Congo', 'atrocity'] },
   ], createdAtZoom: 0.7, starred: false },
-  { id: 'c2f2', clusterId: 'c2',  x: -570, y: 260,  type: 'person',  title: 'frantz fanon',          layout: 'image-hero',     slots: [
+  { id: 'c2f2', clusterId: 'c2',  x: -570, y: 260,  type: 'person',  title: 'frantz fanon',          layout: 'image-hero',     historicalEra: '1925–1961', slots: [
     { type: 'image', content: '' },
     { type: 'body', content: 'Martinican-Algerian philosopher and psychiatrist whose work on decolonisation, violence, and national consciousness shaped anti-colonial movements globally.' },
     { type: 'tags', items: ['philosophy', 'Algeria', 'decolonisation'] },
   ], createdAtZoom: 0.7, starred: false },
 
   // c3 — resistance movements
-  { id: 'c3f1', clusterId: 'c3',  x: -60,  y: 690,  type: 'event',   title: 'haitian revolution',    layout: 'timeline',       slots: [
+  { id: 'c3f1', clusterId: 'c3',  x: -60,  y: 690,  type: 'event',   title: 'haitian revolution',    layout: 'timeline',       historicalEra: '1791–1804', slots: [
     { type: 'body', content: 'The only successful slave revolution in history, 1791–1804. Haiti became the first Black republic and first nation in the Western Hemisphere to abolish slavery.' },
     { type: 'tags', items: ['Haiti', '1804', 'revolution', 'slavery'] },
   ], createdAtZoom: 0.7, starred: false },
-  { id: 'c3f2', clusterId: 'c3',  x: 100,  y: 820,  type: 'concept', title: 'decolonisation',        layout: 'vertical-flow',  slots: [
+  { id: 'c3f2', clusterId: 'c3',  x: 100,  y: 820,  type: 'concept', title: 'decolonisation',        layout: 'vertical-flow',  historicalEra: '1950s–1960s', slots: [
     { type: 'body', content: 'The process by which colonies gained independence from European powers, accelerating dramatically in the 1950s and 1960s across Africa and Asia.' },
     { type: 'tags', items: ['independence', '1960s', 'Africa', 'Asia'] },
   ], createdAtZoom: 0.7, starred: false },
@@ -64,7 +64,7 @@ const FRAGMENTS: Fragment[] = [
     { type: 'body', content: 'The paradox that nations with abundant natural resources often exhibit lower economic growth and weaker governance than resource-poor nations — a legacy of colonial extraction patterns.' },
     { type: 'tags', items: ['economics', 'resources', 'development'] },
   ], createdAtZoom: 0.7, starred: false },
-  { id: 'c4f2', clusterId: 'c4',  x: -200, y: -640, type: 'era',     title: 'post-colonial era',     layout: 'vertical-flow',  slots: [
+  { id: 'c4f2', clusterId: 'c4',  x: -200, y: -640, type: 'era',     title: 'post-colonial era',     layout: 'vertical-flow',  historicalEra: '1960s', slots: [
     { type: 'body', content: 'The period following formal decolonisation, from the 1960s onward, characterised by new nation-states navigating neocolonial dependency structures.' },
     { type: 'tags', items: ['1960s–present', 'independence', 'era'] },
   ], createdAtZoom: 0.7, starred: false },
@@ -194,11 +194,15 @@ export function getMockPivotResult(fragment: Fragment): PivotApiResponse {
 
 export function getMockCanvasState(query: string): CanvasState {
   const seedFragment = FRAGMENTS.find(f => f.clusterId === 'seed');
-  const overriddenFragments = FRAGMENTS.map(f =>
-    f.id === seedFragment?.id
-      ? { ...f, title: query.toLowerCase() }
-      : f
-  );
+  const overriddenFragments = FRAGMENTS.map(f => {
+    const base = f.id === seedFragment?.id ? { ...f, title: query.toLowerCase() } : f;
+    const hasImage = base.slots.some(s => s.type === 'image');
+    const noEmpty = !base.emptySlots;
+    if (noEmpty && !hasImage && base.type !== 'quote' && base.type !== 'spark' && base.type !== 'text-note') {
+      return { ...base, emptySlots: ['image'] as import('./types').SlotType[] };
+    }
+    return base;
+  });
   const overriddenClusters = CLUSTERS.map(c =>
     c.isSeed ? { ...c, label: query.toLowerCase() } : c
   );

@@ -4,11 +4,28 @@ import type { ActiveTool } from '../canvas/useTools';
 interface Props {
   activeTool: ActiveTool;
   onSelect: (tool: ActiveTool) => void;
+  onNewExploration?: () => void;
 }
 
-export default function Toolbar({ activeTool, onSelect }: Props) {
+export default function Toolbar({ activeTool, onSelect, onNewExploration }: Props) {
   return (
     <div className="toolbar">
+      {onNewExploration && (
+        <>
+          <button
+            className="toolbar__btn"
+            onClick={onNewExploration}
+            title="New exploration (⌘N)"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 4v10M4 9h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <span className="toolbar__tooltip">New &nbsp; ⌘N</span>
+          </button>
+          <div className="toolbar__divider" />
+        </>
+      )}
+
       <button
         className={`toolbar__btn${activeTool === 'select' ? ' toolbar__btn--active' : ''}`}
         onClick={() => onSelect('select')}

@@ -1,9 +1,10 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import '../styles/fragments.css';
 import '../styles/fragment-card.css';
 import '../styles/accordion.css';
 import '../styles/connector-dot.css';
-import { Fragment as FragmentType } from '../api/types';
+import '../styles/slots.css';
+import { Fragment as FragmentType, SlotType } from '../api/types';
 import { LOD } from '../canvas/useCanvas';
 import type { ResizeHandle } from '../canvas/useSelection';
 import type { Cluster } from '../api/types';
@@ -12,6 +13,7 @@ import FragmentAccordions from './FragmentAccordions';
 import ConnectorDot from './ConnectorDot';
 import TextNote from './layouts/TextNote';
 import { Spinner } from '../nd/atoms/Spinner/Spinner';
+import { FragmentActionsContext } from './FragmentActionsContext';
 
 const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 
@@ -28,6 +30,9 @@ interface FragmentProps {
   onMoveToCluster?: (fragmentId: string, clusterId: string) => void;
   onAddAccordion?: (fragmentId: string, promptId: string) => Promise<void>;
   onConnectorDotStart?: (fragmentId: string, e: React.MouseEvent) => void;
+  onPromptDrop?: (fragmentId: string, promptId: string) => void;
+  onNavigateSlotHistory?: (fragmentId: string, slotType: SlotType, direction: 'back' | 'forward') => void;
+  onEmptySlotDblClick?: (fragmentId: string, slotType: SlotType, x: number, y: number) => void;
   isPivoting?: boolean;
   pivotDisabled?: boolean;
   pivotError?: string | null;
@@ -37,6 +42,8 @@ interface FragmentProps {
   onDoubleClick?: (id: string) => void;
   onResizeStart?: (handle: ResizeHandle, e: React.MouseEvent) => void;
   dotDragging?: boolean;
+  isRunningPrompt?: boolean;
+  isHighlighted?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -53,6 +60,9 @@ export default function Fragment({
   onMoveToCluster,
   onAddAccordion,
   onConnectorDotStart,
+  onPromptDrop,
+  onNavigateSlotHistory,
+  onEmptySlotDblClick,
   isPivoting,
   pivotDisabled: _pivotDisabled,
   pivotError,
@@ -62,11 +72,14 @@ export default function Fragment({
   onDoubleClick,
   onResizeStart,
   dotDragging,
+  isRunningPrompt,
+  isHighlighted,
   style,
 }: FragmentProps) {
   const { id, layout, width } = fragment;
   const bgVar = `var(--color-fragment-${fragment.type}-bg)`;
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -78,7 +91,37 @@ export default function Fragment({
   }, [isEditing]);
 
   const selectedClass = isSelected ? ' fragment-wrapper--selected' : '';
+  const highlightClass = isHighlighted ? ' fragment-wrapper--timeline-highlight' : '';
   const widthStyle = width ? { ...style, width } : style;
+
+  const contextValue = {
+    fragmentId: id,
+    navigateSlotHistory: (slotType: SlotType, direction: 'back' | 'forward') => {
+      onNavigateSlotHistory?.(id, slotType, direction);
+    },
+    openCommandMenu: (slotType: SlotType, x: number, y: number) => {
+      onEmptySlotDblClick?.(id, slotType, x, y);
+    },
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes('text/prompt-id') || e.dataTransfer.types.includes('promptid')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = () => setIsDragOver(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const promptId = e.dataTransfer.getData('text/prompt-id') || e.dataTransfer.getData('promptId');
+    if (promptId && onPromptDrop && !isRunningPrompt) {
+      onPromptDrop(id, promptId);
+    }
+  };
 
   // Compact LOD — colored bar
   if (lod === 'compact') {
@@ -153,7 +196,7 @@ export default function Fragment({
     );
   }
 
-  // Full LOD — new two-section card
+  // Full LOD — Session 18 two-section card
   const layoutClass = layout === 'quote-centered' ? 'quote' : layout === 'image-hero' ? 'image-hero' : '';
 
   const handleAddAccordion = onAddAccordion
@@ -161,58 +204,62 @@ export default function Fragment({
     : () => Promise.resolve();
 
   return (
-    <div
-      data-fragment-id={id}
-      className={`fragment-wrapper${layoutClass ? ` fragment-wrapper--${layoutClass}` : ''}${selectedClass}`}
-      style={widthStyle}
-      onMouseDown={onMouseDown}
-    >
-      <FragmentCard
-        fragment={fragment}
-        clusters={clusters}
-        onDuplicate={() => onDuplicate?.(id)}
-        onMoveToCluster={clusterId => onMoveToCluster?.(id, clusterId)}
-        onPin={() => onPin?.(id)}
-        onDelete={() => onDelete(id)}
-      />
-
-      <FragmentAccordions
-        fragment={fragment}
-        onAddAccordion={handleAddAccordion}
-      />
-
-      {onConnectorDotStart && (
-        <ConnectorDot
-          onDragStart={e => onConnectorDotStart(id, e)}
-          dragging={dotDragging}
+    <FragmentActionsContext.Provider value={contextValue}>
+      <div
+        data-fragment-id={id}
+        className={`fragment-wrapper${layoutClass ? ` fragment-wrapper--${layoutClass}` : ''}${selectedClass}${highlightClass}${isDragOver ? ' fragment-wrapper--drag-over' : ''}`}
+        style={widthStyle}
+        onMouseDown={onMouseDown}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <FragmentCard
+          fragment={fragment}
+          clusters={clusters}
+          onDuplicate={() => onDuplicate?.(id)}
+          onMoveToCluster={clusterId => onMoveToCluster?.(id, clusterId)}
+          onPin={() => onPin?.(id)}
+          onDelete={() => onDelete(id)}
         />
-      )}
 
-      {isPivoting && (
-        <div className="fragment__pivot-overlay">
-          <Spinner variant="strip" width={120} />
-        </div>
-      )}
-      {pivotError && !isPivoting && (
-        <div className="fragment__pivot-error">{pivotError}</div>
-      )}
+        <FragmentAccordions
+          fragment={fragment}
+          onAddAccordion={handleAddAccordion}
+        />
 
-      {/* Pivot action — still accessible via onPivot from context */}
-      {onPivot && (
-        <div style={{ display: 'none' }} data-pivot-id={id} onClick={() => onPivot(id)} />
-      )}
+        {onConnectorDotStart && (
+          <ConnectorDot
+            onDragStart={e => onConnectorDotStart(id, e)}
+            dragging={dotDragging}
+          />
+        )}
 
-      {isSelected && onResizeStart && (
-        <div className="resize-handles">
-          {RESIZE_HANDLES.map(handle => (
-            <div
-              key={handle}
-              className={`resize-handle resize-handle--${handle}`}
-              onMouseDown={e => { e.stopPropagation(); onResizeStart(handle, e); }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+        {(isPivoting || isRunningPrompt) && (
+          <div className="fragment__pivot-overlay">
+            <Spinner variant="strip" width={120} />
+          </div>
+        )}
+        {pivotError && !isPivoting && (
+          <div className="fragment__pivot-error">{pivotError}</div>
+        )}
+
+        {onPivot && (
+          <div style={{ display: 'none' }} data-pivot-id={id} onClick={() => onPivot(id)} />
+        )}
+
+        {isSelected && onResizeStart && (
+          <div className="resize-handles">
+            {RESIZE_HANDLES.map(handle => (
+              <div
+                key={handle}
+                className={`resize-handle resize-handle--${handle}`}
+                onMouseDown={e => { e.stopPropagation(); onResizeStart(handle, e); }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </FragmentActionsContext.Provider>
   );
 }

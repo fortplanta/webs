@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { CanvasState, Cluster, Fragment, Connector, ConnectorRenderType, AccordionSlot, FragmentType, LayoutType } from '../api/types';
+import { CanvasState, Cluster, Fragment, Connector, ConnectorRenderType, AccordionSlot, FragmentType, LayoutType, SlotType, SlotVersion } from '../api/types';
 import { zoom as zoomTokens } from '../tokens/tokens';
 import { saveCanvasState } from '../storage/storage';
 import { INITIAL_STATE } from '../api/mock';
@@ -280,6 +280,86 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     }));
   }, []);
 
+  // Session 17: update a fragment slot with full history tracking
+  const updateFragmentSlot = useCallback((
+    fragmentId: string,
+    slotType: SlotType,
+    content: string | undefined,
+    items: string[] | undefined,
+    promptId?: string,
+  ) => {
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f => {
+        if (f.id !== fragmentId) return f;
+        const MAX_HISTORY = 10;
+        const existingSlot = f.slots.find(s => s.type === slotType);
+        const version: SlotVersion = {
+          content: existingSlot?.content,
+          items: existingSlot?.items,
+          promptId: existingSlot?.history?.[existingSlot.historyIndex ?? (existingSlot.history?.length ?? 1) - 1]?.promptId,
+          producedAt: Date.now(),
+        };
+        const prevHistory = existingSlot?.history ?? [];
+        const newHistory = [...prevHistory.slice(-(MAX_HISTORY - 1)), version];
+
+        let newSlots = f.slots.filter(s => s.type !== slotType);
+        newSlots = [...newSlots, {
+          type: slotType,
+          content,
+          items,
+          history: newHistory,
+          historyIndex: newHistory.length,
+        }];
+
+        const newEmptySlots = (f.emptySlots ?? []).filter(t => t !== slotType);
+
+        return { ...f, slots: newSlots, emptySlots: newEmptySlots };
+      }),
+    }));
+  // promptId recorded in history version above
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Session 17: navigate slot history
+  const navigateSlotHistory = useCallback((
+    fragmentId: string,
+    slotType: SlotType,
+    direction: 'back' | 'forward',
+  ) => {
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f => {
+        if (f.id !== fragmentId) return f;
+        const slot = f.slots.find(s => s.type === slotType);
+        if (!slot || !slot.history || slot.history.length === 0) return f;
+
+        const currentIndex = slot.historyIndex ?? slot.history.length;
+        const maxIndex = slot.history.length;
+        const newIndex = direction === 'back'
+          ? Math.max(0, currentIndex - 1)
+          : Math.min(maxIndex, currentIndex + 1);
+
+        if (newIndex === currentIndex) return f;
+
+        const version = newIndex < slot.history.length
+          ? slot.history[newIndex]
+          : { content: slot.content, items: slot.items };
+
+        const newSlots = f.slots.map(s =>
+          s.type !== slotType ? s : {
+            ...s,
+            content: version.content,
+            items: version.items,
+            historyIndex: newIndex,
+          }
+        );
+
+        return { ...f, slots: newSlots };
+      }),
+    }));
+  }, []);
+
   const addEmptyFragment = useCallback((type: FragmentType, x: number, y: number, clusterId: string): string => {
     const LAYOUT_FOR_TYPE: Record<FragmentType, LayoutType> = {
       person: 'image-hero', concept: 'vertical-flow', thesis: 'vertical-flow',
@@ -338,6 +418,8 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     addEmptyFragment,
     addConnector,
     addAccordionSlot,
+    updateFragmentSlot,
+    navigateSlotHistory,
     toggleStarFragment,
     removeFragment,
     duplicateFragment,
