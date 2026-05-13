@@ -27,6 +27,7 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | 14 | May 2026 | Connector overhaul | Visual validation of tether / standard / strong at real zoom levels |
 | 16 | May 2026 | Prompt sidebar + slot history | PromptSidebar (⌘P / toggle button); 6 draggable prompt cards; runPromptOnSlot API; slot history (back/forward nav); empty slot placeholders; command menu on double-tap; FragmentActionsContext; mock fallback for all prompts |
 | 17 | May 2026 | Nav rail + startup flow + timeline | NavRail (48px icon strip); NavPanel (280px collapsible); ExplorationPanel, PromptsPanel, LibraryPanel; ExplorationModal (⌘N / + button); TimelineBanner (chronological fragments with historicalEra); Canvas always mounted; SearchInput removed; PromptSidebar removed |
+| 18 | May 2026 | Connector visual overhaul | Default renderType changed straight→bezier; standard opacity raised (intra 0.55, inter 0.38) + strokeWidth 2; strong glow boosted (outer 0.20, mid 0.35, inner 0.60) + wider strokes; invisible hit-targets for reliable right-click; label pill white shadow |
 
 ---
 
@@ -56,7 +57,7 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | Connector system (SVG layer) | DONE | ConnectorLayer.tsx + Connector.tsx; tether/weak/standard/strong types; overflow:visible SVG at canvas origin; SVG width:1 height:1 (width:0 collapsed coordinate system — was root cause of connectors never rendering until Session 12) | Session 04 |
 | Connector bezier curves | DONE | bezier.ts: getBezierPath() + getBezierMidpoint(); all 4 connector types use cubic bezier paths (no straight lines); horizontal-bias control points | Session 10 |
 | Connector tether proximity | DONE | Continuous lerp: opacity 0.55→0.12, strokeWidth 1.5→1, dasharray 0→4 8 over 200–600px distance; opacity raised from 0.25 (was invisible on light canvas) | Session 11 |
-| Connector strong visual | DONE | 4 stacked CSS-classed paths: outer-glow (20px blur 8px), mid-glow (10px blur 4px), inner-glow (4px blur 1px), core (2.5px); pulse animation 2.5s; pinch dot at bezier midpoint; glow opacity raised 3× | Session 11 |
+| Connector strong visual | DONE | 4 stacked CSS-classed paths: outer-glow (28px blur 10px op:0.20), mid-glow (14px blur 5px op:0.35), inner-glow (6px blur 1.5px op:0.60), core (3px op:1); pulse 2.5s; all strokeLinecap round; invisible 16px hit-target | Session 18 |
 | Connector labels (editable) | DONE | ConnectorLabel.tsx — pill on standard/strong; double-click to edit; Enter/Escape confirm/cancel; positioned at bezier midpoint; independently draggable via window mousemove/mouseup + zoom-corrected delta + labelOffsetX/Y on Connector type | Session 11 |
 | Connector context menu | DONE | Right-click on line or label: Make strong / Make standard / Delete per type; dismissed on window click | Session 04 |
 | Connector creation (drag) | DONE | Drag fragment onto another fragment → standard connector created; position reverted | Session 04 |
@@ -90,7 +91,7 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | Connector SVG visibility (re-confirmed) | DONE | Plan file confirmed fix: width:0→1, zIndex:2→0 applied to ConnectorLayer.tsx; 3 bezier tether paths confirmed rendering via DOM inspection; previously marked DONE in Session 12 tracker but fix not yet applied to working tree | Session 13 |
 | Dev-mode hook warnings | NOTES | 8x "Invalid hook call" console errors are a pre-existing Vite 8 + React 19 + @vitejs/plugin-react 6 dev-mode artifact; confirmed present on HEAD with zero nd/ changes; production build is clean (zero errors); not caused by nd/ integration; no fix found — accepted as non-blocking dev noise | Session 13 |
 | Tether system removal | DONE | ConnectorType narrowed to standard\|strong; tether generation removed from generate.ts, addFragment, addPivotCluster, mock.ts; legacy tethers filtered from localStorage on load | Session 15 |
-| Standard connector scope opacity | DONE | intra-cluster: 0.40 opacity, inter-cluster: 0.20 opacity; scope computed in ConnectorLayer from fragment.clusterId | Session 15 |
+| Standard connector scope opacity | DONE | intra-cluster: 0.55 opacity, inter-cluster: 0.38 opacity; raised from 0.40/0.20 (inter was sub-pixel invisible at zoom 0.3); strokeWidth 2 + strokeLinecap round | Session 18 |
 | Prompt sidebar | DONE | PromptSidebar.tsx: 280px right panel; toggle button in canvas top-right; ⌘P shortcut; shows when canvas non-empty | Session 16 |
 | Prompt cards (draggable) | DONE | PromptCard.tsx: 6 cards (explain simply / visual learning / fact check / find similarities / steelman / challenge); HTML5 drag API with promptid dataTransfer key | Session 16 |
 | Prompt drop on fragment | DONE | Fragment.tsx adds dragOver/drop handlers; fragment--drag-over outline class; Canvas.tsx handles runPromptOnSlot; per-fragment promptingFragmentIds set; loading overlay while running | Session 16 |
