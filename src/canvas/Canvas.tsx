@@ -10,10 +10,12 @@ import { generatePivot, runPromptOnSlot } from '../api/generate';
 import { PROMPTS, PromptDefinition } from '../prompts/prompts';
 import CommandMenu, { CommandMenuTarget } from '../ui/CommandMenu';
 import TimelineBanner from '../ui/TimelineBanner';
+import GanttView from '../ui/GanttView';
 import CanvasBackground from './CanvasBackground';
 import Cluster from '../clusters/Cluster';
 import ConnectorLayer from '../edges/ConnectorLayer';
 import FragmentComponent from '../fragments/Fragment';
+import SeedFragment from '../fragments/SeedFragment';
 import CanvasCommandMenu from '../ui/CanvasCommandMenu';
 import StatusBar from '../ui/StatusBar';
 import Toolbar from '../ui/Toolbar';
@@ -43,6 +45,9 @@ interface CanvasProps {
   onFragmentCopy: (f: Fragment) => void;
   onFragmentPaste: () => void;
   onNewExploration?: () => void;
+  ganttOpen?: boolean;
+  onGanttOpen?: () => void;
+  onGanttClose?: () => void;
 }
 
 export default function Canvas({
@@ -52,6 +57,9 @@ export default function Canvas({
   onFragmentCopy,
   onFragmentPaste,
   onNewExploration,
+  ganttOpen = false,
+  onGanttOpen,
+  onGanttClose,
 }: CanvasProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef(initialState.viewport.zoom || 0.7);
@@ -541,7 +549,13 @@ export default function Canvas({
           preview={dotDragPreview}
         />
 
-        {state.fragments.map(f => (
+        {state.fragments
+          // Skip the seed fragment — rendered via SeedFragment below
+          .filter(f => {
+            const cluster = state.clusters.find(c => c.id === f.clusterId);
+            return !cluster?.isSeed;
+          })
+          .map(f => (
           <FragmentComponent
             key={f.id}
             fragment={f}
@@ -582,15 +596,36 @@ export default function Canvas({
           />
         ))}
 
-        {state.clusters.map(cluster => (
-          <Cluster
-            key={cluster.id}
-            cluster={cluster}
-            onDragStart={(id, mx, my, ox, oy) =>
-              startDrag(id, 'cluster', mx, my, ox, oy)
-            }
-          />
-        ))}
+        {state.clusters.map(cluster => {
+          if (cluster.isSeed) {
+            // Find the seed fragment for context text
+            const seedFrag = state.fragments.find(f => f.clusterId === cluster.id);
+            const context = seedFrag?.slots.find(s => s.type === 'body')?.content ?? '';
+            return (
+              <SeedFragment
+                key={cluster.id}
+                query={state.query || cluster.label}
+                context={context}
+                x={cluster.x}
+                y={cluster.y}
+                onMouseDown={e => {
+                  e.stopPropagation();
+                  startDrag(cluster.id, 'cluster', e.clientX, e.clientY, cluster.x, cluster.y);
+                }}
+              />
+            );
+          }
+          return (
+            <Cluster
+              key={cluster.id}
+              cluster={cluster}
+              lod={lod}
+              onDragStart={(id, mx, my, ox, oy) =>
+                startDrag(id, 'cluster', mx, my, ox, oy)
+              }
+            />
+          );
+        })}
 
         {/* Canvas drop menu — inside transform so it pans with canvas */}
         {canvasDropMenu && (
@@ -672,7 +707,15 @@ export default function Canvas({
         </div>
       )}
 
-      <TimelineBanner fragments={state.fragments} onNavigateTo={handleNavigateToFragment} />
+      {ganttOpen && (
+        <GanttView
+          fragments={state.fragments}
+          onClose={onGanttClose ?? (() => {})}
+          onNavigateTo={handleNavigateToFragment}
+        />
+      )}
+
+      <TimelineBanner fragments={state.fragments} onOpenGantt={onGanttOpen ?? (() => {})} />
 
       <Toolbar activeTool={activeTool} onSelect={switchTo} onNewExploration={onNewExploration} />
 

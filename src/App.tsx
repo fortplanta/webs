@@ -22,7 +22,7 @@ import { loadCanvasState, saveCanvasState, updateProjectMeta, loadProjectsIndex 
 import LoadingCanvas from './ui/LoadingCanvas';
 import NavRail, { NavPanel as NavPanelType } from './ui/NavRail';
 import NavPanel from './ui/NavPanel';
-import ExplorationModal from './ui/ExplorationModal';
+import StartingCard from './ui/StartingCard';
 import LibraryView from './ui/LibraryView';
 
 export default function App() {
@@ -39,7 +39,8 @@ export default function App() {
   const [scratchpad, setScratchpad] = useState(() => (loadCanvasState(activeTabId) ?? EMPTY_CANVAS_STATE).scratchpad ?? '');
   const [generationCount, setGenerationCount] = useState(0);
   const [activePanel, setActivePanel] = useState<NavPanelType | null>('exploration');
-  const [explorationModalOpen, setExplorationModalOpen] = useState(false);
+  const [startingCardOpen, setStartingCardOpen] = useState(false);
+  const [ganttOpen, setGanttOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [projectsMeta, setProjectsMeta] = useState<ProjectMeta[]>(() => loadProjectsIndex());
 
@@ -50,6 +51,7 @@ export default function App() {
     setScratchpad(saved.scratchpad ?? '');
     setIsGenerating(false);
     setGenerateError(null);
+    setGanttOpen(false);
   }, [activeTabId]);
 
   const handleScratchpadChange = useCallback((text: string) => {
@@ -75,27 +77,30 @@ export default function App() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
         e.preventDefault();
-        setExplorationModalOpen(true);
+        setStartingCardOpen(true);
       }
       if (e.key === 'Escape') {
-        if (explorationModalOpen) { setExplorationModalOpen(false); return; }
+        if (startingCardOpen) { setStartingCardOpen(false); return; }
+        if (ganttOpen) { setGanttOpen(false); return; }
         if (libraryOpen) setLibraryOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [libraryOpen, explorationModalOpen]);
+  }, [libraryOpen, startingCardOpen, ganttOpen]);
 
   const handleQuery = async (query: string) => {
     setCurrentQuery(query);
     setIsGenerating(true);
     setGenerateError(null);
+    setGanttOpen(false);
     // Use the current tab if it's empty; otherwise create a new one.
     const isEmpty = tabState.clusters.length === 0 && tabState.fragments.length === 0;
     const targetTabId = isEmpty ? activeTabId : addTabGetId();
     try {
       const state = await generateCanvas(query);
-      const name = query.slice(0, 40);
+      // Tab name: query truncated to 32 chars
+      const name = query.slice(0, 32) + (query.length > 32 ? '…' : '');
       saveCanvasState(targetTabId, state);
       renameTab(targetTabId, name);
       updateProjectMeta({
@@ -132,11 +137,17 @@ export default function App() {
     setLibraryOpen(false);
   };
 
+  // When + is clicked: create new tab and immediately open StartingCard
+  const handleAddTab = () => {
+    addTab();
+    setStartingCardOpen(true);
+  };
+
   const activeTabName = tabs.find(t => t.id === activeTabId)?.name ?? '';
   const activeMeta = projectsMeta.find(p => p.id === activeTabId);
 
   const handleNewExploration = () => {
-    setExplorationModalOpen(true);
+    setStartingCardOpen(true);
   };
 
   return (
@@ -147,11 +158,16 @@ export default function App() {
         canAdd={canAddTab}
         onSwitch={switchTab}
         onClose={handleClose}
-        onAdd={addTab}
+        onAdd={handleAddTab}
         onRename={renameTab}
       />
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <NavRail activePanel={activePanel} onToggle={togglePanel} />
+        <NavRail
+          activePanel={activePanel}
+          onToggle={togglePanel}
+          ganttOpen={ganttOpen}
+          onGanttToggle={() => setGanttOpen(v => !v)}
+        />
         <NavPanel
           activePanel={activePanel}
           explorationName={activeTabName}
@@ -178,6 +194,9 @@ export default function App() {
             onFragmentCopy={setCopiedFragment}
             onFragmentPaste={() => setCopiedFragment(null)}
             onNewExploration={handleNewExploration}
+            ganttOpen={ganttOpen}
+            onGanttOpen={() => setGanttOpen(true)}
+            onGanttClose={() => setGanttOpen(false)}
           />
           {isGenerating && (
             <div style={{ position: 'absolute', inset: 0, zIndex: 300 }}>
@@ -208,10 +227,10 @@ export default function App() {
           )}
         </div>
       </div>
-      {explorationModalOpen && (
-        <ExplorationModal
+      {startingCardOpen && (
+        <StartingCard
           onSubmit={handleQuery}
-          onClose={() => setExplorationModalOpen(false)}
+          onClose={() => setStartingCardOpen(false)}
         />
       )}
     </div>

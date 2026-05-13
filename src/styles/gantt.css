@@ -1,0 +1,216 @@
+/* gantt.css — full-screen Gantt timeline view */
+
+.gantt-view {
+  position: absolute;
+  inset: 0;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+  overflow: hidden;
+  user-select: none;
+}
+
+.gantt-back-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-normal);
+  color: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  z-index: 10;
+}
+
+.gantt-back-btn:hover {
+  color: #000;
+}
+
+/* ─── Header ──────────────────────────────────────────────── */
+
+.gantt-header {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 100px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.gantt-header__title {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Main area ────────────────────────────────────────────── */
+
+.gantt-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── Axis ────────────────────────────────────────────────── */
+
+.gantt-axis {
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  padding-left: 100px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.gantt-axis:active {
+  cursor: grabbing;
+}
+
+.gantt-tick {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+}
+
+.gantt-tick__line {
+  width: 1px;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.gantt-tick__label {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-normal);
+  color: rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  margin-bottom: 8px;
+}
+
+/* ─── Rows ────────────────────────────────────────────────── */
+
+.gantt-rows {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  cursor: grab;
+}
+
+.gantt-rows:active {
+  cursor: grabbing;
+}
+
+.gantt-row {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  position: relative;
+}
+
+.gantt-row__label {
+  width: 100px;
+  flex-shrink: 0;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.35);
+  padding: 0 16px;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.gantt-row__track {
+  flex: 1;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ─── Items ────────────────────────────────────────────────── */
+
+.gantt-item {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font-primary);
+  font-size: 11px;
+  letter-spacing: var(--tracking-normal);
+  color: rgba(0, 0, 0, 0.7);
+  min-width: 8px;
+  transition: opacity 0.15s;
+}
+
+.gantt-item--point {
+  min-width: 8px;
+}
+
+.gantt-item--range {
+  min-width: 24px;
+}
+
+.gantt-item:hover {
+  opacity: 0.8;
+}
+
+.gantt-item__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* ─── Tooltip ──────────────────────────────────────────────── */
+
+.gantt-item__tooltip {
+  position: fixed;
+  background: #000;
+  color: #fff;
+  font-family: var(--font-primary);
+  font-size: 11px;
+  padding: 6px 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
+  transform: translateY(-100%);
+  margin-top: -6px;
+}
+
+/* ─── Empty state ──────────────────────────────────────────── */
+
+.gantt-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+}
+
+.gantt-empty__text {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  letter-spacing: var(--tracking-normal);
+  color: rgba(0, 0, 0, 0.3);
+}

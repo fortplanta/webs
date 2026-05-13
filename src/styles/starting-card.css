@@ -1,0 +1,116 @@
+/* starting-card.css — Claude-style exploration input card */
+
+.starting-card__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+}
+
+.starting-card {
+  background: #fff;
+  width: 600px;
+  padding: 32px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.starting-card__label {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.starting-card__textarea {
+  width: 100%;
+  min-height: 120px;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--font-primary);
+  font-size: 20px;
+  letter-spacing: -0.035em;
+  line-height: 1.4;
+  color: #000;
+  background: transparent;
+  font-weight: var(--font-weight-regular);
+}
+
+.starting-card__textarea::placeholder {
+  color: rgba(0, 0, 0, 0.2);
+}
+
+.starting-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.starting-card__icon-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.starting-card__icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: transparent;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.starting-card__icon-btn:hover {
+  background: rgba(0, 0, 0, 0.03);
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.starting-card__icon-btn[data-stub]:hover::after {
+  content: "coming soon";
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000;
+  color: #fff;
+  font-family: var(--font-primary);
+  font-size: 10px;
+  padding: 4px 8px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.starting-card__submit {
+  background: #000;
+  color: #fff;
+  font-family: var(--font-primary);
+  font-size: 14px;
+  letter-spacing: -0.028em;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: var(--font-weight-regular);
+}
+
+.starting-card__submit:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.starting-card__submit:not(:disabled):hover {
+  background: rgba(0, 0, 0, 0.8);
+}

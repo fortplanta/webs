@@ -2,29 +2,24 @@ import '../styles/timeline.css';
 import { Fragment, FragmentType } from '../api/types';
 
 const TYPE_COLORS: Record<FragmentType, string> = {
-  person:    '#00E87B',
-  concept:   '#FF6D00',
-  thesis:    '#FF3B30',
-  source:    '#00D4FF',
-  event:     '#FF9F0A',
-  era:       '#BF5AF2',
-  domain:    '#1a1a1a',
-  quote:     '#2563EB',
-  spark:     '#FF9F0A',
+  person:      '#00E87B',
+  concept:     '#FF6D00',
+  thesis:      '#FF3B30',
+  source:      '#00D4FF',
+  event:       '#FF9F0A',
+  era:         '#BF5AF2',
+  domain:      '#1a1a1a',
+  quote:       '#2563EB',
+  spark:       '#FF9F0A',
   'text-note': '#1a1a1a',
 };
 
-// Parse era string to a sortable integer year.
-// Handles: "1066", "1789–1799", "300 BCE", "1960s", "c. 450"
 function parseEraYear(era: string): number {
   const s = era.trim().toLowerCase();
-  // BCE / BC — take the first number and negate
   const bce = s.match(/(\d+)\s*b\.?c\.?e?\.?/);
   if (bce) return -parseInt(bce[1], 10);
-  // Decade: "1960s" → 1960
   const decade = s.match(/(\d{4})s/);
   if (decade) return parseInt(decade[1], 10);
-  // Range: take the start year
   const range = s.match(/(\d{3,4})/);
   if (range) return parseInt(range[1], 10);
   return 0;
@@ -40,10 +35,10 @@ interface TimelineEvent {
 
 interface Props {
   fragments: Fragment[];
-  onNavigateTo: (fragmentId: string) => void;
+  onOpenGantt: () => void;
 }
 
-export default function TimelineBanner({ fragments, onNavigateTo }: Props) {
+export default function TimelineBanner({ fragments, onOpenGantt }: Props) {
   const events: TimelineEvent[] = fragments
     .filter(f => f.historicalEra)
     .map(f => ({
@@ -58,13 +53,9 @@ export default function TimelineBanner({ fragments, onNavigateTo }: Props) {
   if (events.length === 0) return null;
 
   return (
-    <div className="timeline-banner">
+    <div className="timeline-banner" onClick={onOpenGantt} style={{ cursor: 'pointer' }}>
       {events.map(ev => (
-        <div
-          key={ev.fragmentId}
-          className="timeline-event"
-          onClick={() => onNavigateTo(ev.fragmentId)}
-        >
+        <div key={ev.fragmentId} className="timeline-event">
           <span
             className="timeline-event__dot"
             style={{ background: TYPE_COLORS[ev.type] ?? '#000' }}

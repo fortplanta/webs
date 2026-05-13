@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Fragment, AccordionSlot as AccordionSlotType } from '../api/types';
-import AccordionSlotComponent from './AccordionSlot';
+import { getPromptById } from '../prompts/prompts';
+import AccordionModal from '../ui/AccordionModal';
 
 const MAX_VISIBLE = 3;
 
@@ -11,7 +12,7 @@ interface Props {
 
 export default function FragmentAccordions({ fragment, onAddAccordion }: Props) {
   const accordions = fragment.accordions ?? [];
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [modalSlot, setModalSlot] = useState<AccordionSlotType | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -19,8 +20,7 @@ export default function FragmentAccordions({ fragment, onAddAccordion }: Props) 
   const older = accordions.slice(MAX_VISIBLE);
 
   const handleDragOver = (e: React.DragEvent) => {
-    const promptId = e.dataTransfer.types.includes('text/prompt-id');
-    if (!promptId) return;
+    if (!e.dataTransfer.types.includes('text/prompt-id')) return;
     e.preventDefault();
     setDragOver(true);
   };
@@ -42,16 +42,17 @@ export default function FragmentAccordions({ fragment, onAddAccordion }: Props) 
 
   return (
     <div className="fragment-accordions" onMouseDown={e => e.stopPropagation()}>
-      {visible.map((slot, i) => (
-        <AccordionSlotComponent
+      {visible.map(slot => (
+        <AccordionHeader
           key={slot.id}
           slot={slot}
-          defaultOpen={i === 0}
+          onOpen={() => setModalSlot(slot)}
+          isOpen={modalSlot?.id === slot.id}
         />
       ))}
 
       {older.length > 0 && (
-        <HistorySlot slots={older} open={historyOpen} onToggle={() => setHistoryOpen(v => !v)} />
+        <HistorySlot slots={older} onOpen={setModalSlot} />
       )}
 
       <div
@@ -68,17 +69,48 @@ export default function FragmentAccordions({ fragment, onAddAccordion }: Props) 
           '+ drop a prompt here'
         )}
       </div>
+
+      {modalSlot && (
+        <AccordionModal slot={modalSlot} onClose={() => setModalSlot(null)} />
+      )}
     </div>
   );
 }
 
-function HistorySlot({ slots, open, onToggle }: { slots: AccordionSlotType[]; open: boolean; onToggle: () => void }) {
+function AccordionHeader({ slot, onOpen, isOpen }: {
+  slot: AccordionSlotType;
+  onOpen: () => void;
+  isOpen: boolean;
+}) {
+  const prompt = getPromptById(slot.promptId);
+  return (
+    <div className={`accordion-slot${isOpen ? ' accordion-slot--open' : ''}`}>
+      <button
+        className="accordion-slot__header"
+        onMouseDown={e => e.stopPropagation()}
+        onClick={e => { e.stopPropagation(); onOpen(); }}
+      >
+        <span className="accordion-slot__icon">
+          {prompt?.icon ?? <DefaultIcon />}
+        </span>
+        <span className="accordion-slot__label">{slot.promptLabel}</span>
+        <span className="accordion-slot__chevron">▾</span>
+      </button>
+    </div>
+  );
+}
+
+function HistorySlot({ slots, onOpen }: {
+  slots: AccordionSlotType[];
+  onOpen: (slot: AccordionSlotType) => void;
+}) {
+  const [open, setOpen] = useState(false);
   return (
     <div className={`accordion-slot accordion-slot--history${open ? ' accordion-slot--open' : ''}`}>
       <button
         className="accordion-slot__header"
         onMouseDown={e => e.stopPropagation()}
-        onClick={e => { e.stopPropagation(); onToggle(); }}
+        onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
       >
         <span className="accordion-slot__icon">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" width={16} height={16}>
@@ -92,7 +124,12 @@ function HistorySlot({ slots, open, onToggle }: { slots: AccordionSlotType[]; op
       {open && (
         <div className="accordion-slot__history-list">
           {slots.map(slot => (
-            <div key={slot.id} className="accordion-slot__history-item">
+            <div
+              key={slot.id}
+              className="accordion-slot__history-item"
+              onClick={e => { e.stopPropagation(); onOpen(slot); }}
+              style={{ cursor: 'pointer' }}
+            >
               <span className="accordion-slot__history-label">{slot.promptLabel}</span>
               <span className="accordion-slot__history-time">{relTime(slot.createdAt)}</span>
             </div>
@@ -100,6 +137,14 @@ function HistorySlot({ slots, open, onToggle }: { slots: AccordionSlotType[]; op
         </div>
       )}
     </div>
+  );
+}
+
+function DefaultIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" width={16} height={16}>
+      <circle cx={8} cy={8} r={5} />
+    </svg>
   );
 }
 
