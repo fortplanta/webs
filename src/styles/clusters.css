@@ -37,8 +37,8 @@
 
 .cluster-spawn__label {
   display: inline-block;
-  background: rgba(10, 10, 10, 0.85);
-  color: rgba(255, 255, 255, 0.9);
+  background: rgb(10, 10, 10);
+  color: #ffffff;
   font-family: var(--font-primary);
   font-size: 16px;
   letter-spacing: -0.035em;
