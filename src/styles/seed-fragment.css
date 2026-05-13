@@ -1,0 +1,45 @@
+/* seed-fragment.css — hero card for the seed/starting exploration */
+
+.seed-fragment {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  background: #D2F34C;
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  cursor: grab;
+  user-select: none;
+  z-index: 1;
+}
+
+.seed-fragment:active {
+  cursor: grabbing;
+}
+
+.seed-fragment__eyebrow {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.seed-fragment__query {
+  font-family: var(--font-primary);
+  font-size: 32px;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  color: #000;
+  font-weight: 400;
+}
+
+.seed-fragment__context {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--line-height-relaxed);
+  color: rgba(0, 0, 0, 0.55);
+  margin-top: 8px;
+}

@@ -27,67 +27,58 @@
   cursor: grab;
   z-index: 1;
   display: flex;
-  align-items: center;
-  gap: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .cluster-spawn:active {
   cursor: grabbing;
 }
 
-.cluster-spawn__label {
-  display: inline-block;
-  background: rgb(10, 10, 10);
-  color: #ffffff;
+/* Small circle marker */
+.cluster-spawn__marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1.5px solid rgba(0, 0, 0, 0.2);
+  transition: background 0.15s;
+}
+
+.cluster-spawn:hover .cluster-spawn__marker {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Hover-only label */
+.cluster-spawn__name {
   font-family: var(--font-primary);
-  font-size: 16px;
-  letter-spacing: -0.035em;
-  font-weight: var(--font-weight-regular);
-  padding: 10px 20px;
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.35);
   white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+  position: absolute;
+  top: -20px;
+  left: 0;
   user-select: none;
 }
 
-.cluster-spawn--seed .cluster-spawn__label {
-  background: var(--color-seed-bg);
-  color: var(--color-seed-text);
+.cluster-spawn:hover .cluster-spawn__name {
+  opacity: 1;
+}
+
+/* At compact/macro LOD — label always visible at reduced opacity */
+.cluster-spawn__name[data-always-visible] {
+  opacity: 0.5;
 }
 
 .cluster-spawn--dimmed {
   opacity: 0.3;
   transition: opacity 150ms ease;
-}
-
-/* ─── Collapse toggle ─────────────────────────────────────── */
-
-.cluster-spawn__collapse {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 100%;
-  background: rgba(10, 10, 10, 0.7);
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 10px;
-  font-family: var(--font-primary);
-  flex-shrink: 0;
-}
-
-.cluster-spawn__collapse:hover {
-  background: rgba(10, 10, 10, 0.9);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.cluster-spawn--seed .cluster-spawn__collapse {
-  background: rgba(0, 0, 0, 0.12);
-  color: rgba(0, 0, 0, 0.5);
-}
-
-.cluster-spawn--seed .cluster-spawn__collapse:hover {
-  background: rgba(0, 0, 0, 0.2);
 }
 
 /* ─── Collapsed pill ──────────────────────────────────────── */

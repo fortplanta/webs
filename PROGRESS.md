@@ -28,6 +28,7 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | 16 | May 2026 | Prompt sidebar + slot history | PromptSidebar (⌘P / toggle button); 6 draggable prompt cards; runPromptOnSlot API; slot history (back/forward nav); empty slot placeholders; command menu on double-tap; FragmentActionsContext; mock fallback for all prompts |
 | 17 | May 2026 | Nav rail + startup flow + timeline | NavRail (48px icon strip); NavPanel (280px collapsible); ExplorationPanel, PromptsPanel, LibraryPanel; ExplorationModal (⌘N / + button); TimelineBanner (chronological fragments with historicalEra); Canvas always mounted; SearchInput removed; PromptSidebar removed |
 | 18 | May 2026 | Connector visual overhaul + fragment redesign | Standard opacity intra 0.55 / inter 0.45; strokeWidth 2 + strokeLinecap round; strong glow boosted; hit-targets; two-section card (FragmentCard + FragmentAccordions); ··· menu; source attribution; connector dot drag; accordion slots; canvas command menu |
+| 19 | May 2026 | Visual overhaul + Gantt timeline | SeedFragment hero card (lime green, 32px query, context paragraph); cluster spawn → circle marker + hover-only label; fragment max-height 480px; accordion modal; skeleton loading + cycling helper text + timer; StartingCard (Claude-style input with voice/file stubs); new tab auto-opens StartingCard; Gantt timeline view (pannable/zoomable time axis, type rows, colored pills/bars); timeline banner click → Gantt; Gantt icon in nav rail; tab name truncated to 32 chars |
 
 ---
 
@@ -121,6 +122,17 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | Canvas always mounted | DONE | App.tsx no longer conditionally renders Canvas vs SearchInput; Canvas always mounted with EMPTY_CANVAS_STATE on blank tab | Session 17 |
 | SearchInput removal | DONE | SearchInput.tsx deleted; replaced by ExplorationModal flow | Session 17 |
 | Toolbar + button | DONE | Toolbar.tsx: + button separated by divider; onNewExploration? prop; opens ExplorationModal via Canvas→App callback | Session 17 |
+| Seed fragment hero card | DONE | SeedFragment.tsx: lime green 480px card, "exploring" eyebrow, 32px query, context paragraph; replaces dark spawn label; rendered in Canvas.tsx for isSeed clusters; seed regular fragment card hidden from canvas | Session 19 |
+| Cluster spawn redesign | DONE | Cluster.tsx: 10px circle marker + hover-only uppercase label (opacity 0 → 1 on hover); at compact/macro LOD label shown at 0.5 opacity; seed cluster renders SeedFragment instead | Session 19 |
+| Fragment max-height | DONE | fragment-card.css: max-height 480px + overflow hidden on .fragment-wrapper | Session 19 |
+| Accordion modal | DONE | AccordionModal.tsx: fixed overlay, 560px card, header (icon + label + close), scrollable content; AccordionSlot headers open modal instead of inline expand; AccordionModal.tsx + accordion-modal.css | Session 19 |
+| Skeleton loading | DONE | SkeletonFragment.tsx: shimmer header + 5 body lines at 5 approximate cluster positions; skeleton.css with @keyframes skeleton-shimmer | Session 19 |
+| Loading helper text + timer | DONE | LoadingCanvas.tsx: cycling LOADING_MESSAGES every 2.5s, elapsed seconds counter, spinner strip; replaces old loading strip | Session 19 |
+| StartingCard | DONE | StartingCard.tsx: Claude-style overlay card; "what do you want to explore?" label; 120px min-height textarea; voice + file stub icon buttons with "coming soon" tooltip; disabled submit until content; Enter to submit, Escape to close; replaces ExplorationModal | Session 19 |
+| New tab auto-opens StartingCard | DONE | App.tsx handleAddTab: addTab() then setStartingCardOpen(true); wired to TabStrip onAdd | Session 19 |
+| Gantt timeline view | DONE | GanttView.tsx: full-screen overlay; separate pan/zoom state (scale + offsetX); wheel zoom toward cursor; drag to pan; auto-scaled time axis with tick generation; type rows (ERA→EVENT→PERSON→CONCEPT→THESIS→SOURCE→DOMAIN→QUOTE); colored pills (point) and bars (range); era parsing handles BCE/range/decade/century/approximation; hover tooltip; click item → back to canvas + navigate; gantt.css | Session 19 |
+| Gantt view toggle | DONE | ganttOpen state in App.tsx; passed to Canvas.tsx as prop; TimelineBanner click → onGanttOpen; GanttView back button → onGanttClose; NavRail 4th icon (timeline bars) toggles gantt; Escape closes gantt | Session 19 |
+| Tab name on generation | DONE | App.tsx handleQuery: name = query.slice(0, 32) + ellipsis if longer; renameTab called after generation | Session 19 |
 
 Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKED`
 
