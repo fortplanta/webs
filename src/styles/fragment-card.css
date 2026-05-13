@@ -1,0 +1,297 @@
+/* fragment-card.css — new two-section fragment layout */
+
+/* ─── Wrapper ─────────────────────────────────────────── */
+
+.fragment-wrapper {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  user-select: none;
+}
+
+.fragment-wrapper:active {
+  cursor: grabbing;
+}
+
+.fragment-wrapper--quote {
+  width: 380px;
+}
+
+.fragment-wrapper--image-hero {
+  width: 280px;
+}
+
+.fragment-wrapper--text-note {
+  width: auto;
+  min-width: 120px;
+  max-width: 400px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.fragment-wrapper--selected {
+  outline: 2px solid #0D99FF;
+  outline-offset: 2px;
+}
+
+/* ─── Primary card ────────────────────────────────────── */
+
+.fragment-card {
+  background: #fff;
+  position: relative;
+}
+
+.fragment-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 0;
+}
+
+.fragment-card__chip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  font-family: var(--font-primary);
+  font-size: 10px;
+  font-weight: var(--font-weight-regular);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fragment-card__title-text {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  letter-spacing: var(--tracking-normal);
+  color: #000;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fragment-card__menu-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.3);
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.fragment-card__menu-btn:hover {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.fragment-card__content {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fragment-card__type-label {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.fragment-card__body-title {
+  font-family: var(--font-primary);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: #000;
+  line-height: 1.2;
+}
+
+.fragment-card__body-text {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  letter-spacing: var(--tracking-normal);
+  color: rgba(0, 0, 0, 0.55);
+  line-height: var(--line-height-relaxed);
+}
+
+.fragment-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.fragment-card__tag {
+  display: inline-flex;
+  align-items: center;
+  height: var(--size-tag-height);
+  padding: 0 var(--size-tag-pad-x);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-tag);
+  letter-spacing: var(--tracking-normal);
+  color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* ─── Fragment menu (···) ─────────────────────────────── */
+
+.fragment-menu-anchor {
+  position: relative;
+}
+
+.fragment-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+  min-width: 180px;
+  z-index: 300;
+  padding: 4px;
+}
+
+.fragment-menu__item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  letter-spacing: var(--tracking-normal);
+  color: #000;
+  cursor: pointer;
+  gap: 10px;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.fragment-menu__item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.fragment-menu__item--destructive {
+  color: #FF3B30;
+}
+
+.fragment-menu__item--checked::before {
+  content: '✓';
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+.fragment-menu__divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 4px 0;
+}
+
+.fragment-menu__confirm {
+  padding: 8px 12px;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-tag);
+  color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fragment-menu__confirm button {
+  background: #FF3B30;
+  border: none;
+  color: #fff;
+  padding: 3px 8px;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-tag);
+  cursor: pointer;
+}
+
+.fragment-menu__confirm button:last-child {
+  background: none;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* ─── Source attribution ──────────────────────────────── */
+
+.source-attribution {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 100px;
+  cursor: default;
+  margin-top: 4px;
+  position: relative;
+  width: fit-content;
+}
+
+.source-attribution__favicon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.source-attribution__favicon-fallback {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  color: rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.source-attribution__label {
+  font-family: var(--font-primary);
+  font-size: 12px;
+  letter-spacing: var(--tracking-normal);
+  color: rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+.source-attribution__tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: #000;
+  color: #fff;
+  font-family: var(--font-primary);
+  font-size: 11px;
+  padding: 6px 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.source-attribution:hover .source-attribution__tooltip {
+  opacity: 1;
+}

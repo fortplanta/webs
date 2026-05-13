@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { CanvasState, Cluster, Fragment, Connector, ConnectorRenderType } from '../api/types';
+import { v4 as uuidv4 } from 'uuid';
+import { CanvasState, Cluster, Fragment, Connector, ConnectorRenderType, AccordionSlot, FragmentType, LayoutType } from '../api/types';
 import { zoom as zoomTokens } from '../tokens/tokens';
 import { saveCanvasState } from '../storage/storage';
 import { INITIAL_STATE } from '../api/mock';
@@ -229,6 +230,79 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     }));
   }, []);
 
+  const duplicateFragment = useCallback((fragmentId: string) => {
+    const src = stateRef.current.fragments.find(f => f.id === fragmentId);
+    if (!src) return;
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
+    setState(prev => ({
+      ...prev,
+      fragments: [...prev.fragments, { ...src, id: uuidv4(), x: src.x + 24, y: src.y + 24 }],
+    }));
+  }, []);
+
+  const pinFragment = useCallback((fragmentId: string) => {
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f =>
+        f.id === fragmentId ? { ...f, pinned: !f.pinned } : f
+      ),
+    }));
+  }, []);
+
+  const moveFragmentToCluster = useCallback((fragmentId: string, clusterId: string) => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f =>
+        f.id === fragmentId ? { ...f, clusterId } : f
+      ),
+    }));
+  }, []);
+
+  const addConnector = useCallback((sourceId: string, targetId: string) => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
+    const id = `conn-${uuidv4()}`;
+    setState(prev => ({
+      ...prev,
+      connectors: [...prev.connectors, { id, sourceId, targetId, type: 'standard', label: '' }],
+    }));
+    return id;
+  }, []);
+
+  const addAccordionSlot = useCallback((fragmentId: string, slot: AccordionSlot) => {
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f => {
+        if (f.id !== fragmentId) return f;
+        const existing = f.accordions ?? [];
+        return { ...f, accordions: [slot, ...existing] };
+      }),
+    }));
+  }, []);
+
+  const addEmptyFragment = useCallback((type: FragmentType, x: number, y: number, clusterId: string): string => {
+    const LAYOUT_FOR_TYPE: Record<FragmentType, LayoutType> = {
+      person: 'image-hero', concept: 'vertical-flow', thesis: 'vertical-flow',
+      quote: 'quote-centered', source: 'card-split', event: 'timeline',
+      era: 'vertical-flow', domain: 'vertical-flow', spark: 'vertical-flow',
+      'text-note': 'text-note',
+    };
+    const id = uuidv4();
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
+    setState(prev => ({
+      ...prev,
+      fragments: [...prev.fragments, {
+        id, clusterId, x, y, type,
+        layout: LAYOUT_FOR_TYPE[type],
+        title: type,
+        slots: [],
+        createdAtZoom: 0.7,
+        starred: false,
+      }],
+    }));
+    return id;
+  }, []);
+
   const loadState = useCallback((newState: CanvasState) => {
     setState(newState);
   }, []);
@@ -261,8 +335,14 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     addCluster,
     addPivotCluster,
     addFragment,
+    addEmptyFragment,
+    addConnector,
+    addAccordionSlot,
     toggleStarFragment,
     removeFragment,
+    duplicateFragment,
+    pinFragment,
+    moveFragmentToCluster,
     loadState,
     updateViewport,
     pushUndo,

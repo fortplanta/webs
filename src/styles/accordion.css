@@ -1,0 +1,154 @@
+/* accordion.css — accordion slots and prompt drop target */
+
+/* ─── Accordion section wrapper ──────────────────────── */
+
+.fragment-accordions {
+  background: #fff;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Single accordion slot ──────────────────────────── */
+
+.accordion-slot {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.accordion-slot:first-child {
+  border-top: none;
+}
+
+.accordion-slot__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.accordion-slot__header:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.accordion-slot__icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.accordion-slot__label {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  letter-spacing: var(--tracking-normal);
+  color: #000;
+  flex: 1;
+}
+
+.accordion-slot__chevron {
+  color: rgba(0, 0, 0, 0.3);
+  font-size: 11px;
+  transition: transform 0.18s ease;
+  flex-shrink: 0;
+}
+
+.accordion-slot--open .accordion-slot__chevron {
+  transform: rotate(180deg);
+}
+
+.accordion-slot__content {
+  padding: 0 14px 12px;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  letter-spacing: var(--tracking-normal);
+  color: rgba(0, 0, 0, 0.7);
+  line-height: var(--line-height-relaxed);
+  display: none;
+}
+
+.accordion-slot--open .accordion-slot__content {
+  display: block;
+}
+
+/* ─── History accordion ───────────────────────────────── */
+
+.accordion-slot--history .accordion-slot__header {
+  opacity: 0.5;
+}
+
+.accordion-slot--history .accordion-slot__label {
+  font-style: italic;
+}
+
+.accordion-slot__history-list {
+  padding: 0 14px 10px;
+}
+
+.accordion-slot__history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-tag);
+  color: rgba(0, 0, 0, 0.45);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.accordion-slot__history-item:last-child {
+  border-bottom: none;
+}
+
+.accordion-slot__history-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accordion-slot__history-time {
+  flex-shrink: 0;
+  margin-left: 8px;
+  opacity: 0.6;
+}
+
+/* ─── Drop target ─────────────────────────────────────── */
+
+.accordion-drop-target {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: var(--tracking-wide);
+  color: rgba(0, 0, 0, 0.2);
+  text-transform: uppercase;
+  cursor: default;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.accordion-drop-target--drag-over {
+  background: rgba(13, 153, 255, 0.04);
+  color: #0D99FF;
+  border-color: #0D99FF;
+}
+
+.accordion-drop-target__loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(0, 0, 0, 0.4);
+  font-size: var(--font-size-tag);
+  letter-spacing: var(--tracking-normal);
+  text-transform: none;
+}

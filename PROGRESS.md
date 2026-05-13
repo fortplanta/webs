@@ -25,6 +25,8 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | 14 | May 2026 | Doc restructure | PROGRESS.md + CHANGELOG.md created; CLAUDE.md stripped of dead Migration Strategy + WIP tracker; README rewritten; 5 dead files deleted; v0.3.0 tagged |
 | 15 | May 2026 | Remove tethers + fix connectors | Tether system fully removed (types, generation, mock data, localStorage filter); standard connectors confirmed rendering; scope opacity intra 0.4 / inter 0.2 |
 | 14 | May 2026 | Connector overhaul | Visual validation of tether / standard / strong at real zoom levels |
+| 16 | May 2026 | Connector visual pass | Standard opacity inter 0.45 / intra 0.55; strokeWidth 2; hit-area path; strong glow raised; label pill with border + shadow |
+| 18 | May 2026 | Fragment redesign + connector dot | Two-section card (FragmentCard + FragmentAccordions); ··· menu; source attribution; connector dot drag; canvas command menu; prompt cards in sidebar |
 
 ---
 
@@ -88,7 +90,17 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | Connector SVG visibility (re-confirmed) | DONE | Plan file confirmed fix: width:0→1, zIndex:2→0 applied to ConnectorLayer.tsx; 3 bezier tether paths confirmed rendering via DOM inspection; previously marked DONE in Session 12 tracker but fix not yet applied to working tree | Session 13 |
 | Dev-mode hook warnings | NOTES | 8x "Invalid hook call" console errors are a pre-existing Vite 8 + React 19 + @vitejs/plugin-react 6 dev-mode artifact; confirmed present on HEAD with zero nd/ changes; production build is clean (zero errors); not caused by nd/ integration; no fix found — accepted as non-blocking dev noise | Session 13 |
 | Tether system removal | DONE | ConnectorType narrowed to standard\|strong; tether generation removed from generate.ts, addFragment, addPivotCluster, mock.ts; legacy tethers filtered from localStorage on load | Session 15 |
-| Standard connector scope opacity | DONE | intra-cluster: 0.40 opacity, inter-cluster: 0.20 opacity; scope computed in ConnectorLayer from fragment.clusterId | Session 15 |
+| Standard connector scope opacity | DONE | inter: 0.45, intra: 0.55; strokeWidth 2; 12px transparent hit-area path added for reliable right-click | Session 16 |
+| Strong connector glow | DONE | Glow layer opacities raised: outer 0.12→0.20, mid 0.22→0.35, inner 0.45→0.60; core strokeWidth 2.5→3; pulse animation unchanged | Session 16 |
+| Connector label pill | DONE | Solid bg #f5f5f5, 1px border rgba(0,0,0,0.10), box-shadow 0 1px 3px; font-size 12px; clearly breaks line at all zoom levels | Session 16 |
+| Fragment card redesign | DONE | Two-section layout: FragmentCard (chip+title+··· header, type label+bold title+body+tags+source attribution) + FragmentAccordions (accordion stack + drop target) | Session 18 |
+| Fragment ··· menu | DONE | FragmentMenu.tsx: Duplicate, Move to cluster (submenu), Pin (toggle), Delete (inline confirm); closes on Escape/outside click | Session 18 |
+| Source attribution | DONE | SourceAttribution.tsx: favicon + label pill, +N other count, hover tooltip listing all sources; fallback letter avatar on image error | Session 18 |
+| Accordion slots | DONE | AccordionSlot.tsx + FragmentAccordions.tsx: max 3 visible, history accordion for overflow, drop target for prompt cards; local open/close state | Session 18 |
+| Connector dot | DONE | ConnectorDot.tsx: right-edge dot, hover opacity, drag initiates live preview connector (blue dashed) in ConnectorLayer; mouseup on fragment creates connector, mouseup on empty canvas opens CanvasCommandMenu | Session 18 |
+| Canvas command menu | DONE | CanvasCommandMenu.tsx: positioned in canvas-space at drop coords; Create fragment here (type picker submenu), Create text note, Pivot, Create cluster here | Session 18 |
+| Prompt cards (sidebar) | DONE | PROMPTS constant in src/prompts/prompts.ts (6 prompts with monoline SVG icons); draggable cards in sidebar; drag sets text/prompt-id on dataTransfer | Session 18 |
+| ConnectorLayer preview | DONE | Optional preview prop: renders dashed blue path from source fragment to current cursor position during connector dot drag | Session 18 |
 
 Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKED`
 

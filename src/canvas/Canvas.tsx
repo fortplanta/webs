@@ -5,17 +5,19 @@ import { useCanvas, getLOD } from './useCanvas';
 import { useTools } from './useTools';
 import { useSelection, MIN_FRAGMENT_WIDTH, MAX_FRAGMENT_WIDTH } from './useSelection';
 import type { ResizeHandle } from './useSelection';
-import { CanvasState, ConnectorRenderType, Fragment, LayoutType } from '../api/types';
+import { CanvasState, ConnectorRenderType, Fragment, FragmentType, LayoutType, AccordionSlot } from '../api/types';
 import { generatePivot } from '../api/generate';
 import CanvasBackground from './CanvasBackground';
 import Cluster from '../clusters/Cluster';
 import ConnectorLayer from '../edges/ConnectorLayer';
 import FragmentComponent from '../fragments/Fragment';
+import CanvasCommandMenu from '../ui/CanvasCommandMenu';
 import StatusBar from '../ui/StatusBar';
 import Toolbar from '../ui/Toolbar';
 import '../styles/connectors.css';
 import '../styles/selection.css';
 import '../styles/toolbar.css';
+import '../styles/command-menu.css';
 
 // Default widths per layout (mirrors CSS) — used for resize start width when fragment.width is unset
 const LAYOUT_WIDTHS: Partial<Record<LayoutType, number>> = {
@@ -57,6 +59,8 @@ export default function Canvas({
     updateConnectorLabel, updateConnectorRenderType, deleteConnector, promoteConnector,
     removeFragment, toggleStarFragment,
     addCluster, addFragment, addPivotCluster,
+    addConnector, addEmptyFragment, addAccordionSlot,
+    duplicateFragment, pinFragment, moveFragmentToCluster,
     updateViewport,
     pushUndo,
     undo,
@@ -78,6 +82,20 @@ export default function Canvas({
 
   // Text note editing state
   const [editingFragmentId, setEditingFragmentId] = useState<string | null>(null);
+
+  // Connector dot drag state
+  const dotDragRef = useRef<{
+    sourceFragmentId: string;
+    x1: number;
+    y1: number;
+  } | null>(null);
+  const [dotDragPreview, setDotDragPreview] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [dotDraggingFragmentId, setDotDraggingFragmentId] = useState<string | null>(null);
+
+  // Canvas command menu (from connector dot drop on empty canvas)
+  const [commandMenu, setCommandMenu] = useState<{
+    x: number; y: number; sourceFragmentId: string;
+  } | null>(null);
 
   // Connector context menu state — stored in screen coords so it can use position: fixed
   const connectorMenuRef = useRef<HTMLDivElement>(null);
@@ -149,9 +167,24 @@ export default function Canvas({
     };
   };
 
+  const handleConnectorDotStart = (fragmentId: string, e: React.MouseEvent) => {
+    const frag = state.fragments.find(f => f.id === fragmentId);
+    if (!frag) return;
+    const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
+    dotDragRef.current = { sourceFragmentId: fragmentId, x1: frag.x, y1: frag.y };
+    setDotDragPreview({ x1: frag.x, y1: frag.y, x2: cx, y2: cy });
+    setDotDraggingFragmentId(fragmentId);
+  };
+
   // Window-level mouse handlers — fragment drag, resize drag, selection rect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      if (dotDragRef.current) {
+        const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
+        const { x1, y1 } = dotDragRef.current;
+        setDotDragPreview({ x1, y1, x2: cx, y2: cy });
+        return;
+      }
       if (resizeDragRef.current) {
         const rd = resizeDragRef.current;
         const rawDx = (e.clientX - rd.startMouseX) / zoomRef.current;
@@ -172,6 +205,25 @@ export default function Canvas({
     };
 
     const handleMouseUp = (e: MouseEvent) => {
+      if (dotDragRef.current) {
+        const { sourceFragmentId } = dotDragRef.current;
+        dotDragRef.current = null;
+        setDotDragPreview(null);
+        setDotDraggingFragmentId(null);
+
+        // Check if dropped on a fragment
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const fragEl = el?.closest('[data-fragment-id]');
+        const targetId = fragEl?.getAttribute('data-fragment-id');
+        if (targetId && targetId !== sourceFragmentId) {
+          addConnector(sourceFragmentId, targetId);
+        } else {
+          // Dropped on empty canvas — show command menu in canvas space
+          const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
+          setCommandMenu({ x: cx, y: cy, sourceFragmentId });
+        }
+        return;
+      }
       if (resizeDragRef.current) {
         resizeDragRef.current = null;
         return;
@@ -206,7 +258,7 @@ export default function Canvas({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [updateDrag, endDrag, updateFragmentWidth, updateRect, finishRect, selectMany, state.fragments]);
+  }, [updateDrag, endDrag, updateFragmentWidth, updateRect, finishRect, selectMany, state.fragments, addConnector]);
 
   // Keyboard: copy/paste + delete selected + undo
   useEffect(() => {
@@ -353,6 +405,19 @@ export default function Canvas({
     setEditingFragmentId(null);
   };
 
+  const handleAddAccordion = async (fragmentId: string, promptId: string) => {
+    const frag = state.fragments.find(f => f.id === fragmentId);
+    if (!frag) return;
+    const slot: AccordionSlot = {
+      id: uuidv4(),
+      promptId,
+      promptLabel: promptId.replace(/-/g, ' '),
+      content: `Generated response for "${frag.title}" using prompt "${promptId}".`,
+      createdAt: Date.now(),
+    };
+    addAccordionSlot(fragmentId, slot);
+  };
+
   const handleFragmentDoubleClick = (id: string) => {
     const fragment = state.fragments.find(f => f.id === id);
     if (fragment?.layout === 'text-note') {
@@ -396,6 +461,7 @@ export default function Canvas({
           clusters={state.clusters}
           onLabelChange={updateConnectorLabel}
           onContextMenu={handleConnectorContextMenu}
+          preview={dotDragPreview}
         />
 
         {state.fragments.map(f => (
@@ -403,6 +469,7 @@ export default function Canvas({
             key={f.id}
             fragment={f}
             lod={lod}
+            clusters={state.clusters}
             onMouseDown={e => {
               e.stopPropagation();
               if (activeTool === 'select') {
@@ -413,6 +480,11 @@ export default function Canvas({
             onDelete={removeFragment}
             onToggleStar={toggleStarFragment}
             onPivot={handlePivot}
+            onDuplicate={duplicateFragment}
+            onPin={pinFragment}
+            onMoveToCluster={moveFragmentToCluster}
+            onAddAccordion={handleAddAccordion}
+            onConnectorDotStart={handleConnectorDotStart}
             isPivoting={f.id === pivotingFragmentId}
             pivotDisabled={pivotingFragmentId !== null && f.id !== pivotingFragmentId}
             pivotError={pivotErrors[f.id] ?? null}
@@ -421,6 +493,7 @@ export default function Canvas({
             onTitleChange={handleTitleChange}
             onDoubleClick={handleFragmentDoubleClick}
             onResizeStart={(handle, e) => handleResizeStart(f, handle, e)}
+            dotDragging={dotDraggingFragmentId === f.id}
             style={{ left: f.x, top: f.y }}
           />
         ))}
@@ -434,6 +507,39 @@ export default function Canvas({
             }
           />
         ))}
+
+        {/* Canvas command menu — inside transform so it pans with canvas */}
+        {commandMenu && (
+          <CanvasCommandMenu
+            x={commandMenu.x}
+            y={commandMenu.y}
+            sourceFragmentId={commandMenu.sourceFragmentId}
+            onCreateFragment={(type: FragmentType, x: number, y: number) => {
+              const FALLBACK_CLUSTER = 'canvas-drops';
+              if (!state.clusters.some(c => c.id === FALLBACK_CLUSTER)) {
+                addCluster({ id: FALLBACK_CLUSTER, x: 0, y: 0, label: 'canvas drops', isSeed: false });
+              }
+              const newId = addEmptyFragment(type, x, y, FALLBACK_CLUSTER);
+              addConnector(commandMenu.sourceFragmentId, newId);
+            }}
+            onCreateTextNote={(x: number, y: number) => {
+              const TEXT_NOTES_CLUSTER = 'text-notes';
+              if (!state.clusters.some(c => c.id === TEXT_NOTES_CLUSTER)) {
+                addCluster({ id: TEXT_NOTES_CLUSTER, x: 0, y: 0, label: 'notes', isSeed: false });
+              }
+              const newId = uuidv4();
+              addFragment({ id: newId, clusterId: TEXT_NOTES_CLUSTER, x, y, type: 'text-note', layout: 'text-note', title: '', slots: [], createdAtZoom: transformRef.current.zoom, starred: false });
+              addConnector(commandMenu.sourceFragmentId, newId);
+              setEditingFragmentId(newId);
+            }}
+            onPivot={handlePivot}
+            onCreateCluster={(x: number, y: number) => {
+              const newClusterId = uuidv4();
+              addCluster({ id: newClusterId, x, y, label: 'new cluster', isSeed: false });
+            }}
+            onClose={() => setCommandMenu(null)}
+          />
+        )}
 
         {/* Selection rectangle */}
         {selectionRect && (

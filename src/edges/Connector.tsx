@@ -93,16 +93,24 @@ export default function ConnectorEdge({
   );
 
   if (connector.type === 'standard') {
-    const opacity = scope === 'intra' ? 0.40 : 0.20;
+    const opacity = scope === 'intra' ? 0.55 : 0.45;
     return (
       <g>
+        {/* wide transparent hit area for reliable context-menu trigger */}
         <path
           d={d}
-          stroke={`rgba(0,0,0,${opacity})`}
-          strokeWidth={1.5}
+          stroke="transparent"
+          strokeWidth={12}
           fill="none"
           style={{ pointerEvents: 'stroke', cursor: 'context-menu' }}
           onContextMenu={handleCtxOnPath}
+        />
+        <path
+          d={d}
+          stroke={`rgba(0,0,0,${opacity})`}
+          strokeWidth={2}
+          fill="none"
+          style={{ pointerEvents: 'none' }}
         />
         {label}
       </g>

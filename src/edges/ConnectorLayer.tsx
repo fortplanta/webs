@@ -2,12 +2,20 @@ import { useMemo } from 'react';
 import type { Connector, Fragment, Cluster } from '../api/types';
 import ConnectorEdge from './Connector';
 
+interface PreviewConnector {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
 interface Props {
   connectors: Connector[];
   fragments: Fragment[];
   clusters: Cluster[];
   onLabelChange: (id: string, label: string) => void;
   onContextMenu: (e: React.MouseEvent, connectorId: string) => void;
+  preview?: PreviewConnector | null;
 }
 
 const FRAG_COLOR_VAR: Record<string, string> = {
@@ -23,7 +31,7 @@ const FRAG_COLOR_VAR: Record<string, string> = {
 
 export default function ConnectorLayer({
   connectors, fragments, clusters,
-  onLabelChange, onContextMenu,
+  onLabelChange, onContextMenu, preview,
 }: Props) {
   const posById = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>();
@@ -52,6 +60,12 @@ export default function ConnectorLayer({
         pointerEvents: 'none', zIndex: 0,
       }}
     >
+      {preview && (
+        <path
+          d={`M ${preview.x1} ${preview.y1} L ${preview.x2} ${preview.y2}`}
+          className="connector-preview"
+        />
+      )}
       {connectors.map(conn => {
         const src = posById.get(conn.sourceId);
         const tgt = posById.get(conn.targetId);

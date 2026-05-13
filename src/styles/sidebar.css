@@ -190,3 +190,46 @@
 .sidebar__button--secondary:disabled:hover {
   background: transparent;
 }
+
+/* ── Prompt cards ──────────────────────────────────── */
+
+.sidebar__prompts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.sidebar__prompt-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  cursor: grab;
+  user-select: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sidebar__prompt-card:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.sidebar__prompt-card:active {
+  cursor: grabbing;
+}
+
+.sidebar__prompt-icon {
+  color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sidebar__prompt-label {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body);
+  letter-spacing: var(--tracking-normal);
+  color: rgba(0, 0, 0, 0.7);
+}

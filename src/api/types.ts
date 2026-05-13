@@ -30,6 +30,21 @@ export interface FragmentSlot {
   items?: string[];
 }
 
+export interface FragmentSource {
+  url: string;
+  domain: string;
+  faviconUrl: string;
+  label: string;
+}
+
+export interface AccordionSlot {
+  id: string;
+  promptId: string;
+  promptLabel: string;
+  content: string;
+  createdAt: number;
+}
+
 export interface Fragment {
   id: string;
   clusterId: string;       // logical parent — never changes
@@ -41,8 +56,11 @@ export interface Fragment {
   slots: FragmentSlot[];
   createdAtZoom: number;
   starred: boolean;
+  pinned?: boolean;
   width?: number;           // only set if user explicitly resized
   note?: string;            // personal annotation, separate from AI body
+  sources?: FragmentSource[];
+  accordions?: AccordionSlot[];
   sparkMediaUrl?: string;  // data URL for spark image
   sparkMediaType?: 'image' | 'text';
   sparkStatus?: 'idle' | 'processing' | 'done';

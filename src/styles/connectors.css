@@ -14,25 +14,25 @@
   stroke-width: 20;
   filter: blur(8px);
   animation: connector-pulse 2.5s ease-in-out infinite;
-  --base-opacity: 0.12;
+  --base-opacity: 0.20;
 }
 
 .connector-strong-mid-glow {
   stroke-width: 10;
   filter: blur(4px);
   animation: connector-pulse 2.5s ease-in-out infinite;
-  --base-opacity: 0.22;
+  --base-opacity: 0.35;
 }
 
 .connector-strong-inner-glow {
   stroke-width: 4;
   filter: blur(1px);
   animation: connector-pulse 2.5s ease-in-out infinite;
-  --base-opacity: 0.45;
+  --base-opacity: 0.60;
 }
 
 .connector-strong-core {
-  stroke-width: 2.5;
+  stroke-width: 3;
   opacity: 1;
 }
 
@@ -50,12 +50,14 @@
 
 .connector-label-fo__pill {
   display: inline-block;
-  background: rgb(237, 237, 237);
-  padding: 5px 10px;
+  background: rgb(245, 245, 245);
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 4px 10px;
   font-family: var(--font-primary);
-  font-size: 13px;
-  letter-spacing: -0.025em;
-  color: var(--color-text);
+  font-size: 12px;
+  letter-spacing: -0.02em;
+  color: rgba(0, 0, 0, 0.65);
   font-weight: var(--font-weight-regular);
   white-space: nowrap;
   pointer-events: auto;
@@ -72,13 +74,13 @@
 
 .connector-label-fo__input {
   font-family: var(--font-primary);
-  font-size: 13px;
-  letter-spacing: -0.025em;
+  font-size: 12px;
+  letter-spacing: -0.02em;
   font-weight: var(--font-weight-regular);
-  border: none;
+  border: 1px solid rgba(0, 0, 0, 0.15);
   outline: none;
-  background: rgb(237, 237, 237);
-  padding: 5px 10px;
+  background: rgb(245, 245, 245);
+  padding: 4px 10px;
   color: var(--color-text);
   min-width: 80px;
   pointer-events: auto;

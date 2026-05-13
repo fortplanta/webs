@@ -1,38 +1,33 @@
 import { useRef, useEffect } from 'react';
 import '../styles/fragments.css';
-import { Fragment as FragmentType, LayoutType } from '../api/types';
+import '../styles/fragment-card.css';
+import '../styles/accordion.css';
+import '../styles/connector-dot.css';
+import { Fragment as FragmentType } from '../api/types';
 import { LOD } from '../canvas/useCanvas';
 import type { ResizeHandle } from '../canvas/useSelection';
-import FragmentHeader from './FragmentHeader';
-import VerticalFlow from './layouts/VerticalFlow';
-import QuoteCentered from './layouts/QuoteCentered';
-import ImageHero from './layouts/ImageHero';
-import CardSplit from './layouts/CardSplit';
-import Timeline from './layouts/Timeline';
-import ListProminent from './layouts/ListProminent';
+import type { Cluster } from '../api/types';
+import FragmentCard from './FragmentCard';
+import FragmentAccordions from './FragmentAccordions';
+import ConnectorDot from './ConnectorDot';
 import TextNote from './layouts/TextNote';
-import { Icon } from '../nd/atoms/Icon/Icon';
 import { Spinner } from '../nd/atoms/Spinner/Spinner';
-
-const LAYOUT_COMPONENTS: Record<LayoutType, React.ComponentType<{ fragment: FragmentType }>> = {
-  'vertical-flow':  VerticalFlow,
-  'image-hero':     ImageHero,
-  'quote-centered': QuoteCentered,
-  'card-split':     CardSplit,
-  'timeline':       Timeline,
-  'list-prominent': ListProminent,
-  'text-note':      TextNote,
-};
 
 const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 
 interface FragmentProps {
   fragment: FragmentType;
   lod: LOD;
+  clusters: Cluster[];
   onMouseDown: (e: React.MouseEvent) => void;
   onDelete: (id: string) => void;
   onToggleStar: (id: string) => void;
   onPivot?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+  onPin?: (id: string) => void;
+  onMoveToCluster?: (fragmentId: string, clusterId: string) => void;
+  onAddAccordion?: (fragmentId: string, promptId: string) => Promise<void>;
+  onConnectorDotStart?: (fragmentId: string, e: React.MouseEvent) => void;
   isPivoting?: boolean;
   pivotDisabled?: boolean;
   pivotError?: string | null;
@@ -41,156 +36,172 @@ interface FragmentProps {
   onTitleChange?: (id: string, title: string) => void;
   onDoubleClick?: (id: string) => void;
   onResizeStart?: (handle: ResizeHandle, e: React.MouseEvent) => void;
+  dotDragging?: boolean;
   style?: React.CSSProperties;
 }
 
 export default function Fragment({
   fragment,
   lod,
+  clusters,
   onMouseDown,
   onDelete,
-  onToggleStar,
+  onToggleStar: _onToggleStar,
   onPivot,
+  onDuplicate,
+  onPin,
+  onMoveToCluster,
+  onAddAccordion,
+  onConnectorDotStart,
   isPivoting,
-  pivotDisabled,
+  pivotDisabled: _pivotDisabled,
   pivotError,
   isSelected,
   isEditing,
   onTitleChange,
   onDoubleClick,
   onResizeStart,
+  dotDragging,
   style,
 }: FragmentProps) {
-  const { id, type, layout, title, starred, width } = fragment;
-  const bgVar = `var(--color-fragment-${type}-bg)`;
+  const { id, layout, width } = fragment;
+  const bgVar = `var(--color-fragment-${fragment.type}-bg)`;
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
-      // Auto-size to content on mount
       inputRef.current.style.height = 'auto';
       inputRef.current.style.height = inputRef.current.scrollHeight + 'px';
     }
   }, [isEditing]);
 
-  const selectedClass = isSelected ? ' fragment--selected' : '';
+  const selectedClass = isSelected ? ' fragment-wrapper--selected' : '';
   const widthStyle = width ? { ...style, width } : style;
 
+  // Compact LOD — colored bar
   if (lod === 'compact') {
     return (
       <div
         data-fragment-id={id}
-        className={`fragment fragment--compact${selectedClass}`}
+        className="fragment fragment--compact"
         style={{ background: bgVar, ...widthStyle }}
         onMouseDown={onMouseDown}
       />
     );
   }
 
+  // Macro LOD — colored dot
   if (lod === 'macro') {
     return (
       <div
         data-fragment-id={id}
-        className={`fragment fragment--macro${selectedClass}`}
+        className="fragment fragment--macro"
         style={{ background: bgVar, ...widthStyle }}
         onMouseDown={onMouseDown}
       />
     );
   }
 
-  const isTextNote = layout === 'text-note';
-  const isQuote = layout === 'quote-centered';
-  const isImageHero = layout === 'image-hero';
-  const pivotButtonDisabled = isPivoting || pivotDisabled;
-  const LayoutComponent = LAYOUT_COMPONENTS[layout];
-
-  // Text note in edit mode
-  if (isTextNote && isEditing) {
+  // Text note — handled separately
+  if (layout === 'text-note') {
+    if (isEditing) {
+      return (
+        <div
+          data-fragment-id={id}
+          className={`fragment fragment--text-note${isSelected ? ' fragment--selected' : ''}`}
+          style={widthStyle}
+          onMouseDown={onMouseDown}
+        >
+          <textarea
+            ref={inputRef}
+            className="text-note__input"
+            defaultValue={fragment.title}
+            rows={1}
+            onMouseDown={e => e.stopPropagation()}
+            onInput={e => {
+              const el = e.currentTarget;
+              el.style.height = 'auto';
+              el.style.height = el.scrollHeight + 'px';
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                onTitleChange?.(id, (e.target as HTMLTextAreaElement).value.trim());
+              }
+              if (e.key === 'Escape') {
+                onTitleChange?.(id, (e.target as HTMLTextAreaElement).value.trim());
+              }
+            }}
+            onBlur={e => onTitleChange?.(id, e.target.value.trim())}
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      );
+    }
     return (
       <div
         data-fragment-id={id}
-        className={`fragment fragment--text-note${selectedClass}`}
+        className={`fragment fragment--text-note${isSelected ? ' fragment--selected' : ''}`}
         style={widthStyle}
         onMouseDown={onMouseDown}
+        onDoubleClick={e => { e.stopPropagation(); onDoubleClick?.(id); }}
       >
-        <textarea
-          ref={inputRef}
-          className="text-note__input"
-          defaultValue={title}
-          rows={1}
-          onMouseDown={e => e.stopPropagation()}
-          onInput={e => {
-            const el = e.currentTarget;
-            el.style.height = 'auto';
-            el.style.height = el.scrollHeight + 'px';
-          }}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              onTitleChange?.(id, (e.target as HTMLTextAreaElement).value.trim());
-            }
-            if (e.key === 'Escape') {
-              onTitleChange?.(id, (e.target as HTMLTextAreaElement).value.trim());
-            }
-          }}
-          onBlur={e => onTitleChange?.(id, e.target.value.trim())}
-          onClick={e => e.stopPropagation()}
-        />
+        <TextNote fragment={fragment} />
       </div>
     );
   }
 
+  // Full LOD — new two-section card
+  const layoutClass = layout === 'quote-centered' ? 'quote' : layout === 'image-hero' ? 'image-hero' : '';
+
+  const handleAddAccordion = onAddAccordion
+    ? (fragmentId: string, promptId: string) => onAddAccordion(fragmentId, promptId)
+    : () => Promise.resolve();
+
   return (
     <div
       data-fragment-id={id}
-      className={`fragment fragment--${layout}${selectedClass}`}
+      className={`fragment-wrapper${layoutClass ? ` fragment-wrapper--${layoutClass}` : ''}${selectedClass}`}
       style={widthStyle}
       onMouseDown={onMouseDown}
-      onDoubleClick={isTextNote ? (e => { e.stopPropagation(); onDoubleClick?.(id); }) : undefined}
     >
-      {!isQuote && !isTextNote && (
-        <FragmentHeader type={type} title={title} small={isImageHero} />
-      )}
-      <div className="fragment__card-body">
-        <LayoutComponent fragment={fragment} />
-        {isPivoting && (
-          <div className="fragment__pivot-overlay">
-            <Spinner variant="strip" width={120} />
-          </div>
-        )}
-        {pivotError && !isPivoting && (
-          <div className="fragment__pivot-error">{pivotError}</div>
-        )}
-      </div>
-      {!isTextNote && (
-        <div className="fragment__menubar">
-          <button
-            className="fragment__menubar-item"
-            title="Delete"
-            onClick={e => { e.stopPropagation(); onDelete(id); }}
-          >
-            <Icon name="Trash2" size={14} color="inherit" />
-          </button>
-          <button
-            className={`fragment__menubar-item${pivotButtonDisabled ? ' fragment__menubar-item--disabled' : ''}`}
-            title="Pivot"
-            onClick={e => { e.stopPropagation(); if (!pivotButtonDisabled) onPivot?.(id); }}
-          >
-            <Icon name="Shuffle" size={14} color="inherit" />
-          </button>
-          <button
-            className={`fragment__menubar-item${starred ? ' fragment__menubar-item--active' : ''}`}
-            title={starred ? 'Unstar' : 'Star'}
-            onClick={e => { e.stopPropagation(); onToggleStar(id); }}
-          >
-            <Icon name="Star" size={14} color="inherit" />
-          </button>
-        </div>
+      <FragmentCard
+        fragment={fragment}
+        clusters={clusters}
+        onDuplicate={() => onDuplicate?.(id)}
+        onMoveToCluster={clusterId => onMoveToCluster?.(id, clusterId)}
+        onPin={() => onPin?.(id)}
+        onDelete={() => onDelete(id)}
+      />
+
+      <FragmentAccordions
+        fragment={fragment}
+        onAddAccordion={handleAddAccordion}
+      />
+
+      {onConnectorDotStart && (
+        <ConnectorDot
+          onDragStart={e => onConnectorDotStart(id, e)}
+          dragging={dotDragging}
+        />
       )}
 
-      {/* Resize handles — shown when selected at full LOD */}
+      {isPivoting && (
+        <div className="fragment__pivot-overlay">
+          <Spinner variant="strip" width={120} />
+        </div>
+      )}
+      {pivotError && !isPivoting && (
+        <div className="fragment__pivot-error">{pivotError}</div>
+      )}
+
+      {/* Pivot action — still accessible via onPivot from context */}
+      {onPivot && (
+        <div style={{ display: 'none' }} data-pivot-id={id} onClick={() => onPivot(id)} />
+      )}
+
       {isSelected && onResizeStart && (
         <div className="resize-handles">
           {RESIZE_HANDLES.map(handle => (

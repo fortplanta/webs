@@ -2,6 +2,7 @@ import '../styles/sidebar.css';
 import '../styles/panels.css';
 import { useRef, useCallback } from 'react';
 import { Button } from '../nd/atoms/Button/Button';
+import { PROMPTS } from '../prompts/prompts';
 
 function relativeTime(ms: number): string {
   if (!ms) return '—';
@@ -105,7 +106,28 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Section 3: Scratchpad */}
+        {/* Section 3: Prompts */}
+        <div className="sidebar__section">
+          <p className="sidebar__label">prompts</p>
+          <div className="sidebar__prompts">
+            {PROMPTS.map(prompt => (
+              <div
+                key={prompt.id}
+                className="sidebar__prompt-card"
+                draggable
+                onDragStart={e => {
+                  e.dataTransfer.setData('text/prompt-id', prompt.id);
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
+              >
+                <span className="sidebar__prompt-icon">{prompt.icon}</span>
+                <span className="sidebar__prompt-label">{prompt.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 4: Scratchpad */}
         <div className="sidebar__section">
           <p className="sidebar__label">scratchpad</p>
           <div className="scratchpad">
