@@ -76,6 +76,7 @@ export default function Canvas({
     addConnector, addEmptyFragment, addAccordionSlot,
     updateFragmentSlot, navigateSlotHistory,
     duplicateFragment, pinFragment, moveFragmentToCluster,
+    moveGroupElements, removeCluster,
     updateViewport,
     pushUndo,
     undo,
@@ -138,6 +139,14 @@ export default function Canvas({
     origX: number;
     isLeft: boolean;
   } | null>(null);
+
+  // Group drag — ref tracks start positions, state drives CSS class (Session 20)
+  const groupDragRef = useRef<{
+    startMouseX: number;
+    startMouseY: number;
+    startPositions: Map<string, { x: number; y: number; type: 'fragment' | 'cluster' }>;
+  } | null>(null);
+  const [groupDragging, setGroupDragging] = useState(false);
 
   // Selection rect dragging ref (to avoid state lag in handlers)
   const selectionDragging = useRef(false);
@@ -203,6 +212,17 @@ export default function Canvas({
   // Window-level mouse handlers — fragment drag, resize drag, selection rect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      if (groupDragRef.current) {
+        const gd = groupDragRef.current;
+        const dx = (e.clientX - gd.startMouseX) / zoomRef.current;
+        const dy = (e.clientY - gd.startMouseY) / zoomRef.current;
+        const updates = Array.from(gd.startPositions.entries()).map(([id, pos]) => ({
+          id, type: pos.type as 'fragment' | 'cluster',
+          x: pos.x + dx, y: pos.y + dy,
+        }));
+        moveGroupElements(updates);
+        return;
+      }
       if (dotDragRef.current) {
         const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
         const { x1, y1 } = dotDragRef.current;
@@ -229,6 +249,11 @@ export default function Canvas({
     };
 
     const handleMouseUp = (e: MouseEvent) => {
+      if (groupDragRef.current) {
+        groupDragRef.current = null;
+        setGroupDragging(false);
+        return;
+      }
       if (dotDragRef.current) {
         const { sourceFragmentId } = dotDragRef.current;
         dotDragRef.current = null;
@@ -261,11 +286,14 @@ export default function Canvas({
           const minY = Math.min(rect.startY, rect.endY);
           const maxY = Math.max(rect.startY, rect.endY);
           if (maxX - minX > 4 || maxY - minY > 4) {
-            const hit = state.fragments.filter(f => {
+            const hitFrags = state.fragments.filter(f => {
               const fw = f.width ?? LAYOUT_WIDTHS[f.layout] ?? 320;
-              return f.x < maxX && f.x + fw > minX && f.y < maxY && f.y + 100 > minY;
+              return f.x < maxX && f.x + fw > minX && f.y < maxY && f.y + 480 > minY;
             });
-            selectMany(hit.map(f => f.id));
+            const hitClusters = state.clusters.filter(c =>
+              c.x - 8 < maxX && c.x + 8 > minX && c.y - 8 < maxY && c.y + 8 > minY
+            );
+            selectMany([...hitFrags.map(f => f.id), ...hitClusters.map(c => c.id)]);
           }
         }
         return;
@@ -282,7 +310,7 @@ export default function Canvas({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [updateDrag, endDrag, updateFragmentWidth, updateRect, finishRect, selectMany, state.fragments, addConnector]);
+  }, [updateDrag, endDrag, updateFragmentWidth, updateRect, finishRect, selectMany, state.fragments, state.clusters, addConnector, moveGroupElements]);
 
   // Keyboard: copy/paste + delete selected + undo
   useEffect(() => {
@@ -291,6 +319,24 @@ export default function Canvas({
       const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true';
 
       const isMod = e.metaKey || e.ctrlKey;
+
+      if (e.key === 'Escape') {
+        if (selectionDragging.current) {
+          selectionDragging.current = false;
+          finishRect();
+        }
+        deselectAll();
+        return;
+      }
+
+      if (isMod && e.key === 'a') {
+        e.preventDefault();
+        selectMany([
+          ...state.fragments.map(f => f.id),
+          ...state.clusters.map(c => c.id),
+        ]);
+        return;
+      }
 
       if (isMod && e.key === 'z') {
         e.preventDefault();
@@ -320,13 +366,18 @@ export default function Canvas({
 
       if (!isTyping && (e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
         e.preventDefault();
-        selectedIds.forEach(id => removeFragment(id));
+        if (selectedIds.size > 3 && !window.confirm(`Delete ${selectedIds.size} selected elements?`)) return;
+        const fragIds = new Set(state.fragments.map(f => f.id));
+        selectedIds.forEach(id => {
+          if (fragIds.has(id)) removeFragment(id);
+          else removeCluster(id);
+        });
         deselectAll();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.fragments, state.clusters, copiedFragment, selectedIds, onFragmentCopy, onFragmentPaste, addCluster, addFragment, removeFragment, deselectAll, undo]);
+  }, [state.fragments, state.clusters, copiedFragment, selectedIds, onFragmentCopy, onFragmentPaste, addCluster, addFragment, removeFragment, removeCluster, deselectAll, selectMany, finishRect, undo]);
 
   // Canvas background mouse down — select tool starts rect, text tool places note
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -535,6 +586,7 @@ export default function Canvas({
       <CanvasBackground transform={transform} />
       <div
         className="canvas-content"
+        data-group-dragging={groupDragging || undefined}
         style={{
           transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
           transition: isTransitioning ? 'transform 400ms ease-out' : 'none',
@@ -563,6 +615,25 @@ export default function Canvas({
             clusters={state.clusters}
             onMouseDown={e => {
               e.stopPropagation();
+              // Group drag: mousedown on a selected element when multiple are selected
+              if (
+                activeTool === 'select' &&
+                selectedIds.size > 1 &&
+                selectedIds.has(f.id) &&
+                !e.shiftKey &&
+                !(e.target as HTMLElement).closest('.resize-handle') &&
+                !(e.target as HTMLElement).closest('.connector-dot')
+              ) {
+                pushUndo();
+                const startPositions = new Map<string, { x: number; y: number; type: 'fragment' | 'cluster' }>();
+                state.fragments.filter(fr => selectedIds.has(fr.id))
+                  .forEach(fr => startPositions.set(fr.id, { x: fr.x, y: fr.y, type: 'fragment' }));
+                state.clusters.filter(c => selectedIds.has(c.id))
+                  .forEach(c => startPositions.set(c.id, { x: c.x, y: c.y, type: 'cluster' }));
+                groupDragRef.current = { startMouseX: e.clientX, startMouseY: e.clientY, startPositions };
+                setGroupDragging(true);
+                return;
+              }
               if (activeTool === 'select') {
                 selectId(f.id, e.shiftKey);
               }

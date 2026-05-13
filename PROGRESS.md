@@ -24,7 +24,7 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | 13 | May 2026 | nd/ design system | nd/ atoms (Button, Spinner, Icon) wired into Sidebar, LoadingCanvas, Fragment; hook warning diagnosed (non-blocking) |
 | 14 | May 2026 | Doc restructure | PROGRESS.md + CHANGELOG.md created; CLAUDE.md stripped of dead Migration Strategy + WIP tracker; README rewritten; 5 dead files deleted; v0.3.0 tagged |
 | 15 | May 2026 | Remove tethers + fix connectors | Tether system fully removed (types, generation, mock data, localStorage filter); standard connectors confirmed rendering; scope opacity intra 0.4 / inter 0.2 |
-| 14 | May 2026 | Connector overhaul | Visual validation of tether / standard / strong at real zoom levels |
+| 20 | May 2026 | Multi-select + group drag | Box select selects fragments + cluster spawns (height 480, 16px spawn bbox); group drag moves all selected elements atomically; Escape/Cmd+A/Delete with confirmation; moveGroupElements + removeCluster added to useCanvas |
 | 16 | May 2026 | Prompt sidebar + slot history | PromptSidebar (⌘P / toggle button); 6 draggable prompt cards; runPromptOnSlot API; slot history (back/forward nav); empty slot placeholders; command menu on double-tap; FragmentActionsContext; mock fallback for all prompts |
 | 17 | May 2026 | Nav rail + startup flow + timeline | NavRail (48px icon strip); NavPanel (280px collapsible); ExplorationPanel, PromptsPanel, LibraryPanel; ExplorationModal (⌘N / + button); TimelineBanner (chronological fragments with historicalEra); Canvas always mounted; SearchInput removed; PromptSidebar removed |
 | 18 | May 2026 | Connector visual overhaul + fragment redesign | Standard opacity intra 0.55 / inter 0.45; strokeWidth 2 + strokeLinecap round; strong glow boosted; hit-targets; two-section card (FragmentCard + FragmentAccordions); ··· menu; source attribution; connector dot drag; accordion slots; canvas command menu |
@@ -53,6 +53,9 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | Slot system | DONE | All 5 slot components implemented: BodySlot, TagsSlot, ListSlot, DisclaimerSlot, ImageSlot; image placeholder uses grey bg | Session 05 |
 | Cluster system | DONE | Cluster.tsx is now a spawn-point marker (dark label box); fragments are independent entities with own x,y; data model overhauled Session 04 | Session 04 |
 | Cluster positioning (orbit) | IN PROGRESS | MOCK_CLUSTERS + MOCK_FRAGMENTS hardcoded in useCanvas.ts; positionClusters() orbit math in generate.ts for API wiring later | Session 04 |
+| Multi-select box selection | DONE | Drag on empty canvas in select tool draws blue rect; intersects fragments (width×480) and cluster spawns (16×16 bbox); all 4 drag directions correct | Session 20 |
+| Group drag | DONE | Mousedown on selected element when >1 selected starts group drag; moveGroupElements batches all position updates in one setState; visual feedback via [data-group-dragging] .fragment--selected | Session 20 |
+| Keyboard: Escape / Cmd+A / Delete | DONE | Escape deselects + cancels box select; Cmd+A selects all fragments + clusters; Delete with window.confirm when >3 elements; clusters removed via removeCluster | Session 20 |
 | Cluster labels (compact/macro) | DONE | ClusterLabel.tsx unchanged; cluster spawn points use .cluster-spawn__label styling | Session 04 |
 | Seed fragment | DONE | Seed spawn point uses --color-seed-bg lime green label | Session 04 |
 | Connector system (SVG layer) | DONE | ConnectorLayer.tsx + Connector.tsx; tether/weak/standard/strong types; overflow:visible SVG at canvas origin; SVG width:1 height:1 (width:0 collapsed coordinate system — was root cause of connectors never rendering until Session 12) | Session 04 |

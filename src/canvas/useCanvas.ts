@@ -259,6 +259,33 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     }));
   }, []);
 
+  // Session 20: atomically move any mix of fragments and cluster spawns in one render
+  const moveGroupElements = useCallback((
+    updates: Array<{ id: string; type: 'fragment' | 'cluster'; x: number; y: number }>
+  ) => {
+    const fragMap = new Map(updates.filter(u => u.type === 'fragment').map(u => [u.id, u]));
+    const clusterMap = new Map(updates.filter(u => u.type === 'cluster').map(u => [u.id, u]));
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f => { const u = fragMap.get(f.id); return u ? { ...f, x: u.x, y: u.y } : f; }),
+      clusters: prev.clusters.map(c => { const u = clusterMap.get(c.id); return u ? { ...c, x: u.x, y: u.y } : c; }),
+    }));
+  }, []);
+
+  // Session 20: remove a cluster spawn and all its child fragments + their connectors
+  const removeCluster = useCallback((clusterId: string) => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
+    setState(prev => {
+      const childFragIds = new Set(prev.fragments.filter(f => f.clusterId === clusterId).map(f => f.id));
+      return {
+        ...prev,
+        clusters: prev.clusters.filter(c => c.id !== clusterId),
+        fragments: prev.fragments.filter(f => f.clusterId !== clusterId),
+        connectors: prev.connectors.filter(c => !childFragIds.has(c.sourceId) && !childFragIds.has(c.targetId)),
+      };
+    });
+  }, []);
+
   const addConnector = useCallback((sourceId: string, targetId: string) => {
     undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
     const id = `conn-${uuidv4()}`;
@@ -425,6 +452,8 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     duplicateFragment,
     pinFragment,
     moveFragmentToCluster,
+    moveGroupElements,
+    removeCluster,
     loadState,
     updateViewport,
     pushUndo,
