@@ -52,6 +52,18 @@ export default function ConnectorLayer({
     return map;
   }, [fragments]);
 
+  // Tether lines: faint lines from each cluster spawn point to its fragments
+  const clusterTethers = useMemo(() => {
+    const lines: { key: string; cx: number; cy: number; fx: number; fy: number }[] = [];
+    clusters.forEach(c => {
+      const clusterFrags = fragments.filter(f => f.clusterId === c.id);
+      clusterFrags.forEach(f => {
+        lines.push({ key: `${c.id}-${f.id}`, cx: c.x, cy: c.y, fx: f.x, fy: f.y });
+      });
+    });
+    return lines;
+  }, [clusters, fragments]);
+
   return (
     <svg
       style={{
@@ -60,6 +72,16 @@ export default function ConnectorLayer({
         pointerEvents: 'none', zIndex: 0,
       }}
     >
+      {clusterTethers.map(t => (
+        <line
+          key={t.key}
+          x1={t.cx} y1={t.cy}
+          x2={t.fx} y2={t.fy}
+          stroke="rgba(0,0,0,0.18)"
+          strokeWidth={1}
+          strokeDasharray="2 5"
+        />
+      ))}
       {preview && (
         <path
           d={`M ${preview.x1} ${preview.y1} L ${preview.x2} ${preview.y2}`}

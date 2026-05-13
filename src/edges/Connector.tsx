@@ -29,7 +29,7 @@ export default function ConnectorEdge({
     if (editing) inputRef.current?.focus();
   }, [editing]);
 
-  const renderType = connector.renderType ?? 'bezier';
+  const renderType = connector.renderType ?? 'straight';
   const d = getPath(x1, y1, x2, y2, renderType);
   const { mx, my } = getMidpoint(x1, y1, x2, y2);
 

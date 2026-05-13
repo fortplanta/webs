@@ -63,8 +63,6 @@ export default function FragmentCard({
       </div>
 
       <div className="fragment-card__content">
-        <div className="fragment-card__type-label">{type}</div>
-        <div className="fragment-card__body-title">{title}</div>
         {body && <div className="fragment-card__body-text">{body}</div>}
         {tags && tags.length > 0 && (
           <div className="fragment-card__tags">
