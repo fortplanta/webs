@@ -29,7 +29,7 @@ export default function ConnectorEdge({
     if (editing) inputRef.current?.focus();
   }, [editing]);
 
-  const renderType = connector.renderType ?? 'straight';
+  const renderType = connector.renderType ?? 'bezier';
   const d = getPath(x1, y1, x2, y2, renderType);
   const { mx, my } = getMidpoint(x1, y1, x2, y2);
 
@@ -93,16 +93,25 @@ export default function ConnectorEdge({
   );
 
   if (connector.type === 'standard') {
-    const opacity = scope === 'intra' ? 0.40 : 0.20;
+    const opacity = scope === 'intra' ? 0.55 : 0.38;
     return (
       <g>
+        {/* Wide invisible hit-target for easier right-click */}
         <path
           d={d}
-          stroke={`rgba(0,0,0,${opacity})`}
-          strokeWidth={1.5}
+          stroke="transparent"
+          strokeWidth={12}
           fill="none"
           style={{ pointerEvents: 'stroke', cursor: 'context-menu' }}
           onContextMenu={handleCtxOnPath}
+        />
+        <path
+          d={d}
+          stroke={`rgba(0,0,0,${opacity})`}
+          strokeWidth={2}
+          strokeLinecap="round"
+          fill="none"
+          style={{ pointerEvents: 'none' }}
         />
         {label}
       </g>
@@ -113,15 +122,24 @@ export default function ConnectorEdge({
   const color = sourceColor ?? 'rgba(0,0,0,0.8)';
   return (
     <g>
-      <path d={d} className="connector-strong-outer-glow" style={{ stroke: color }} fill="none" />
-      <path d={d} className="connector-strong-mid-glow"   style={{ stroke: color }} fill="none" />
-      <path d={d} className="connector-strong-inner-glow" style={{ stroke: color }} fill="none" />
+      {/* Wide invisible hit-target */}
+      <path
+        d={d}
+        stroke="transparent"
+        strokeWidth={16}
+        fill="none"
+        style={{ pointerEvents: 'stroke', cursor: 'context-menu' }}
+        onContextMenu={handleCtxOnPath}
+      />
+      <path d={d} className="connector-strong-outer-glow" style={{ stroke: color }} fill="none" strokeLinecap="round" />
+      <path d={d} className="connector-strong-mid-glow"   style={{ stroke: color }} fill="none" strokeLinecap="round" />
+      <path d={d} className="connector-strong-inner-glow" style={{ stroke: color }} fill="none" strokeLinecap="round" />
       <path
         d={d}
         className="connector-strong-core"
-        style={{ stroke: color, pointerEvents: 'stroke', cursor: 'context-menu' } as React.CSSProperties}
+        style={{ stroke: color, pointerEvents: 'none' } as React.CSSProperties}
         fill="none"
-        onContextMenu={handleCtxOnPath}
+        strokeLinecap="round"
       />
       {label}
     </g>

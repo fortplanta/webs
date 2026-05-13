@@ -11,28 +11,28 @@
 /* Perf note: CSS blur on SVG paths — monitor paint cost with many strong connectors */
 
 .connector-strong-outer-glow {
-  stroke-width: 20;
-  filter: blur(8px);
+  stroke-width: 28;
+  filter: blur(10px);
   animation: connector-pulse 2.5s ease-in-out infinite;
-  --base-opacity: 0.12;
+  --base-opacity: 0.20;
 }
 
 .connector-strong-mid-glow {
-  stroke-width: 10;
-  filter: blur(4px);
+  stroke-width: 14;
+  filter: blur(5px);
   animation: connector-pulse 2.5s ease-in-out infinite;
-  --base-opacity: 0.22;
+  --base-opacity: 0.35;
 }
 
 .connector-strong-inner-glow {
-  stroke-width: 4;
-  filter: blur(1px);
+  stroke-width: 6;
+  filter: blur(1.5px);
   animation: connector-pulse 2.5s ease-in-out infinite;
-  --base-opacity: 0.45;
+  --base-opacity: 0.60;
 }
 
 .connector-strong-core {
-  stroke-width: 2.5;
+  stroke-width: 3;
   opacity: 1;
 }
 
@@ -59,6 +59,7 @@
   font-weight: var(--font-weight-regular);
   white-space: nowrap;
   pointer-events: auto;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9);
 }
 
 .connector-label-fo__empty {
@@ -82,6 +83,7 @@
   color: var(--color-text);
   min-width: 80px;
   pointer-events: auto;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9);
 }
 
 /* ─── Context menu ────────────────────────────────────────── */

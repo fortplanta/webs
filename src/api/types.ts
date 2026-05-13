@@ -76,7 +76,7 @@ export interface Connector {
   sourceId: string;       // fragment id or cluster id
   targetId: string;       // fragment id or cluster id
   type: ConnectorType;
-  renderType?: ConnectorRenderType; // default "straight"
+  renderType?: ConnectorRenderType; // default "bezier"
   label: string;          // editable verb phrase, empty by default
 }
 
