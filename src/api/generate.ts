@@ -207,6 +207,7 @@ export async function generateCanvas(query: string): Promise<CanvasState> {
 
   const data = await response.json() as { content?: Array<{ text?: string }> };
   const text = data.content?.[0]?.text ?? '';
+  console.log('[Webs API] Raw response text:\n', text);
   // Extract JSON robustly: find first { and last } to handle any preamble/postamble/fences
   const jsonStart = text.indexOf('{');
   const jsonEnd = text.lastIndexOf('}');
@@ -215,6 +216,7 @@ export async function generateCanvas(query: string): Promise<CanvasState> {
   let parsed: GenerateApiResponse;
   try {
     parsed = JSON.parse(cleaned) as GenerateApiResponse;
+    console.log('[Webs API] Fragment types returned:', parsed.clusters?.flatMap(c => c.fragments.map(f => f.type)));
   } catch (err) {
     console.error('Failed to parse API response, falling back to mock:', err, '\nRaw text:', text);
     return getMockCanvasState(query);
