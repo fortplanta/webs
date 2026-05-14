@@ -20,7 +20,7 @@ Return ONLY valid JSON matching this exact shape:
       "title": "cluster theme (2-4 words)",
       "fragments": [
         {
-          "type": "concept",
+          "type": "person | concept | thesis | source | event | era | domain | quote",
           "title": "fragment title (2-5 words, lowercase)",
           "body": "2-4 sentences of substantive content",
           "tags": ["tag1", "tag2", "tag3"],
@@ -44,6 +44,16 @@ Rules:
 - Return 3 to 5 fragments per cluster
 - Every fragment must have a "body" field with 2-4 sentences of meaningful content
 - Fragment types: person, concept, thesis, source, event, era, domain, quote
+  Fragment type guide — choose carefully based on what each fragment actually IS:
+  · "person"  — a specific individual (scholar, leader, artist, scientist, thinker)
+  · "concept" — an idea, theory, framework, or movement
+  · "thesis"  — a contested claim, argument, or proposition
+  · "source"  — a specific book, paper, film, or primary document
+  · "event"   — a specific historical happening, turning point, or occurrence
+  · "era"     — a period, epoch, age, or decade
+  · "domain"  — a field of study or broad area of knowledge
+  · "quote"   — a verbatim quotation; body = quote text + "— Author, Work, Year"
+  IMPORTANT: Use a diverse mix of types across clusters. Most clusters should contain at least 2–3 different types. Do NOT make everything "concept" — use "person", "event", "era", "source", "thesis", and "quote" wherever they are more accurate.
 - "tags": required on all fragments except type "quote". 2-4 tags, lowercase, short words.
 - "list": optional. Only include for concept, thesis, domain, source fragments. 3-6 items if used.
 - "era": only for event and era fragment types. A year or short date range like "1789" or "1914–1918".

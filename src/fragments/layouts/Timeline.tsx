@@ -13,6 +13,9 @@ export default function Timeline({ fragment }: { fragment: FragmentType }) {
 
   return (
     <div className="fragment__body">
+      {fragment.historicalEra && (
+        <div className="fragment-card__type-label">{fragment.historicalEra}</div>
+      )}
       {body && <BodySlot slot={body} />}
       {list && <ListSlot slot={list} />}
       {tags && <TagsSlot slot={tags} />}
