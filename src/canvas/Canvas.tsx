@@ -77,6 +77,9 @@ export default function Canvas({
     updateFragmentSlot, navigateSlotHistory,
     duplicateFragment, pinFragment, moveFragmentToCluster,
     moveGroupElements, removeCluster,
+    resetToInitialPositions,
+    anchorFragment, unanchorFragment,
+    unassignFromCluster,
     updateViewport,
     pushUndo,
     undo,
@@ -121,6 +124,12 @@ export default function Canvas({
 
   // Timeline highlight state (Session 17)
   const [highlightedFragmentId, setHighlightedFragmentId] = useState<string | null>(null);
+
+  // Reset confirmation dialog
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Selected tether (cluster-spawn to fragment line)
+  const [selectedTetherKey, setSelectedTetherKey] = useState<string | null>(null);
 
   // Connector context menu state — stored in screen coords so it can use position: fixed
   const connectorMenuRef = useRef<HTMLDivElement>(null);
@@ -286,9 +295,15 @@ export default function Canvas({
           const minY = Math.min(rect.startY, rect.endY);
           const maxY = Math.max(rect.startY, rect.endY);
           if (maxX - minX > 4 || maxY - minY > 4) {
+            // Fragment wrappers are centered (translate -50%,-50%) so bounds are centered on x,y
             const hitFrags = state.fragments.filter(f => {
               const fw = f.width ?? LAYOUT_WIDTHS[f.layout] ?? 320;
-              return f.x < maxX && f.x + fw > minX && f.y < maxY && f.y + 480 > minY;
+              const fh = 480;
+              const left = f.x - fw / 2;
+              const right = f.x + fw / 2;
+              const top = f.y - fh / 2;
+              const bottom = f.y + fh / 2;
+              return left < maxX && right > minX && top < maxY && bottom > minY;
             });
             const hitClusters = state.clusters.filter(c =>
               c.x - 8 < maxX && c.x + 8 > minX && c.y - 8 < maxY && c.y + 8 > minY
@@ -344,6 +359,12 @@ export default function Canvas({
         return;
       }
 
+      if (isMod && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        setShowResetConfirm(true);
+        return;
+      }
+
       if (isMod && e.key === 'c') {
         const hoveredEl = document.querySelector('[data-fragment-id]:hover');
         if (!hoveredEl) return;
@@ -364,20 +385,31 @@ export default function Canvas({
         return;
       }
 
-      if (!isTyping && (e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
-        e.preventDefault();
-        if (selectedIds.size > 3 && !window.confirm(`Delete ${selectedIds.size} selected elements?`)) return;
-        const fragIds = new Set(state.fragments.map(f => f.id));
-        selectedIds.forEach(id => {
-          if (fragIds.has(id)) removeFragment(id);
-          else removeCluster(id);
-        });
-        deselectAll();
+      if (!isTyping && (e.key === 'Delete' || e.key === 'Backspace')) {
+        // Delete selected tether
+        if (selectedTetherKey) {
+          e.preventDefault();
+          const fragId = selectedTetherKey.split('-').slice(1).join('-');
+          unassignFromCluster(fragId);
+          setSelectedTetherKey(null);
+          return;
+        }
+        // Delete selected elements
+        if (selectedIds.size > 0) {
+          e.preventDefault();
+          if (selectedIds.size > 3 && !window.confirm(`Delete ${selectedIds.size} selected elements?`)) return;
+          const fragIds = new Set(state.fragments.map(f => f.id));
+          selectedIds.forEach(id => {
+            if (fragIds.has(id)) removeFragment(id);
+            else removeCluster(id);
+          });
+          deselectAll();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.fragments, state.clusters, copiedFragment, selectedIds, onFragmentCopy, onFragmentPaste, addCluster, addFragment, removeFragment, removeCluster, deselectAll, selectMany, finishRect, undo]);
+  }, [state.fragments, state.clusters, copiedFragment, selectedIds, selectedTetherKey, onFragmentCopy, onFragmentPaste, addCluster, addFragment, removeFragment, removeCluster, deselectAll, selectMany, finishRect, undo, unassignFromCluster]);
 
   // Canvas background mouse down — select tool starts rect, text tool places note
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -599,6 +631,13 @@ export default function Canvas({
           onLabelChange={updateConnectorLabel}
           onContextMenu={handleConnectorContextMenu}
           preview={dotDragPreview}
+          selectedTetherKey={selectedTetherKey}
+          onTetherSelect={key => { setSelectedTetherKey(key); deselectAll(); }}
+          onTetherDelete={key => {
+            const fragId = key.split('-').slice(1).join('-');
+            unassignFromCluster(fragId);
+            setSelectedTetherKey(null);
+          }}
         />
 
         {state.fragments
@@ -615,6 +654,8 @@ export default function Canvas({
             clusters={state.clusters}
             onMouseDown={e => {
               e.stopPropagation();
+              // Anchored fragments cannot be dragged independently
+              if (f.anchored) return;
               // Group drag: mousedown on a selected element when multiple are selected
               if (
                 activeTool === 'select' &&
@@ -644,6 +685,9 @@ export default function Canvas({
             onPivot={handlePivot}
             onDuplicate={duplicateFragment}
             onPin={pinFragment}
+            onAnchor={anchorFragment}
+            onUnanchor={unanchorFragment}
+            onResetPositions={() => setShowResetConfirm(true)}
             onMoveToCluster={moveFragmentToCluster}
             onAddAccordion={handleAddAccordion}
             onConnectorDotStart={handleConnectorDotStart}
@@ -803,6 +847,15 @@ export default function Canvas({
           onSelect={handleCommandMenuSelect}
           onClose={() => setCommandMenu(null)}
         />
+      )}
+
+      {/* Reset positions confirmation */}
+      {showResetConfirm && (
+        <div className="reset-confirm-panel">
+          <span className="reset-confirm-panel__msg">Reset all positions to initial layout? This cannot be undone.</span>
+          <button className="reset-confirm-panel__btn reset-confirm-panel__btn--cancel" onClick={() => setShowResetConfirm(false)}>Cancel</button>
+          <button className="reset-confirm-panel__btn reset-confirm-panel__btn--confirm" onClick={() => { resetToInitialPositions(); setShowResetConfirm(false); }}>Reset positions</button>
+        </div>
       )}
     </div>
   );

@@ -61,6 +61,8 @@ export interface Fragment {
   clusterId: string;       // logical parent — never changes
   x: number;              // own canvas-space position (center)
   y: number;
+  initialX?: number;       // spawn position — set once, never updated
+  initialY?: number;
   type: FragmentType;
   layout: LayoutType;
   title: string;
@@ -68,6 +70,9 @@ export interface Fragment {
   createdAtZoom: number;
   starred: boolean;
   pinned?: boolean;
+  anchored?: boolean;      // locks position relative to cluster spawn
+  anchorOffsetX?: number;
+  anchorOffsetY?: number;
   width?: number;           // only set if user explicitly resized
   note?: string;            // personal annotation, separate from AI body
   sources?: FragmentSource[];
@@ -83,6 +88,8 @@ export interface Cluster {
   id: string;
   x: number;              // canvas-space position (center)
   y: number;
+  initialX?: number;       // spawn position — set once, never updated
+  initialY?: number;
   label: string;
   isSeed: boolean;
   note?: string;

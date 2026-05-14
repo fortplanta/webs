@@ -97,12 +97,26 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
         ),
       }));
     } else {
-      setState(prev => ({
-        ...prev,
-        clusters: prev.clusters.map(c =>
-          c.id === drag.id ? { ...c, x: newX, y: newY } : c
-        ),
-      }));
+      // When dragging a cluster, co-move any anchored child fragments
+      setState(prev => {
+        const cluster = prev.clusters.find(c => c.id === drag.id);
+        if (!cluster) return prev;
+        const oldX = cluster.x;
+        const oldY = cluster.y;
+        const ddx = newX - oldX;
+        const ddy = newY - oldY;
+        return {
+          ...prev,
+          clusters: prev.clusters.map(c =>
+            c.id === drag.id ? { ...c, x: newX, y: newY } : c
+          ),
+          fragments: prev.fragments.map(f =>
+            f.clusterId === drag.id && f.anchored
+              ? { ...f, x: f.x + ddx, y: f.y + ddy }
+              : f
+          ),
+        };
+      });
     }
   }, []);
 
@@ -410,6 +424,58 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     return id;
   }, []);
 
+  const resetToInitialPositions = useCallback(() => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f =>
+        f.initialX !== undefined && f.initialY !== undefined
+          ? { ...f, x: f.initialX, y: f.initialY }
+          : f
+      ),
+      clusters: prev.clusters.map(c =>
+        c.initialX !== undefined && c.initialY !== undefined
+          ? { ...c, x: c.initialX, y: c.initialY }
+          : c
+      ),
+    }));
+  }, []);
+
+  const anchorFragment = useCallback((fragmentId: string) => {
+    setState(prev => {
+      const fragment = prev.fragments.find(f => f.id === fragmentId);
+      const cluster = fragment ? prev.clusters.find(c => c.id === fragment.clusterId) : null;
+      if (!fragment || !cluster) return prev;
+      return {
+        ...prev,
+        fragments: prev.fragments.map(f =>
+          f.id === fragmentId
+            ? { ...f, anchored: true, anchorOffsetX: f.x - cluster.x, anchorOffsetY: f.y - cluster.y }
+            : f
+        ),
+      };
+    });
+  }, []);
+
+  const unanchorFragment = useCallback((fragmentId: string) => {
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f =>
+        f.id === fragmentId ? { ...f, anchored: false } : f
+      ),
+    }));
+  }, []);
+
+  const unassignFromCluster = useCallback((fragmentId: string) => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), stateRef.current];
+    setState(prev => ({
+      ...prev,
+      fragments: prev.fragments.map(f =>
+        f.id === fragmentId ? { ...f, clusterId: '' } : f
+      ),
+    }));
+  }, []);
+
   const loadState = useCallback((newState: CanvasState) => {
     setState(newState);
   }, []);
@@ -454,6 +520,10 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
     moveFragmentToCluster,
     moveGroupElements,
     removeCluster,
+    resetToInitialPositions,
+    anchorFragment,
+    unanchorFragment,
+    unassignFromCluster,
     loadState,
     updateViewport,
     pushUndo,

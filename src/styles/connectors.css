@@ -88,6 +88,32 @@
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9);
 }
 
+/* ─── Tether delete button ────────────────────────────────── */
+
+.tether-delete-btn {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 9px;
+  color: rgba(0, 0, 0, 0.4);
+  padding: 0;
+  line-height: 1;
+  font-family: var(--font-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tether-delete-btn:hover {
+  background: #FF3B30;
+  color: #fff;
+  border-color: transparent;
+}
+
 /* ─── Context menu ────────────────────────────────────────── */
 
 .connector-context-menu {
