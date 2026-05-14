@@ -22,10 +22,10 @@ const API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-5';
 const MAX_TOKENS = 8000;
 
-const BASE_RADIUS = 700;
-const RADIUS_JITTER = 100;
-const FRAGMENT_COL_W = 360;
-const FRAGMENT_ROW_H = 440;
+const BASE_RADIUS = 800;
+const FRAGMENT_WIDTH = 320;
+const FRAGMENT_HEIGHT = 480;
+const FRAGMENT_GAP = 48;
 
 export const LAYOUT_FOR_TYPE: Record<FragmentType, LayoutType> = {
   person:  'image-hero',
@@ -66,27 +66,37 @@ function buildSlots(f: GenerateApiResponse['clusters'][0]['fragments'][0]): Frag
   return slots;
 }
 
-function positionClusters(clusters: Cluster[]): Cluster[] {
-  const nonSeedCount = clusters.filter(c => !c.isSeed).length;
-  const angleStep = (Math.PI * 2) / (nonSeedCount || 1);
-  let nonSeedIdx = 0;
+// Cardinal angles: N, E, S, W, then diagonals for overflow
+const CARDINAL_ANGLES = [
+  -Math.PI / 2,       // N
+  0,                  // E
+  Math.PI / 2,        // S
+  Math.PI,            // W
+  -Math.PI * 3 / 4,  // NW
+  -Math.PI / 4,      // NE
+  Math.PI * 3 / 4,   // SW
+  Math.PI / 4,        // SE
+];
 
+function positionClusters(clusters: Cluster[]): Cluster[] {
+  let nonSeedIdx = 0;
   return clusters.map((cluster) => {
-    if (cluster.isSeed) return { ...cluster, x: 0, y: 0 };
-    const angle = angleStep * nonSeedIdx++;
-    const r = BASE_RADIUS + jitter(RADIUS_JITTER);
-    return {
-      ...cluster,
-      x: Math.cos(angle) * r,
-      y: Math.sin(angle) * r,
-    };
+    if (cluster.isSeed) return { ...cluster, x: 0, y: 0, initialX: 0, initialY: 0 };
+    const angle = CARDINAL_ANGLES[nonSeedIdx % CARDINAL_ANGLES.length] ?? 0;
+    nonSeedIdx++;
+    const x = Math.round(Math.cos(angle) * BASE_RADIUS);
+    const y = Math.round(Math.sin(angle) * BASE_RADIUS);
+    return { ...cluster, x, y, initialX: x, initialY: y };
   });
 }
 
 function fragmentPositions(clusterX: number, clusterY: number, count: number): Array<{ x: number; y: number }> {
+  // Single column, vertically stacked, centered on cluster spawn
+  const totalHeight = count * FRAGMENT_HEIGHT + (count - 1) * FRAGMENT_GAP;
+  const startY = clusterY - totalHeight / 2;
   return Array.from({ length: count }, (_, i) => ({
-    x: clusterX + (i % 2) * FRAGMENT_COL_W - FRAGMENT_COL_W / 2 + jitter(),
-    y: clusterY + Math.floor(i / 2) * FRAGMENT_ROW_H + jitter(),
+    x: clusterX,
+    y: startY + i * (FRAGMENT_HEIGHT + FRAGMENT_GAP),
   }));
 }
 
@@ -102,8 +112,8 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
   const seedFragment: Fragment = {
     id: uuidv4(),
     clusterId: seedId,
-    x: 0,
-    y: 90,
+    x: 0, initialX: 0,
+    y: 90, initialY: 90,
     type: 'domain',
     layout: 'vertical-flow',
     title: query.toLowerCase(),
@@ -139,8 +149,8 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
       fragments.push({
         id: fragmentId,
         clusterId: cluster.id,
-        x: pos.x,
-        y: pos.y,
+        x: pos.x, initialX: pos.x,
+        y: pos.y, initialY: pos.y,
         type: f.type,
         layout: LAYOUT_FOR_TYPE[f.type],
         title: f.title,
@@ -246,8 +256,8 @@ function buildPivotResult(pivotData: PivotApiResponse, sourceFragment: Fragment,
 
   const cluster: Cluster = {
     id: clusterId,
-    x: clusterX,
-    y: clusterY,
+    x: clusterX, initialX: clusterX,
+    y: clusterY, initialY: clusterY,
     label: pivotData.clusterTitle,
     isSeed: false,
   };
@@ -257,8 +267,8 @@ function buildPivotResult(pivotData: PivotApiResponse, sourceFragment: Fragment,
   const fragments: Fragment[] = pivotData.fragments.map((f, i) => ({
     id: uuidv4(),
     clusterId,
-    x: positions[i].x,
-    y: positions[i].y,
+    x: positions[i].x, initialX: positions[i].x,
+    y: positions[i].y, initialY: positions[i].y,
     type: f.type,
     layout: LAYOUT_FOR_TYPE[f.type],
     title: f.title,

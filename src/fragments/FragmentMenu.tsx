@@ -4,23 +4,33 @@ import type { Cluster } from '../api/types';
 interface Props {
   fragmentId: string;
   pinned?: boolean;
+  anchored?: boolean;
   clusters: Cluster[];
   onDuplicate: () => void;
   onMoveToCluster: (clusterId: string) => void;
   onPin: () => void;
   onDelete: () => void;
+  onAnchor?: () => void;
+  onUnanchor?: () => void;
+  onResetPositions?: () => void;
   onClose: () => void;
+  style?: React.CSSProperties;
 }
 
 export default function FragmentMenu({
   fragmentId: _fragmentId,
   pinned,
+  anchored,
   clusters,
   onDuplicate,
   onMoveToCluster,
   onPin,
   onDelete,
+  onAnchor,
+  onUnanchor,
+  onResetPositions,
   onClose,
+  style,
 }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
@@ -44,6 +54,7 @@ export default function FragmentMenu({
     <div
       ref={ref}
       className="fragment-menu"
+      style={style}
       onMouseDown={e => e.stopPropagation()}
       onClick={e => e.stopPropagation()}
     >
@@ -85,6 +96,21 @@ export default function FragmentMenu({
       >
         {pinned ? 'Pinned' : 'Pin'}
       </button>
+
+      {(onAnchor || onUnanchor) && (
+        <button
+          className={`fragment-menu__item${anchored ? ' fragment-menu__item--checked' : ''}`}
+          onClick={() => { anchored ? onUnanchor?.() : onAnchor?.(); onClose(); }}
+        >
+          {anchored ? 'Unanchor' : 'Anchor to cluster'}
+        </button>
+      )}
+
+      {onResetPositions && (
+        <button className="fragment-menu__item" onClick={() => { onClose(); onResetPositions(); }}>
+          Reset all positions
+        </button>
+      )}
 
       <div className="fragment-menu__divider" />
 

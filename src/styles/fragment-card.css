@@ -7,17 +7,29 @@
   display: flex;
   flex-direction: column;
   width: 320px;
-  max-height: 480px;
-  overflow: hidden;
+  overflow: visible;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
   transform: translate(-50%, -50%);
   cursor: grab;
   user-select: none;
+  z-index: 1;
+}
+
+.fragment-wrapper:hover {
+  z-index: 10;
 }
 
 .fragment-wrapper:active {
   cursor: grabbing;
+}
+
+/* Inner content container — clips overflow instead of wrapper */
+.fragment-card-inner {
+  max-height: 480px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .fragment-wrapper--quote {
@@ -39,7 +51,112 @@
 .fragment-wrapper--selected {
   outline: 2px solid #0D99FF;
   outline-offset: 2px;
+  z-index: 20;
 }
+
+/* Text content — selectable and copyable */
+.fragment-card__body-text,
+.fragment-slot--body p,
+.fragment-card__type-label,
+.seed-fragment__context,
+.seed-fragment__query {
+  user-select: text;
+  cursor: text;
+}
+
+/* Non-selectable interactive chrome */
+.fragment-card__header,
+.fragment-card__menu-btn,
+.connector-dot {
+  user-select: none;
+}
+
+/* ─── Anchor indicator ────────────────────────────────── */
+
+.fragment__anchor-indicator {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.5);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Anchored wrapper — default cursor */
+[data-anchored="true"].fragment-wrapper {
+  cursor: default;
+}
+
+/* ─── Reset positions panel ──────────────────────────── */
+
+.reset-confirm-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;
+  white-space: nowrap;
+}
+
+.reset-confirm-panel__msg {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-tag);
+  letter-spacing: var(--tracking-normal);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.reset-confirm-panel__btn {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-tag);
+  letter-spacing: var(--tracking-normal);
+  border: none;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.reset-confirm-panel__btn--cancel {
+  background: none;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.reset-confirm-panel__btn--confirm {
+  background: #000;
+  color: #fff;
+}
+
+/* ─── Cursor rules ─────────────────────────────────────── */
+
+.fragment-wrapper[data-draggable="true"] { cursor: grab; }
+.fragment-wrapper[data-draggable="true"]:active { cursor: grabbing; }
+.fragment-wrapper[data-anchored="true"] { cursor: default; }
+
+.fragment-card__body-text,
+.fragment-slot--body p { cursor: text; }
+
+.connector-dot { cursor: crosshair; }
+
+.fragment-card__menu-btn { cursor: pointer; }
+
+.resize-handle--n,
+.resize-handle--s { cursor: ns-resize; }
+.resize-handle--e,
+.resize-handle--w { cursor: ew-resize; }
+.resize-handle--nw,
+.resize-handle--se { cursor: nwse-resize; }
+.resize-handle--ne,
+.resize-handle--sw { cursor: nesw-resize; }
 
 /* ─── Primary card ────────────────────────────────────── */
 

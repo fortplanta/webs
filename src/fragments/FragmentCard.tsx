@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Fragment, Cluster } from '../api/types';
 import SourceAttribution from './SourceAttribution';
 import FragmentMenu from './FragmentMenu';
@@ -16,6 +17,9 @@ interface Props {
   onMoveToCluster: (clusterId: string) => void;
   onPin: () => void;
   onDelete: () => void;
+  onAnchor?: () => void;
+  onUnanchor?: () => void;
+  onResetPositions?: () => void;
 }
 
 export default function FragmentCard({
@@ -25,11 +29,24 @@ export default function FragmentCard({
   onMoveToCluster,
   onPin,
   onDelete,
+  onAnchor,
+  onUnanchor,
+  onResetPositions,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   const { type, layout, title, sources, pinned } = fragment;
   const isQuote = layout === 'quote-centered';
+
+  const handleMenuOpen = () => {
+    const rect = menuBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setMenuOpen(v => !v);
+  };
 
   function renderLayoutBody() {
     switch (layout) {
@@ -59,25 +76,32 @@ export default function FragmentCard({
           <span className="fragment-card__title-text">{title}</span>
           <div className="fragment-menu-anchor">
             <button
+              ref={menuBtnRef}
               className="fragment-card__menu-btn"
               onMouseDown={e => e.stopPropagation()}
-              onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
+              onClick={e => { e.stopPropagation(); handleMenuOpen(); }}
             >
               ···
             </button>
-            {menuOpen && (
-              <FragmentMenu
-                fragmentId={fragment.id}
-                pinned={pinned}
-                clusters={clusters}
-                onDuplicate={onDuplicate}
-                onMoveToCluster={onMoveToCluster}
-                onPin={onPin}
-                onDelete={onDelete}
-                onClose={() => setMenuOpen(false)}
-              />
-            )}
           </div>
+          {menuOpen && menuPos && createPortal(
+            <FragmentMenu
+              fragmentId={fragment.id}
+              pinned={pinned}
+              anchored={fragment.anchored}
+              clusters={clusters}
+              onDuplicate={onDuplicate}
+              onMoveToCluster={onMoveToCluster}
+              onPin={onPin}
+              onDelete={onDelete}
+              onAnchor={onAnchor}
+              onUnanchor={onUnanchor}
+              onResetPositions={onResetPositions}
+              onClose={() => setMenuOpen(false)}
+              style={{ position: 'fixed', top: menuPos.top, right: menuPos.right }}
+            />,
+            document.body
+          )}
         </div>
       )}
 

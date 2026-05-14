@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Connector, Fragment, Cluster } from '../api/types';
 import ConnectorEdge from './Connector';
 
@@ -16,6 +16,9 @@ interface Props {
   onLabelChange: (id: string, label: string) => void;
   onContextMenu: (e: React.MouseEvent, connectorId: string) => void;
   preview?: PreviewConnector | null;
+  selectedTetherKey?: string | null;
+  onTetherSelect?: (key: string) => void;
+  onTetherDelete?: (key: string) => void;
 }
 
 const FRAG_COLOR_VAR: Record<string, string> = {
@@ -32,7 +35,9 @@ const FRAG_COLOR_VAR: Record<string, string> = {
 export default function ConnectorLayer({
   connectors, fragments, clusters,
   onLabelChange, onContextMenu, preview,
+  selectedTetherKey, onTetherSelect, onTetherDelete,
 }: Props) {
+  const [hoveredTetherKey, setHoveredTetherKey] = useState<string | null>(null);
   const posById = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>();
     fragments.forEach(f => map.set(f.id, { x: f.x, y: f.y }));
@@ -69,19 +74,52 @@ export default function ConnectorLayer({
       style={{
         position: 'absolute', top: 0, left: 0,
         width: 1, height: 1, overflow: 'visible',
-        pointerEvents: 'none', zIndex: 0,
+        zIndex: 0,
       }}
     >
-      {clusterTethers.map(t => (
-        <line
-          key={t.key}
-          x1={t.cx} y1={t.cy}
-          x2={t.fx} y2={t.fy}
-          stroke="rgba(0,0,0,0.18)"
-          strokeWidth={1}
-          strokeDasharray="2 5"
-        />
-      ))}
+      {clusterTethers.map(t => {
+        const isSelected = selectedTetherKey === t.key;
+        const isHovered = hoveredTetherKey === t.key;
+        const mx = (t.cx + t.fx) / 2;
+        const my = (t.cy + t.fy) / 2;
+        return (
+          <g key={t.key}>
+            {/* Invisible wide hit target */}
+            <line
+              x1={t.cx} y1={t.cy} x2={t.fx} y2={t.fy}
+              stroke="transparent" strokeWidth={12}
+              style={{ cursor: 'pointer', pointerEvents: 'stroke' }}
+              onClick={e => { e.stopPropagation(); onTetherSelect?.(t.key); }}
+              onMouseEnter={() => setHoveredTetherKey(t.key)}
+              onMouseLeave={() => setHoveredTetherKey(null)}
+            />
+            {/* Visible line */}
+            <line
+              x1={t.cx} y1={t.cy} x2={t.fx} y2={t.fy}
+              stroke={isSelected ? '#0D99FF' : 'rgba(0,0,0,0.18)'}
+              strokeWidth={isSelected ? 2 : 1}
+              strokeDasharray="2 5"
+              style={{ pointerEvents: 'none' }}
+            />
+            {/* × delete button at midpoint — shown on hover or select */}
+            {(isHovered || isSelected) && (
+              <foreignObject
+                x={mx - 8} y={my - 8}
+                width={16} height={16}
+                style={{ pointerEvents: 'auto', overflow: 'visible' }}
+              >
+                <button
+                  className="tether-delete-btn"
+                  onClick={e => { e.stopPropagation(); onTetherDelete?.(t.key); }}
+                  onMouseEnter={() => setHoveredTetherKey(t.key)}
+                  onMouseLeave={() => setHoveredTetherKey(null)}
+                  title="Remove tether"
+                >×</button>
+              </foreignObject>
+            )}
+          </g>
+        );
+      })}
       {preview && (
         <path
           d={`M ${preview.x1} ${preview.y1} L ${preview.x2} ${preview.y2}`}

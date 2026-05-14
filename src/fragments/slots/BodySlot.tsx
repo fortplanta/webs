@@ -18,7 +18,7 @@ export default function BodySlot({ slot }: { slot: FragmentSlot }) {
   if (!slot.content) return null;
   return (
     <div ref={containerRef} className="fragment-slot fragment-slot--body">
-      <p>{slot.content}</p>
+      <p data-text-content="true">{slot.content}</p>
       <SlotHistory slot={slot} slotType="body" />
     </div>
   );

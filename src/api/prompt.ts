@@ -40,8 +40,8 @@ Return ONLY valid JSON matching this exact shape:
 }
 
 Rules:
-- Return 5 to 7 clusters
-- Return 3 to 5 fragments per cluster
+- Return exactly 4 clusters (no more, no fewer)
+- Return exactly 3 fragments per cluster (12 fragments total)
 - Every fragment must have a "body" field with 2-4 sentences of meaningful content
 - Fragment types: person, concept, thesis, source, event, era, domain, quote
   Fragment type guide — choose carefully based on what each fragment actually IS:

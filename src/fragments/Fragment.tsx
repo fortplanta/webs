@@ -27,6 +27,9 @@ interface FragmentProps {
   onPivot?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onPin?: (id: string) => void;
+  onAnchor?: (id: string) => void;
+  onUnanchor?: (id: string) => void;
+  onResetPositions?: () => void;
   onMoveToCluster?: (fragmentId: string, clusterId: string) => void;
   onAddAccordion?: (fragmentId: string, promptId: string) => Promise<void>;
   onConnectorDotStart?: (fragmentId: string, e: React.MouseEvent) => void;
@@ -57,6 +60,9 @@ export default function Fragment({
   onPivot,
   onDuplicate,
   onPin,
+  onAnchor,
+  onUnanchor,
+  onResetPositions,
   onMoveToCluster,
   onAddAccordion,
   onConnectorDotStart,
@@ -203,30 +209,51 @@ export default function Fragment({
     ? (fragmentId: string, promptId: string) => onAddAccordion(fragmentId, promptId)
     : () => Promise.resolve();
 
+  // Prevent drag when clicking directly on selectable text
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('[data-text-content]')) return;
+    onMouseDown(e);
+  };
+
   return (
     <FragmentActionsContext.Provider value={contextValue}>
       <div
         data-fragment-id={id}
+        data-draggable={fragment.anchored ? undefined : 'true'}
+        data-anchored={fragment.anchored ? 'true' : undefined}
         className={`fragment-wrapper${layoutClass ? ` fragment-wrapper--${layoutClass}` : ''}${selectedClass}${highlightClass}${isDragOver ? ' fragment-wrapper--drag-over' : ''}`}
         style={widthStyle}
-        onMouseDown={onMouseDown}
+        onMouseDown={handleMouseDown}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <FragmentCard
-          fragment={fragment}
-          clusters={clusters}
-          onDuplicate={() => onDuplicate?.(id)}
-          onMoveToCluster={clusterId => onMoveToCluster?.(id, clusterId)}
-          onPin={() => onPin?.(id)}
-          onDelete={() => onDelete(id)}
-        />
+        <div className="fragment-card-inner">
+          {fragment.anchored && (
+            <div className="fragment__anchor-indicator" title="Anchored to cluster">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <rect x="2" y="5" width="8" height="6" rx="1" fill="currentColor" opacity="0.5"/>
+                <path d="M4 5V3.5a2 2 0 0 1 4 0V5" stroke="currentColor" strokeWidth="1.2" opacity="0.5"/>
+              </svg>
+            </div>
+          )}
+          <FragmentCard
+            fragment={fragment}
+            clusters={clusters}
+            onDuplicate={() => onDuplicate?.(id)}
+            onMoveToCluster={clusterId => onMoveToCluster?.(id, clusterId)}
+            onPin={() => onPin?.(id)}
+            onDelete={() => onDelete(id)}
+            onAnchor={onAnchor ? () => onAnchor(id) : undefined}
+            onUnanchor={onUnanchor ? () => onUnanchor(id) : undefined}
+            onResetPositions={onResetPositions}
+          />
 
-        <FragmentAccordions
-          fragment={fragment}
-          onAddAccordion={handleAddAccordion}
-        />
+          <FragmentAccordions
+            fragment={fragment}
+            onAddAccordion={handleAddAccordion}
+          />
+        </div>
 
         {onConnectorDotStart && (
           <ConnectorDot
