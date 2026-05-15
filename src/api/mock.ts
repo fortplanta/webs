@@ -47,13 +47,13 @@ const FRAGMENTS: Fragment[] = [
   // c2 — key figures (E, x=800)
   { id: 'c2f1', clusterId: 'c2', x: 800, y: col(0, 0), initialX: 800, initialY: col(0, 0),
     type: 'person', title: 'leopold II', layout: 'image-hero', historicalEra: '1885–1908', slots: [
-      { type: 'image', content: '' },
+      { type: 'image', content: 'https://source.unsplash.com/400x300/?leopold,belgium,king' },
       { type: 'body', content: 'King of Belgium who privately owned the Congo Free State 1885–1908, overseeing a brutal rubber extraction regime responsible for millions of deaths.' },
       { type: 'tags', items: ['Belgium', 'Congo', 'atrocity'] },
     ], createdAtZoom: 0.7, starred: false },
   { id: 'c2f2', clusterId: 'c2', x: 800, y: col(0, 1), initialX: 800, initialY: col(0, 1),
     type: 'person', title: 'frantz fanon', layout: 'image-hero', historicalEra: '1925–1961', slots: [
-      { type: 'image', content: '' },
+      { type: 'image', content: 'https://source.unsplash.com/400x300/?frantz,fanon,philosopher,algeria' },
       { type: 'body', content: 'Martinican-Algerian philosopher and psychiatrist whose work on decolonisation, violence, and national consciousness shaped anti-colonial movements globally.' },
       { type: 'tags', items: ['philosophy', 'Algeria', 'decolonisation'] },
     ], createdAtZoom: 0.7, starred: false },
@@ -66,6 +66,7 @@ const FRAGMENTS: Fragment[] = [
   // c3 — resistance movements (S, y=800)
   { id: 'c3f1', clusterId: 'c3', x: 0, y: col(800, 0), initialX: 0, initialY: col(800, 0),
     type: 'event', title: 'haitian revolution', layout: 'timeline', historicalEra: '1791–1804', slots: [
+      { type: 'image', content: 'https://source.unsplash.com/400x300/?haiti,revolution,history' },
       { type: 'body', content: 'The only successful slave revolution in history, 1791–1804. Haiti became the first Black republic and first nation in the Western Hemisphere to abolish slavery.' },
       { type: 'tags', items: ['Haiti', '1804', 'revolution', 'slavery'] },
     ], createdAtZoom: 0.7, starred: false },
