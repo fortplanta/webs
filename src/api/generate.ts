@@ -49,9 +49,15 @@ function normalizeArray(val: string[] | string | undefined | null): string[] {
   return String(val).split(',').map(s => s.trim()).filter(Boolean);
 }
 
+function unsplashUrl(keyword: string): string {
+  return 'https://source.unsplash.com/400x300/?' + keyword.toLowerCase().replace(/\s+/g, ',');
+}
+
 function buildSlots(f: GenerateApiResponse['clusters'][0]['fragments'][0]): FragmentSlot[] {
   const slots: FragmentSlot[] = [];
-  // person image slots are intentionally omitted — we have no image URLs from the API
+  if (f.type === 'person' || f.type === 'event') {
+    slots.push({ type: 'image', content: unsplashUrl(f.title) });
+  }
   if (f.body) {
     slots.push({ type: 'body', content: f.body });
   }

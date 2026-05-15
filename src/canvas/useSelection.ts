@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
@@ -15,6 +15,9 @@ export interface SelectionRect {
 export function useSelection() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
+  // Ref mirrors state so finishRect can read synchronously (React 18 batching makes
+  // state updater callbacks run async — reading from state in the callback would return null)
+  const rectRef = useRef<SelectionRect | null>(null);
 
   const selectId = useCallback((id: string, add = false) => {
     if (add) {
@@ -34,16 +37,21 @@ export function useSelection() {
   const selectMany = useCallback((ids: string[]) => setSelectedIds(new Set(ids)), []);
 
   const startRect = useCallback((x: number, y: number) => {
-    setSelectionRect({ startX: x, startY: y, endX: x, endY: y });
+    const r = { startX: x, startY: y, endX: x, endY: y };
+    rectRef.current = r;
+    setSelectionRect(r);
   }, []);
 
   const updateRect = useCallback((x: number, y: number) => {
-    setSelectionRect(prev => prev ? { ...prev, endX: x, endY: y } : null);
+    if (!rectRef.current) return;
+    rectRef.current = { ...rectRef.current, endX: x, endY: y };
+    setSelectionRect(rectRef.current);
   }, []);
 
   const finishRect = useCallback((): SelectionRect | null => {
-    let result: SelectionRect | null = null;
-    setSelectionRect(prev => { result = prev; return null; });
+    const result = rectRef.current;
+    rectRef.current = null;
+    setSelectionRect(null);
     return result;
   }, []);
 

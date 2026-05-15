@@ -12,9 +12,6 @@
   user-select: none;
 }
 
-.canvas-wrapper:active {
-  cursor: grabbing;
-}
 
 .canvas-content {
   position: absolute;

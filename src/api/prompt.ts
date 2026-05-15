@@ -61,7 +61,6 @@ Rules:
 - Quote fragments: body field only (verbatim quote + attribution). No tags, no list, no era.
 - Edge labels must be verb phrases, not nouns: "shaped by", "resulted in", "challenged by", "enabled", "inspired".
 - Edge source and target must EXACTLY match cluster titles in your response.
-- Do not include image fields.
 - Return raw JSON only. No markdown. No code fences. Start with { and end with }.`;
 }
 
