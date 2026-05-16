@@ -7,11 +7,14 @@
   flex: 1;
   min-height: 0;
   background: var(--color-canvas);
-  cursor: grab;
   overflow: hidden;
   user-select: none;
 }
 
+
+.canvas-wrapper--alt .fragment-wrapper {
+  cursor: text;
+}
 
 .canvas-content {
   position: absolute;

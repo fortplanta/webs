@@ -11,8 +11,6 @@
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
   transform: translate(-50%, -50%);
-  cursor: grab;
-  user-select: none;
   z-index: 1;
 }
 
@@ -27,6 +25,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  user-select: text;
 }
 
 .fragment-wrapper--quote {
@@ -51,14 +50,13 @@
   z-index: 20;
 }
 
-/* Text content — selectable and copyable */
+/* Text content — always selectable */
 .fragment-card__body-text,
 .fragment-slot--body p,
 .fragment-card__type-label,
 .seed-fragment__context,
 .seed-fragment__query {
   user-select: text;
-  cursor: text;
 }
 
 /* Non-selectable interactive chrome */
@@ -135,11 +133,7 @@
 
 /* ─── Cursor rules ─────────────────────────────────────── */
 
-.fragment-wrapper[data-draggable="true"] { cursor: grab; }
 .fragment-wrapper[data-anchored="true"] { cursor: default; }
-
-.fragment-card__body-text,
-.fragment-slot--body p { cursor: text; }
 
 .connector-dot { cursor: crosshair; }
 

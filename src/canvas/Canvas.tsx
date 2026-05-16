@@ -160,6 +160,41 @@ export default function Canvas({
   // Selection rect dragging ref (to avoid state lag in handlers)
   const selectionDragging = useRef(false);
 
+  // Double-click text mode — per fragment
+
+  // Alt key: text-select cursor on fragment cards
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Alt') el.classList.add('canvas-wrapper--alt'); };
+    const onKeyUp = (e: KeyboardEvent) => { if (e.key === 'Alt') el.classList.remove('canvas-wrapper--alt'); };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      el.classList.remove('canvas-wrapper--alt');
+    };
+  }, []);
+
+  // Prevent accidental text selection during any canvas drag
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const onDown = (e: MouseEvent) => {
+      if (e.altKey) return;
+      document.body.classList.add('drag-active');
+    };
+    const onUp = () => document.body.classList.remove('drag-active');
+    el.addEventListener('mousedown', onDown);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      el.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mouseup', onUp);
+      document.body.classList.remove('drag-active');
+    };
+  }, []);
+
   // Restore viewport
   useEffect(() => {
     const el = wrapperRef.current;
@@ -415,7 +450,6 @@ export default function Canvas({
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     // Only handle direct clicks on canvas-content or canvas-wrapper (not on fragments)
     if ((e.target as HTMLElement).closest('[data-fragment-id]')) return;
-
     if (activeTool === 'text') return; // text placement handled on click
 
     if (activeTool === 'select') {
@@ -654,7 +688,6 @@ export default function Canvas({
             clusters={state.clusters}
             onMouseDown={e => {
               e.stopPropagation();
-              // Anchored fragments cannot be dragged independently
               if (f.anchored) return;
               // Group drag: mousedown on a selected element when multiple are selected
               if (
