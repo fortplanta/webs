@@ -1,5 +1,33 @@
 /* connectors.css — connector lines, labels, context menu, spawn points, fragment placeholders */
 
+/* ─── Marching dashes — user connection pending AI validation ─ */
+
+@keyframes dash-march {
+  to { stroke-dashoffset: -20; }
+}
+
+/* ─── Score badge — floats up and fades on connection drawn ── */
+
+@keyframes score-badge-float {
+  0%   { transform: translateY(0);     opacity: 1; }
+  100% { transform: translateY(-40px); opacity: 0; }
+}
+
+.score-badge {
+  position: fixed;
+  font-family: var(--font-primary);
+  font-size: 14px;
+  font-weight: var(--font-weight-regular);
+  letter-spacing: var(--tracking-tight);
+  color: #0a0a0a;
+  background: #D2F34C;
+  padding: 3px 8px;
+  border-radius: 2px;
+  pointer-events: none;
+  animation: score-badge-float 1s ease-out forwards;
+  z-index: 2000;
+}
+
 /* ─── Strong connector pulse animation ───────────────────── */
 
 @keyframes connector-pulse {

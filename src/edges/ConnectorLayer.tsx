@@ -26,6 +26,8 @@ interface Props {
   onTetherDelete?: (key: string) => void;
   userConnections?: UserConnection[];
   connectPreview?: PreviewConnector | null;
+  pendingConnectionIds?: Set<string>;
+  fadingLabelIds?: Set<string>;
 }
 
 const FRAG_COLOR_VAR: Record<string, string> = {
@@ -45,6 +47,8 @@ export default function ConnectorLayer({
   selectedTetherKey, onTetherSelect, onTetherDelete,
   userConnections = [],
   connectPreview,
+  pendingConnectionIds,
+  fadingLabelIds,
 }: Props) {
   const [hoveredTetherKey, setHoveredTetherKey] = useState<string | null>(null);
   const posById = useMemo(() => {
@@ -147,11 +151,22 @@ export default function ConnectorLayer({
         const y2 = tgt.y;
         const mx = (x1 + x2) / 2;
         const my = (y1 + y2) / 2;
+        const isPending = pendingConnectionIds?.has(uc.id) ?? false;
+        const isLabelFading = fadingLabelIds?.has(uc.id) ?? false;
         return (
           <g key={uc.id} pointerEvents="none">
-            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(0,0,0,0.35)" strokeWidth={1.5} />
+            <line
+              x1={x1} y1={y1} x2={x2} y2={y2}
+              stroke="rgba(0,0,0,0.35)"
+              strokeWidth={1.5}
+              strokeDasharray={isPending ? '6 4' : undefined}
+              style={isPending ? { animation: 'dash-march 0.8s linear infinite' } : undefined}
+            />
             {uc.label && (
-              <foreignObject x={mx - 60} y={my - 10} width={120} height={20} style={{ overflow: 'visible' }}>
+              <foreignObject
+                x={mx - 60} y={my - 10} width={120} height={20}
+                style={{ overflow: 'visible', opacity: isLabelFading ? 0 : 1, transition: 'opacity 150ms' }}
+              >
                 <span className="connector-label-fo">{uc.label}</span>
               </foreignObject>
             )}

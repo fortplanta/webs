@@ -82,13 +82,13 @@ export function addUserConnection(
   explorationId: string,
   sourceFragmentId: string,
   targetFragmentId: string,
-): void {
+): { id: string; strength: 1 | 2 | 3 } | null {
   const canvasState = loadCanvasState(explorationId);
-  if (!canvasState) return;
+  if (!canvasState) return null;
 
   const sourceFragment = canvasState.fragments.find(f => f.id === sourceFragmentId);
   const targetFragment = canvasState.fragments.find(f => f.id === targetFragmentId);
-  if (!sourceFragment || !targetFragment) return;
+  if (!sourceFragment || !targetFragment) return null;
 
   const state = loadExplorationState(explorationId) ?? buildInitialState(canvasState.fragments);
 
@@ -114,6 +114,29 @@ export function addUserConnection(
   state.depthScore = depthScoreFromConnections(state.userConnections);
 
   saveExplorationState(explorationId, state);
+  return { id: connection.id, strength };
+}
+
+export function updateUserConnectionAI(
+  explorationId: string,
+  connectionId: string,
+  update: { label: string; strength: 1 | 2 | 3; rationale: string },
+): { prevStrength: 1 | 2 | 3 } | null {
+  const state = loadExplorationState(explorationId);
+  if (!state) return null;
+
+  const conn = state.userConnections.find(c => c.id === connectionId);
+  if (!conn) return null;
+
+  const prevStrength = conn.strength as 1 | 2 | 3;
+  conn.label = update.label;
+  conn.strength = update.strength;
+  conn.rationale = update.rationale;
+
+  state.depthScore = depthScoreFromConnections(state.userConnections);
+  saveExplorationState(explorationId, state);
+
+  return { prevStrength };
 }
 
 export function removeUserConnection(explorationId: string, connectionId: string): void {

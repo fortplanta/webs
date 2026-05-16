@@ -415,6 +415,88 @@ export async function runPromptOnSlot(
   }
 }
 
+export interface ConnectionValidationResult {
+  label: string;
+  strength: 1 | 2 | 3;
+  rationale: string;
+}
+
+const CONNECTION_VALIDATION_SYSTEM = 'You assess intellectual connections between knowledge fragments. Return ONLY valid JSON. No markdown. No explanation. Response must start with { and end with }.';
+
+function buildConnectionValidationMessage(sourceFragment: Fragment, targetFragment: Fragment): string {
+  const srcBody = sourceFragment.slots.find(s => s.type === 'body')?.content ?? '';
+  const tgtBody = targetFragment.slots.find(s => s.type === 'body')?.content ?? '';
+  return `Fragment A: ${sourceFragment.type} "${sourceFragment.title}" — ${srcBody}
+Fragment B: ${targetFragment.type} "${targetFragment.title}" — ${tgtBody}
+Return JSON:
+{
+  "label": "a 2–4 word verb phrase describing how A relates to B (lowercase)",
+  "strength": 1 or 2 or 3,
+  "rationale": "one sentence"
+}
+Strength guide: 1 = loose or tangential, 2 = clear relationship, 3 = strong causal or structural link.`;
+}
+
+function getMockConnectionValidation(sourceFragment: Fragment, targetFragment: Fragment): ConnectionValidationResult {
+  const labels = ['relates to', 'informs', 'builds on', 'contrasts with', 'parallels'];
+  const label = labels[Math.floor(Math.random() * labels.length)];
+  const strength = (Math.floor(Math.random() * 3) + 1) as 1 | 2 | 3;
+  return {
+    label,
+    strength,
+    rationale: `"${sourceFragment.title}" and "${targetFragment.title}" share conceptual territory worth exploring.`,
+  };
+}
+
+export async function validateConnectionLabel(
+  sourceFragment: Fragment,
+  targetFragment: Fragment,
+): Promise<ConnectionValidationResult | null> {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+
+  if (!apiKey) {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    return getMockConnectionValidation(sourceFragment, targetFragment);
+  }
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 200,
+        system: CONNECTION_VALIDATION_SYSTEM,
+        messages: [{ role: 'user', content: buildConnectionValidationMessage(sourceFragment, targetFragment) }],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Connection validation API error', response.status);
+      return null;
+    }
+
+    const data = await response.json() as { content?: Array<{ text?: string }> };
+    const text = data.content?.[0]?.text ?? '';
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    const cleaned = jsonStart !== -1 && jsonEnd > jsonStart ? text.slice(jsonStart, jsonEnd + 1) : text.trim();
+    const parsed = JSON.parse(cleaned) as { label?: string; strength?: number; rationale?: string };
+
+    if (!parsed.label || typeof parsed.strength !== 'number') return null;
+    const strength = ([1, 2, 3].includes(parsed.strength) ? parsed.strength : 2) as 1 | 2 | 3;
+    return { label: String(parsed.label), strength, rationale: String(parsed.rationale ?? '') };
+  } catch (err) {
+    console.error('Connection validation failed:', err);
+    return null;
+  }
+}
+
 export async function generatePivot(sourceFragment: Fragment, sourceClusterId: string): Promise<PivotResult> {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
 
