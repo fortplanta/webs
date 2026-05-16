@@ -9,6 +9,7 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 
 | Session | Date | Focus | Outcome |
 |---------|------|-------|---------|
+| 23 | May 2026 | Data layer: connection state + depth score | UserConnection/ExplorationConnectionState types; calculateConnectionStrength; depthScoreFromConnections; addUserConnection; removeUserConnection; initExplorationState wired in App.tsx; fragment IDs changed to clusterSlug_index format; 10 unit tests via Vitest; no UI changes |
 | 01 | Apr 2026 | Foundation | React Flow + Ant Design removed; token system bootstrapped |
 | 02 | Apr 2026 | Pan-zoom canvas | usePanZoom.ts + Canvas.tsx + dot grid background |
 | 03 | Apr 2026 | LOD system | getLOD() with macro/compact/full thresholds |
@@ -136,6 +137,15 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | Gantt timeline view | DONE | GanttView.tsx: full-screen overlay; separate pan/zoom state (scale + offsetX); wheel zoom toward cursor; drag to pan; auto-scaled time axis with tick generation; type rows (ERA→EVENT→PERSON→CONCEPT→THESIS→SOURCE→DOMAIN→QUOTE); colored pills (point) and bars (range); era parsing handles BCE/range/decade/century/approximation; hover tooltip; click item → back to canvas + navigate; gantt.css | Session 19 |
 | Gantt view toggle | DONE | ganttOpen state in App.tsx; passed to Canvas.tsx as prop; TimelineBanner click → onGanttOpen; GanttView back button → onGanttClose; NavRail 4th icon (timeline bars) toggles gantt; Escape closes gantt | Session 19 |
 | Tab name on generation | DONE | App.tsx handleQuery: name = query.slice(0, 32) + ellipsis if longer; renameTab called after generation | Session 19 |
+
+| Fragment IDs (deterministic format) | DONE | Format: clusterSlug_fragmentIndex (e.g. "engineering_0"); seed fragment uses "seed_0"; pivot fragments still use uuidv4 | Session 23 |
+| ExplorationConnectionState model | DONE | userConnections[], depthScore, fragmentStates map; persisted to webs_exploration_[id] in localStorage | Session 23 |
+| calculateConnectionStrength | DONE | Pure function, returns 1–3; same cluster→1, diff cluster same type→2, diff cluster diff type→3; AI edge cap at 2; thesis +1 capped at 3 | Session 23 |
+| depthScoreFromConnections | DONE | Pure function: sum of connection.strength * 10 | Session 23 |
+| addUserConnection | DONE | Loads canvas+exploration state from localStorage; computes strength; appends connection; updates fragmentStates; recalculates depthScore; persists | Session 23 |
+| removeUserConnection | DONE | Removes by connectionId; recomputes fragmentStates from scratch; recalculates depthScore; persists | Session 23 |
+| initExplorationState | DONE | Called in App.tsx after generateCanvas resolves; populates fragmentStates for all fragments; wired before renameTab | Session 23 |
+| Unit tests (calculateConnectionStrength) | DONE | 10 tests via Vitest covering all 5 rule branches; all pass | Session 23 |
 
 Status values: `NOT STARTED` / `IN PROGRESS` / `DONE` / `NEEDS REVIEW` / `BLOCKED`
 
