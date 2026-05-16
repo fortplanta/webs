@@ -6,8 +6,8 @@ import { useTools } from './useTools';
 import { useSelection, MIN_FRAGMENT_WIDTH, MAX_FRAGMENT_WIDTH } from './useSelection';
 import type { ResizeHandle } from './useSelection';
 import { CanvasState, ConnectorRenderType, Fragment, FragmentType, LayoutType, AccordionSlot, SlotType, UserConnection } from '../api/types';
-import { addUserConnection, loadExplorationState } from './connections';
-import { generatePivot, runPromptOnSlot } from '../api/generate';
+import { addUserConnection, updateUserConnectionAI, loadExplorationState } from './connections';
+import { generatePivot, runPromptOnSlot, validateConnectionLabel } from '../api/generate';
 import { PROMPTS, PromptDefinition } from '../prompts/prompts';
 import CommandMenu, { CommandMenuTarget } from '../ui/CommandMenu';
 import TimelineBanner from '../ui/TimelineBanner';
@@ -119,6 +119,15 @@ export default function Canvas({
   const [userConnectionsList, setUserConnectionsList] = useState<UserConnection[]>(() =>
     loadExplorationState(projectId)?.userConnections ?? []
   );
+
+  // AI-pending user connections (marching dashes while waiting for label)
+  // Map: connectionId → { heuristicStrength, badgeX, badgeY }
+  const pendingConnectionsRef = useRef<Map<string, { heuristicStrength: 1 | 2 | 3; badgeX: number; badgeY: number }>>(new Map());
+  const [pendingConnectionIds, setPendingConnectionIds] = useState<Set<string>>(new Set());
+  const [fadingLabelIds, setFadingLabelIds] = useState<Set<string>>(new Set());
+
+  // Floating score badges: +N chips that float up and disappear
+  const [scoreBadges, setScoreBadges] = useState<Array<{ id: string; delta: number; x: number; y: number }>>([]);
 
   // Canvas drop menu (connector dot → empty canvas) — canvas-space coords
   const [canvasDropMenu, setCanvasDropMenu] = useState<{
@@ -344,8 +353,56 @@ export default function Canvas({
         const fragEl = el?.closest('[data-fragment-id]');
         const targetId = fragEl?.getAttribute('data-fragment-id');
         if (targetId && targetId !== sourceFragmentId) {
-          addUserConnection(projectId, sourceFragmentId, targetId);
+          const result = addUserConnection(projectId, sourceFragmentId, targetId);
           setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+          if (result) {
+            const { id: connectionId, strength: heuristicStrength } = result;
+            // Show initial score badge at drop position
+            const badgeId = crypto.randomUUID();
+            setScoreBadges(prev => [...prev, { id: badgeId, delta: heuristicStrength * 10, x: e.clientX, y: e.clientY }]);
+            setTimeout(() => setScoreBadges(prev => prev.filter(b => b.id !== badgeId)), 1000);
+            // Mark connection as AI-pending (marching dashes)
+            pendingConnectionsRef.current.set(connectionId, { heuristicStrength, badgeX: e.clientX, badgeY: e.clientY });
+            setPendingConnectionIds(prev => new Set(prev).add(connectionId));
+            // Fire background AI validation (non-blocking)
+            const sourceFragment = state.fragments.find(f => f.id === sourceFragmentId);
+            const targetFragment = state.fragments.find(f => f.id === targetId);
+            if (sourceFragment && targetFragment) {
+              validateConnectionLabel(sourceFragment, targetFragment).then(aiResult => {
+                const pending = pendingConnectionsRef.current.get(connectionId);
+                pendingConnectionsRef.current.delete(connectionId);
+                setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
+                if (!aiResult) {
+                  // Error: keep heuristic, empty label
+                  updateUserConnectionAI(projectId, connectionId, { label: '', strength: heuristicStrength, rationale: '' });
+                  setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+                  return;
+                }
+                // Fade out label, update, fade in
+                setFadingLabelIds(prev => new Set(prev).add(connectionId));
+                setTimeout(() => {
+                  const update = updateUserConnectionAI(projectId, connectionId, aiResult);
+                  setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+                  // Show delta badge if AI returned stronger score
+                  if (update && pending && aiResult.strength > pending.heuristicStrength) {
+                    const delta = (aiResult.strength - pending.heuristicStrength) * 10;
+                    const deltaBadgeId = crypto.randomUUID();
+                    setScoreBadges(prev => [...prev, { id: deltaBadgeId, delta, x: pending.badgeX, y: pending.badgeY - 20 }]);
+                    setTimeout(() => setScoreBadges(prev => prev.filter(b => b.id !== deltaBadgeId)), 1000);
+                  }
+                  setFadingLabelIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
+                }, 150);
+              }).catch(err => {
+                console.error('Connection validation error:', err);
+                pendingConnectionsRef.current.delete(connectionId);
+                setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
+              });
+            } else {
+              // Fragments not found — clear pending immediately
+              pendingConnectionsRef.current.delete(connectionId);
+              setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
+            }
+          }
         }
         return;
       }
@@ -718,6 +775,8 @@ export default function Canvas({
           preview={dotDragPreview}
           userConnections={userConnectionsList}
           connectPreview={connectPreview}
+          pendingConnectionIds={pendingConnectionIds}
+          fadingLabelIds={fadingLabelIds}
           selectedTetherKey={selectedTetherKey}
           onTetherSelect={key => { setSelectedTetherKey(key); deselectAll(); }}
           onTetherDelete={key => {
@@ -876,6 +935,17 @@ export default function Canvas({
           />
         )}
       </div>
+
+      {/* Score badges — fixed position, float up on connection drawn */}
+      {scoreBadges.map(b => (
+        <div
+          key={b.id}
+          className="score-badge"
+          style={{ left: b.x, top: b.y }}
+        >
+          +{b.delta}
+        </div>
+      ))}
 
       {/* Connector context menu — fixed position, outside canvas-content transform */}
       {connectorMenu && activeConnector && (

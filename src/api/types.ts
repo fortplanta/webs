@@ -174,6 +174,7 @@ export interface UserConnection {
   targetFragmentId: string;
   label: string;
   strength: 0 | 1 | 2 | 3;
+  rationale?: string;
   createdAt: number;
 }
 
