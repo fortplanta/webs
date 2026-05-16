@@ -19,6 +19,7 @@ import Canvas from './canvas/Canvas';
 import TabStrip from './tabs/TabStrip';
 import { useTabs } from './tabs/useTabs';
 import { loadCanvasState, saveCanvasState, updateProjectMeta, loadProjectsIndex } from './storage/storage';
+import { initExplorationState } from './canvas/connections';
 import LoadingCanvas from './ui/LoadingCanvas';
 import NavRail, { NavPanel as NavPanelType } from './ui/NavRail';
 import NavPanel from './ui/NavPanel';
@@ -105,6 +106,7 @@ export default function App() {
       // Tab name: query truncated to 32 chars
       const name = query.slice(0, 32) + (query.length > 32 ? '…' : '');
       saveCanvasState(targetTabId, state);
+      initExplorationState(targetTabId, state.fragments);
       renameTab(targetTabId, name);
       updateProjectMeta({
         id: targetTabId,

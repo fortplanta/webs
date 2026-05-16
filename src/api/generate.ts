@@ -116,7 +116,7 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
     isSeed: true,
   };
   const seedFragment: Fragment = {
-    id: uuidv4(),
+    id: 'seed_0',
     clusterId: seedId,
     x: 0, initialX: 0,
     y: 90, initialY: 90,
@@ -148,7 +148,8 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
     if (!cluster) return;
     const positions = fragmentPositions(cluster.x, cluster.y, apiCluster.fragments.length);
     apiCluster.fragments.forEach((f, fi) => {
-      const fragmentId = uuidv4();
+      const clusterSlug = cluster.label.toLowerCase().replace(/\s+/g, '_');
+      const fragmentId = `${clusterSlug}_${fi}`;
       const pos = positions[fi];
       const builtSlots = buildSlots(f);
       const hasImage = builtSlots.some(s => s.type === 'image');

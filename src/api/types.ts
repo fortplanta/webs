@@ -168,6 +168,26 @@ export interface PivotApiResponse {
 
 // Raw API response shape before client-side processing.
 // Uses flat fields — client converts to FragmentSlot[] via buildSlots().
+export interface UserConnection {
+  id: string;
+  sourceFragmentId: string;
+  targetFragmentId: string;
+  label: string;
+  strength: 0 | 1 | 2 | 3;
+  createdAt: number;
+}
+
+export interface FragmentConnectionState {
+  connected: boolean;
+  connectionCount: number;
+}
+
+export interface ExplorationConnectionState {
+  userConnections: UserConnection[];
+  depthScore: number;
+  fragmentStates: Record<string, FragmentConnectionState>;
+}
+
 export interface GenerateApiResponse {
   context: string;
   clusters: Array<{
