@@ -318,3 +318,13 @@
   color: rgba(0, 0, 0, 0.3);
   text-transform: uppercase;
 }
+
+.library-panel__cross-link-badge {
+  font-family: var(--font-primary);
+  font-size: 10px;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-seed-bg, #d2f34c);
+  font-weight: var(--font-weight-regular);
+  flex-shrink: 0;
+  cursor: default;
+}

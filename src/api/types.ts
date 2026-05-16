@@ -190,6 +190,16 @@ export interface ExplorationConnectionState {
   milestonesReached: number[];
 }
 
+export interface CrossLink {
+  id: string;
+  explorationAId: string;
+  fragmentAId: string;
+  explorationBId: string;
+  fragmentBId: string;
+  label: string;
+  createdAt: number;
+}
+
 export interface GenerateApiResponse {
   context: string;
   clusters: Array<{

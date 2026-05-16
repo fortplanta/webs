@@ -176,3 +176,11 @@
 .status-bar__dot--offline {
   background: rgba(0, 0, 0, 0.2);
 }
+
+.status-bar__linked-badge {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  letter-spacing: 0.04em;
+  color: var(--color-seed-bg, #d2f34c);
+  text-transform: uppercase;
+}

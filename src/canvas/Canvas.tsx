@@ -7,7 +7,11 @@ import { useSelection, MIN_FRAGMENT_WIDTH, MAX_FRAGMENT_WIDTH } from './useSelec
 import type { ResizeHandle } from './useSelection';
 import { CanvasState, ConnectorRenderType, Fragment, FragmentType, LayoutType, AccordionSlot, SlotType, UserConnection } from '../api/types';
 import { addUserConnection, updateUserConnectionAI, loadExplorationState } from './connections';
-import { generatePivot, runPromptOnSlot, validateConnectionLabel } from '../api/generate';
+import { getCrossLinksForExploration, addCrossLink, getCrossLinks, updateCrossLinkLabel } from './crossLinks';
+import { loadCanvasState } from '../storage/storage';
+import { generatePivot, runPromptOnSlot, validateConnectionLabel, validateCrossLink } from '../api/generate';
+import type { ProjectMeta } from '../api/types';
+import CrossLinkModal from '../ui/CrossLinkModal';
 import { PROMPTS, PromptDefinition } from '../prompts/prompts';
 import CommandMenu, { CommandMenuTarget } from '../ui/CommandMenu';
 import TimelineBanner from '../ui/TimelineBanner';
@@ -49,6 +53,7 @@ interface CanvasProps {
   ganttOpen?: boolean;
   onGanttOpen?: () => void;
   onGanttClose?: () => void;
+  projects?: ProjectMeta[];
 }
 
 export default function Canvas({
@@ -61,6 +66,7 @@ export default function Canvas({
   ganttOpen = false,
   onGanttOpen,
   onGanttClose,
+  projects = [],
 }: CanvasProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef(initialState.viewport.zoom || 0.7);
@@ -118,6 +124,12 @@ export default function Canvas({
   const [connectDropTargetId, setConnectDropTargetId] = useState<string | null>(null);
   const [userConnectionsList, setUserConnectionsList] = useState<UserConnection[]>(() =>
     loadExplorationState(projectId)?.userConnections ?? []
+  );
+
+  // Cross-link modal state (Session 28)
+  const [crossLinkSourceFragmentId, setCrossLinkSourceFragmentId] = useState<string | null>(null);
+  const [explorationCrossLinks, setExplorationCrossLinks] = useState(() =>
+    getCrossLinksForExploration(projectId)
   );
 
   // AI-pending user connections (marching dashes while waiting for label)
@@ -235,6 +247,14 @@ export default function Canvas({
   // Reload user connections on tab switch
   useEffect(() => {
     setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+    setExplorationCrossLinks(getCrossLinksForExploration(projectId));
+  }, [projectId]);
+
+  // Reload cross-links when any cross-link is added/updated
+  useEffect(() => {
+    const handler = () => setExplorationCrossLinks(getCrossLinksForExploration(projectId));
+    window.addEventListener('webs-cross-links-changed', handler);
+    return () => window.removeEventListener('webs-cross-links-changed', handler);
   }, [projectId]);
 
   // Passive wheel listener
@@ -741,6 +761,59 @@ export default function Canvas({
     setConnectorMenu({ connectorId, screenX: e.clientX, screenY: e.clientY });
   };
 
+  // Session 28: cross-link handlers
+  const explorationDepthScore = userConnectionsList.reduce((sum, c) => sum + c.strength * 10, 0);
+
+  const handleLinkToExploration = (fragmentId: string) => {
+    setCrossLinkSourceFragmentId(fragmentId);
+  };
+
+  const handleCrossLinkConfirm = (targetExplorationId: string, targetFragmentId: string) => {
+    if (!crossLinkSourceFragmentId) return;
+    const link = {
+      id: crypto.randomUUID(),
+      explorationAId: projectId,
+      fragmentAId: crossLinkSourceFragmentId,
+      explorationBId: targetExplorationId,
+      fragmentBId: targetFragmentId,
+      label: '',
+      createdAt: Date.now(),
+    };
+    addCrossLink(link);
+    setExplorationCrossLinks(getCrossLinksForExploration(projectId));
+
+    // First-ever cross-link reward
+    if (getCrossLinks().length === 1 && !localStorage.getItem('webs_first_cross_link_shown')) {
+      localStorage.setItem('webs_first_cross_link_shown', 'true');
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(210,243,76,0.1);pointer-events:none;z-index:9999;';
+      document.body.appendChild(overlay);
+      overlay.animate(
+        [{ opacity: 0 }, { opacity: 1 }, { opacity: 1 }, { opacity: 0 }],
+        { duration: 1800, easing: 'ease-in-out', fill: 'forwards' }
+      ).onfinish = () => overlay.remove();
+    }
+
+    // Background AI label generation
+    const fragA = state.fragments.find(f => f.id === crossLinkSourceFragmentId);
+    if (fragA) {
+      const targetCanvas = loadCanvasState(targetExplorationId);
+      const fragB = targetCanvas?.fragments.find(f => f.id === targetFragmentId);
+      if (fragB) {
+        const bodyA = fragA.slots.find(s => s.type === 'body')?.content ?? '';
+        const bodyB = fragB.slots.find(s => s.type === 'body')?.content ?? '';
+        validateCrossLink(
+          { type: fragA.type, title: fragA.title, body: bodyA },
+          { type: fragB.type, title: fragB.title, body: bodyB },
+        ).then(result => {
+          if (result?.label) updateCrossLinkLabel(link.id, result.label);
+        }).catch(() => {});
+      }
+    }
+
+    setCrossLinkSourceFragmentId(null);
+  };
+
   const activeConnector = connectorMenu
     ? state.connectors.find(c => c.id === connectorMenu.connectorId)
     : null;
@@ -837,6 +910,8 @@ export default function Canvas({
             onAddAccordion={handleAddAccordion}
             onConnectorDotStart={handleConnectorDotStart}
             onConnectHandleMouseDown={handleConnectHandleStart}
+            onLinkToExploration={handleLinkToExploration}
+            depthScore={explorationDepthScore}
             isDropTarget={connectDropTargetId === f.id}
             onPromptDrop={handlePromptDrop}
             onNavigateSlotHistory={navigateSlotHistory}
@@ -996,6 +1071,7 @@ export default function Canvas({
         zoom={transform.zoom}
         fragmentCount={state.fragments.length}
         clusterCount={state.clusters.length}
+        hasLinks={explorationCrossLinks.length > 0}
       />
 
       {/* Slot command menu — fixed position */}
@@ -1006,6 +1082,20 @@ export default function Canvas({
           onClose={() => setCommandMenu(null)}
         />
       )}
+
+      {/* Cross-link modal (Session 28) */}
+      {crossLinkSourceFragmentId && (() => {
+        const sourceFragment = state.fragments.find(f => f.id === crossLinkSourceFragmentId);
+        return sourceFragment ? (
+          <CrossLinkModal
+            sourceFragment={sourceFragment}
+            sourceExplorationId={projectId}
+            projects={projects}
+            onConfirm={handleCrossLinkConfirm}
+            onClose={() => setCrossLinkSourceFragmentId(null)}
+          />
+        ) : null;
+      })()}
 
       {/* Reset positions confirmation */}
       {showResetConfirm && (
