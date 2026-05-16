@@ -17,7 +17,13 @@ interface Props {
   explorationName: string;
   fragmentCount: number;
   clusterCount: number;
+  totalClusters: number;
   connectorCount: number;
+  depthScore: number;
+  userConnectionCount: number;
+  maxConnections: number;
+  clustersLit: number;
+  milestonesReached: number[];
   createdAt: number;
   updatedAt: number;
   scratchpad: string;
@@ -36,7 +42,13 @@ export default function NavPanel({
   explorationName,
   fragmentCount,
   clusterCount,
+  totalClusters,
   connectorCount,
+  depthScore,
+  userConnectionCount,
+  maxConnections,
+  clustersLit,
+  milestonesReached,
   createdAt,
   updatedAt,
   scratchpad,
@@ -59,7 +71,13 @@ export default function NavPanel({
                 explorationName={explorationName}
                 fragmentCount={fragmentCount}
                 clusterCount={clusterCount}
+                totalClusters={totalClusters}
                 connectorCount={connectorCount}
+                depthScore={depthScore}
+                userConnectionCount={userConnectionCount}
+                maxConnections={maxConnections}
+                clustersLit={clustersLit}
+                milestonesReached={milestonesReached}
                 createdAt={createdAt}
                 updatedAt={updatedAt}
                 scratchpad={scratchpad}

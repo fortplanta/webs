@@ -13,10 +13,21 @@ export function loadExplorationState(explorationId: string): ExplorationConnecti
   }
 }
 
+const MILESTONE_THRESHOLDS = [100, 200, 300];
+
 function saveExplorationState(explorationId: string, state: ExplorationConnectionState): void {
   try {
     localStorage.setItem(explorationKey(explorationId), JSON.stringify(state));
+    window.dispatchEvent(new CustomEvent('webs-connections-changed', { detail: { explorationId } }));
   } catch { /* fire-and-forget */ }
+}
+
+function updateMilestones(state: ExplorationConnectionState): void {
+  for (const threshold of MILESTONE_THRESHOLDS) {
+    if (state.depthScore >= threshold && !state.milestonesReached.includes(threshold)) {
+      state.milestonesReached.push(threshold);
+    }
+  }
 }
 
 // Build a blank ExplorationConnectionState from a fragment list.
@@ -25,7 +36,7 @@ function buildInitialState(fragments: Fragment[]): ExplorationConnectionState {
   fragments.forEach(f => {
     fragmentStates[f.id] = { connected: false, connectionCount: 0 };
   });
-  return { userConnections: [], depthScore: 0, fragmentStates };
+  return { userConnections: [], depthScore: 0, fragmentStates, milestonesReached: [] };
 }
 
 // Called once after generateCanvas() resolves. Persists the blank exploration state.
@@ -112,6 +123,7 @@ export function addUserConnection(
   if (tgt) { tgt.connected = true; tgt.connectionCount++; }
 
   state.depthScore = depthScoreFromConnections(state.userConnections);
+  updateMilestones(state);
 
   saveExplorationState(explorationId, state);
   return { id: connection.id, strength };
@@ -134,6 +146,7 @@ export function updateUserConnectionAI(
   conn.rationale = update.rationale;
 
   state.depthScore = depthScoreFromConnections(state.userConnections);
+  updateMilestones(state);
   saveExplorationState(explorationId, state);
 
   return { prevStrength };
@@ -165,6 +178,7 @@ export function removeUserConnection(explorationId: string, connectionId: string
   void removed;
 
   state.depthScore = depthScoreFromConnections(state.userConnections);
+  updateMilestones(state);
 
   saveExplorationState(explorationId, state);
 }
