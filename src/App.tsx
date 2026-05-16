@@ -14,7 +14,7 @@ import './styles/nav-panel.css';
 import './styles/modal.css';
 import { CanvasState, Fragment, ProjectMeta } from './api/types';
 import { generateCanvas } from './api/generate';
-import { EMPTY_CANVAS_STATE } from './canvas/useCanvas';
+import { createEmptyCanvasState } from './canvas/useCanvas';
 import Canvas from './canvas/Canvas';
 import TabStrip from './tabs/TabStrip';
 import { useTabs } from './tabs/useTabs';
@@ -29,14 +29,15 @@ export default function App() {
   const { tabs, activeTabId, canAddTab, switchTab, addTab, addTabGetId, openProject, closeTab, renameTab } = useTabs();
   const [copiedFragment, setCopiedFragment] = useState<Fragment | null>(null);
 
+  const [prevActiveTabId, setPrevActiveTabId] = useState(activeTabId);
   const [tabState, setTabState] = useState<CanvasState>(() =>
-    loadCanvasState(activeTabId) ?? EMPTY_CANVAS_STATE
+    loadCanvasState(activeTabId) ?? createEmptyCanvasState()
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [currentQuery, setCurrentQuery] = useState('');
 
-  const [scratchpad, setScratchpad] = useState(() => (loadCanvasState(activeTabId) ?? EMPTY_CANVAS_STATE).scratchpad ?? '');
+  const [scratchpad, setScratchpad] = useState(() => (loadCanvasState(activeTabId) ?? createEmptyCanvasState()).scratchpad ?? '');
   const [generationCount, setGenerationCount] = useState(0);
   const [activePanel, setActivePanel] = useState<NavPanelType | null>('exploration');
   const [startingCardOpen, setStartingCardOpen] = useState(false);
@@ -44,19 +45,21 @@ export default function App() {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [projectsMeta, setProjectsMeta] = useState<ProjectMeta[]>(() => loadProjectsIndex());
 
-  // When the active tab changes, load its saved state
-  useEffect(() => {
-    const saved = loadCanvasState(activeTabId) ?? EMPTY_CANVAS_STATE;
+  // Synchronous tab switch: update tabState during render so Canvas mounts with correct state.
+  // useEffect fires after children mount — too late when key changes force a remount.
+  if (prevActiveTabId !== activeTabId) {
+    const saved = loadCanvasState(activeTabId) ?? createEmptyCanvasState();
     setTabState(saved);
     setScratchpad(saved.scratchpad ?? '');
     setIsGenerating(false);
     setGenerateError(null);
     setGanttOpen(false);
-  }, [activeTabId]);
+    setPrevActiveTabId(activeTabId);
+  }
 
   const handleScratchpadChange = useCallback((text: string) => {
     setScratchpad(text);
-    const current = loadCanvasState(activeTabId) ?? EMPTY_CANVAS_STATE;
+    const current = loadCanvasState(activeTabId) ?? createEmptyCanvasState();
     saveCanvasState(activeTabId, { ...current, scratchpad: text });
   }, [activeTabId]);
 

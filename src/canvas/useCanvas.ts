@@ -15,14 +15,19 @@ export function getLOD(zoom: number): LOD {
 
 export { INITIAL_STATE };
 
-export const EMPTY_CANVAS_STATE: CanvasState = {
-  clusters: [],
-  fragments: [],
-  connectors: [],
-  viewport: { x: 0, y: 0, zoom: zoomTokens.initial },
-  query: '',
-  createdAt: 0,
-};
+export function createEmptyCanvasState(): CanvasState {
+  return {
+    clusters: [],
+    fragments: [],
+    connectors: [],
+    viewport: { x: 0, y: 0, zoom: zoomTokens.initial },
+    query: '',
+    createdAt: 0,
+  };
+}
+
+/** @deprecated use createEmptyCanvasState() */
+export const EMPTY_CANVAS_STATE = createEmptyCanvasState();
 
 type DragState = {
   id: string;
@@ -36,7 +41,7 @@ type DragState = {
 
 const MAX_UNDO = 50;
 
-export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS_STATE) {
+export function useCanvas(projectId: string, initial: CanvasState = createEmptyCanvasState()) {
   // Filter out legacy tether/weak connectors that may exist in saved state
   const filteredInitial: CanvasState = {
     ...initial,
@@ -483,6 +488,11 @@ export function useCanvas(projectId: string, initial: CanvasState = EMPTY_CANVAS
   const updateViewport = useCallback((viewport: { x: number; y: number; zoom: number }) => {
     setState(prev => ({ ...prev, viewport }));
   }, []);
+
+  // Flush save immediately on unmount so tab-switch key remounts don't drop unsaved state
+  useEffect(() => {
+    return () => { saveCanvasState(projectId, stateRef.current); };
+  }, [projectId]);
 
   // Debounced auto-save to localStorage
   useEffect(() => {

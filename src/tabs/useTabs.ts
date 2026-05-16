@@ -7,7 +7,7 @@ import {
   saveCanvasState,
   updateProjectMeta,
 } from '../storage/storage';
-import { EMPTY_CANVAS_STATE } from '../canvas/useCanvas';
+import { createEmptyCanvasState } from '../canvas/useCanvas';
 
 const MAX_TABS = 20;
 
@@ -22,7 +22,7 @@ function initAppState(): AppState {
   // First ever load — seed with empty canvas (user will enter a query)
   const id = uuidv4();
   const now = Date.now();
-  const canvasState = { ...EMPTY_CANVAS_STATE, createdAt: now };
+  const canvasState = { ...createEmptyCanvasState(), createdAt: now };
   saveCanvasState(id, canvasState);
   updateProjectMeta({ id, name: 'exploration 1', createdAt: now, updatedAt: now });
   const initial: AppState = {
@@ -56,7 +56,7 @@ export function useTabs() {
       const id = uuidv4();
       const name = `exploration ${prev.tabs.length + 1}`;
       const now = Date.now();
-      const canvasState = { ...EMPTY_CANVAS_STATE, createdAt: now };
+      const canvasState = { ...createEmptyCanvasState(), createdAt: now };
       saveCanvasState(id, canvasState);
       updateProjectMeta({ id, name, createdAt: now, updatedAt: now });
       const next: AppState = {
@@ -76,7 +76,7 @@ export function useTabs() {
       if (prev.tabs.length >= MAX_TABS) return prev;
       const name = `exploration ${prev.tabs.length + 1}`;
       const now = Date.now();
-      const canvasState = { ...EMPTY_CANVAS_STATE, createdAt: now };
+      const canvasState = { ...createEmptyCanvasState(), createdAt: now };
       saveCanvasState(id, canvasState);
       updateProjectMeta({ id, name, createdAt: now, updatedAt: now });
       const next: AppState = {

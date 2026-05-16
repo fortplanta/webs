@@ -12,7 +12,7 @@ export function deserialize(raw: string): CanvasState | null {
     if (!Array.isArray(parsed.fragments)) return null;
     if (!Array.isArray(parsed.connectors)) return null;
     if (!parsed.viewport || typeof parsed.viewport.zoom !== 'number') return null;
-    return parsed as CanvasState;
+    return JSON.parse(JSON.stringify(parsed)) as CanvasState;
   } catch {
     return null;
   }
