@@ -12,14 +12,14 @@ import './styles/prompt-sidebar.css';
 import './styles/nav-rail.css';
 import './styles/nav-panel.css';
 import './styles/modal.css';
-import { CanvasState, Fragment, ProjectMeta } from './api/types';
+import { CanvasState, Fragment, ProjectMeta, ExplorationConnectionState } from './api/types';
 import { generateCanvas } from './api/generate';
 import { createEmptyCanvasState } from './canvas/useCanvas';
 import Canvas from './canvas/Canvas';
 import TabStrip from './tabs/TabStrip';
 import { useTabs } from './tabs/useTabs';
 import { loadCanvasState, saveCanvasState, updateProjectMeta, loadProjectsIndex } from './storage/storage';
-import { initExplorationState } from './canvas/connections';
+import { initExplorationState, loadExplorationState } from './canvas/connections';
 import LoadingCanvas from './ui/LoadingCanvas';
 import NavRail, { NavPanel as NavPanelType } from './ui/NavRail';
 import NavPanel from './ui/NavPanel';
@@ -45,6 +45,9 @@ export default function App() {
   const [ganttOpen, setGanttOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [projectsMeta, setProjectsMeta] = useState<ProjectMeta[]>(() => loadProjectsIndex());
+  const [explorationState, setExplorationState] = useState<ExplorationConnectionState | null>(() =>
+    loadExplorationState(activeTabId)
+  );
 
   // Synchronous tab switch: update tabState during render so Canvas mounts with correct state.
   // useEffect fires after children mount — too late when key changes force a remount.
@@ -56,7 +59,20 @@ export default function App() {
     setGenerateError(null);
     setGanttOpen(false);
     setPrevActiveTabId(activeTabId);
+    setExplorationState(loadExplorationState(activeTabId));
   }
+
+  // Reload exploration state whenever Canvas modifies connections.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { explorationId: string };
+      if (detail.explorationId === activeTabId) {
+        setExplorationState(loadExplorationState(activeTabId));
+      }
+    };
+    window.addEventListener('webs-connections-changed', handler);
+    return () => window.removeEventListener('webs-connections-changed', handler);
+  }, [activeTabId]);
 
   const handleScratchpadChange = useCallback((text: string) => {
     setScratchpad(text);
@@ -151,6 +167,18 @@ export default function App() {
   const activeTabName = tabs.find(t => t.id === activeTabId)?.name ?? '';
   const activeMeta = projectsMeta.find(p => p.id === activeTabId);
 
+  const fragmentCount = tabState.fragments.length;
+  const clusterCount = tabState.clusters.length;
+  const depthScore = explorationState?.depthScore ?? 0;
+  const userConnectionCount = explorationState?.userConnections.length ?? 0;
+  const maxConnections = Math.min(Math.floor((fragmentCount * (fragmentCount - 1)) / 2), 20);
+  const fragmentStates = explorationState?.fragmentStates ?? {};
+  const clustersLit = tabState.clusters.filter(cluster => {
+    const clusterFragments = tabState.fragments.filter(f => f.clusterId === cluster.id);
+    return clusterFragments.length > 0 && clusterFragments.every(f => (fragmentStates[f.id]?.connectionCount ?? 0) > 0);
+  }).length;
+  const milestonesReached = explorationState?.milestonesReached ?? [];
+
   const handleNewExploration = () => {
     setStartingCardOpen(true);
   };
@@ -176,9 +204,15 @@ export default function App() {
         <NavPanel
           activePanel={activePanel}
           explorationName={activeTabName}
-          fragmentCount={tabState.fragments.length}
-          clusterCount={tabState.clusters.length}
+          fragmentCount={fragmentCount}
+          clusterCount={clusterCount}
+          totalClusters={clusterCount}
           connectorCount={tabState.connectors.length}
+          depthScore={depthScore}
+          userConnectionCount={userConnectionCount}
+          maxConnections={maxConnections}
+          clustersLit={clustersLit}
+          milestonesReached={milestonesReached}
           createdAt={tabState.createdAt}
           updatedAt={activeMeta?.updatedAt ?? tabState.createdAt}
           scratchpad={scratchpad}

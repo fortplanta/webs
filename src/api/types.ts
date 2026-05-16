@@ -187,6 +187,7 @@ export interface ExplorationConnectionState {
   userConnections: UserConnection[];
   depthScore: number;
   fragmentStates: Record<string, FragmentConnectionState>;
+  milestonesReached: number[];
 }
 
 export interface GenerateApiResponse {

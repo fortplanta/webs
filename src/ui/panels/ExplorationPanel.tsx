@@ -1,4 +1,11 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
+
+const MILESTONE_THRESHOLDS = [100, 200, 300];
+const MILESTONE_LABELS: Record<number, string> = {
+  100: 'First Cluster',
+  200: 'Half Web',
+  300: 'Full Chemistry',
+};
 
 function relativeTime(ms: number): string {
   if (!ms) return '—';
@@ -19,7 +26,13 @@ interface Props {
   explorationName: string;
   fragmentCount: number;
   clusterCount: number;
+  totalClusters: number;
   connectorCount: number;
+  depthScore: number;
+  userConnectionCount: number;
+  maxConnections: number;
+  clustersLit: number;
+  milestonesReached: number[];
   createdAt: number;
   updatedAt: number;
   scratchpad: string;
@@ -32,7 +45,12 @@ export default function ExplorationPanel({
   explorationName,
   fragmentCount,
   clusterCount,
-  connectorCount,
+  totalClusters,
+  depthScore,
+  userConnectionCount,
+  maxConnections,
+  clustersLit,
+  milestonesReached,
   createdAt,
   updatedAt,
   scratchpad,
@@ -41,12 +59,48 @@ export default function ExplorationPanel({
   onNewExploration,
 }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fillRef = useRef<HTMLDivElement | null>(null);
+  const dotRefs = useRef<Record<number, HTMLSpanElement | null>>({});
+  const prevMilestonesRef = useRef<number[]>(milestonesReached);
 
   const handleScratchpad = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => onScratchpadChange(text), 1000);
   }, [onScratchpadChange]);
+
+  // Flash progress bar lime-green when score reaches 300.
+  const prevScoreRef = useRef(depthScore);
+  useEffect(() => {
+    const prev = prevScoreRef.current;
+    prevScoreRef.current = depthScore;
+    if (prev < 300 && depthScore >= 300 && fillRef.current) {
+      fillRef.current.animate([
+        { background: 'var(--fg-strong)' },
+        { background: '#d2f34c' },
+        { background: 'var(--fg-strong)' },
+      ], { duration: 600, easing: 'ease-in-out' });
+    }
+  }, [depthScore]);
+
+  // Fire milestone dot animation exactly once when a threshold is newly crossed.
+  useEffect(() => {
+    const prev = prevMilestonesRef.current;
+    const newlyReached = milestonesReached.filter(t => !prev.includes(t));
+    for (const threshold of newlyReached) {
+      const dot = dotRefs.current[threshold];
+      if (dot) {
+        dot.animate([
+          { transform: 'scale(1)', background: 'rgba(0,0,0,0.15)' },
+          { transform: 'scale(1.4)', background: '#0f172a' },
+          { transform: 'scale(1)', background: '#0f172a' },
+        ], { duration: 400, easing: 'cubic-bezier(0.34,1.56,0.64,1)', fill: 'forwards' });
+      }
+    }
+    prevMilestonesRef.current = milestonesReached;
+  }, [milestonesReached]);
+
+  const progressPct = Math.min((depthScore / 300) * 100, 100);
 
   return (
     <div className="exploration-panel">
@@ -55,18 +109,31 @@ export default function ExplorationPanel({
 
       <div className="exploration-panel__section">
         <p className="exploration-panel__label">this exploration</p>
+
+        <div className="exploration-panel__depth-score">
+          {depthScore}
+        </div>
+
+        <div className="depth-progress-track">
+          <div
+            ref={fillRef}
+            className="depth-progress-fill"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+
         <div className="exploration-panel__stats">
+          <div className="exploration-panel__stat">
+            <span className="exploration-panel__stat-key">connections</span>
+            <span className="exploration-panel__stat-value">{userConnectionCount} / {maxConnections}</span>
+          </div>
+          <div className="exploration-panel__stat">
+            <span className="exploration-panel__stat-key">clusters lit</span>
+            <span className="exploration-panel__stat-value">{clustersLit} / {totalClusters}</span>
+          </div>
           <div className="exploration-panel__stat">
             <span className="exploration-panel__stat-key">fragments</span>
             <span className="exploration-panel__stat-value">{fragmentCount}</span>
-          </div>
-          <div className="exploration-panel__stat">
-            <span className="exploration-panel__stat-key">clusters</span>
-            <span className="exploration-panel__stat-value">{clusterCount}</span>
-          </div>
-          <div className="exploration-panel__stat">
-            <span className="exploration-panel__stat-key">connections</span>
-            <span className="exploration-panel__stat-value">{connectorCount}</span>
           </div>
           <div className="exploration-panel__stat">
             <span className="exploration-panel__stat-key">created</span>
@@ -76,6 +143,25 @@ export default function ExplorationPanel({
             <span className="exploration-panel__stat-key">modified</span>
             <span className="exploration-panel__stat-value">{relativeTime(updatedAt)}</span>
           </div>
+        </div>
+      </div>
+
+      <div className="exploration-panel__section">
+        <p className="exploration-panel__label">milestones</p>
+        <div className="exploration-panel__milestones">
+          {MILESTONE_THRESHOLDS.map(threshold => {
+            const reached = milestonesReached.includes(threshold);
+            return (
+              <div key={threshold} className="exploration-panel__milestone">
+                <span
+                  ref={el => { dotRefs.current[threshold] = el; }}
+                  className={`exploration-panel__milestone-dot${reached ? ' exploration-panel__milestone-dot--reached' : ''}`}
+                />
+                <span className="exploration-panel__milestone-label">{MILESTONE_LABELS[threshold]}</span>
+                <span className="exploration-panel__milestone-pts">{threshold} pts</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
