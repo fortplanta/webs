@@ -5,7 +5,8 @@ import { useCanvas, getLOD } from './useCanvas';
 import { useTools } from './useTools';
 import { useSelection, MIN_FRAGMENT_WIDTH, MAX_FRAGMENT_WIDTH } from './useSelection';
 import type { ResizeHandle } from './useSelection';
-import { CanvasState, ConnectorRenderType, Fragment, FragmentType, LayoutType, AccordionSlot, SlotType } from '../api/types';
+import { CanvasState, ConnectorRenderType, Fragment, FragmentType, LayoutType, AccordionSlot, SlotType, UserConnection } from '../api/types';
+import { addUserConnection, loadExplorationState } from './connections';
 import { generatePivot, runPromptOnSlot } from '../api/generate';
 import { PROMPTS, PromptDefinition } from '../prompts/prompts';
 import CommandMenu, { CommandMenuTarget } from '../ui/CommandMenu';
@@ -111,6 +112,14 @@ export default function Canvas({
   const [dotDragPreview, setDotDragPreview] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [dotDraggingFragmentId, setDotDraggingFragmentId] = useState<string | null>(null);
 
+  // User connection draw handle state (Session 24)
+  const connectHandleRef = useRef<{ sourceFragmentId: string; x1: number; y1: number } | null>(null);
+  const [connectPreview, setConnectPreview] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [connectDropTargetId, setConnectDropTargetId] = useState<string | null>(null);
+  const [userConnectionsList, setUserConnectionsList] = useState<UserConnection[]>(() =>
+    loadExplorationState(projectId)?.userConnections ?? []
+  );
+
   // Canvas drop menu (connector dot → empty canvas) — canvas-space coords
   const [canvasDropMenu, setCanvasDropMenu] = useState<{
     x: number; y: number; sourceFragmentId: string;
@@ -214,6 +223,11 @@ export default function Canvas({
   // Sync viewport to state
   useEffect(() => { updateViewport(transform); }, [transform, updateViewport]);
 
+  // Reload user connections on tab switch
+  useEffect(() => {
+    setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+  }, [projectId]);
+
   // Passive wheel listener
   useEffect(() => {
     const el = wrapperRef.current;
@@ -253,6 +267,17 @@ export default function Canvas({
     setDotDraggingFragmentId(fragmentId);
   };
 
+  const handleConnectHandleStart = (fragmentId: string, e: React.MouseEvent) => {
+    const frag = state.fragments.find(f => f.id === fragmentId);
+    if (!frag) return;
+    const fragWidth = frag.width ?? LAYOUT_WIDTHS[frag.layout] ?? 320;
+    const x1 = frag.x + fragWidth / 2;
+    const y1 = frag.y;
+    const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
+    connectHandleRef.current = { sourceFragmentId: fragmentId, x1, y1 };
+    setConnectPreview({ x1, y1, x2: cx, y2: cy });
+  };
+
   // Window-level mouse handlers — fragment drag, resize drag, selection rect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -265,6 +290,18 @@ export default function Canvas({
           x: pos.x + dx, y: pos.y + dy,
         }));
         moveGroupElements(updates);
+        return;
+      }
+      if (connectHandleRef.current) {
+        const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
+        const { x1, y1 } = connectHandleRef.current;
+        setConnectPreview({ x1, y1, x2: cx, y2: cy });
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const fragEl = el?.closest('[data-fragment-id]');
+        const hoveredId = fragEl?.getAttribute('data-fragment-id') ?? null;
+        setConnectDropTargetId(
+          hoveredId && hoveredId !== connectHandleRef.current.sourceFragmentId ? hoveredId : null
+        );
         return;
       }
       if (dotDragRef.current) {
@@ -296,6 +333,20 @@ export default function Canvas({
       if (groupDragRef.current) {
         groupDragRef.current = null;
         setGroupDragging(false);
+        return;
+      }
+      if (connectHandleRef.current) {
+        const { sourceFragmentId } = connectHandleRef.current;
+        connectHandleRef.current = null;
+        setConnectPreview(null);
+        setConnectDropTargetId(null);
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const fragEl = el?.closest('[data-fragment-id]');
+        const targetId = fragEl?.getAttribute('data-fragment-id');
+        if (targetId && targetId !== sourceFragmentId) {
+          addUserConnection(projectId, sourceFragmentId, targetId);
+          setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+        }
         return;
       }
       if (dotDragRef.current) {
@@ -360,7 +411,7 @@ export default function Canvas({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [updateDrag, endDrag, updateFragmentWidth, updateRect, finishRect, selectMany, state.fragments, state.clusters, addConnector, moveGroupElements]);
+  }, [updateDrag, endDrag, updateFragmentWidth, updateRect, finishRect, selectMany, state.fragments, state.clusters, addConnector, moveGroupElements, projectId]);
 
   // Keyboard: copy/paste + delete selected + undo
   useEffect(() => {
@@ -665,6 +716,8 @@ export default function Canvas({
           onLabelChange={updateConnectorLabel}
           onContextMenu={handleConnectorContextMenu}
           preview={dotDragPreview}
+          userConnections={userConnectionsList}
+          connectPreview={connectPreview}
           selectedTetherKey={selectedTetherKey}
           onTetherSelect={key => { setSelectedTetherKey(key); deselectAll(); }}
           onTetherDelete={key => {
@@ -724,6 +777,8 @@ export default function Canvas({
             onMoveToCluster={moveFragmentToCluster}
             onAddAccordion={handleAddAccordion}
             onConnectorDotStart={handleConnectorDotStart}
+            onConnectHandleMouseDown={handleConnectHandleStart}
+            isDropTarget={connectDropTargetId === f.id}
             onPromptDrop={handlePromptDrop}
             onNavigateSlotHistory={navigateSlotHistory}
             onEmptySlotDblClick={(fragmentId, slotType, x, y) =>
