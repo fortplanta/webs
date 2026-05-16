@@ -4,12 +4,7 @@
 
 .fragment {
   position: absolute;
-  cursor: grab;
   z-index: 1;
-}
-
-.fragment:active {
-  cursor: grabbing;
 }
 
 .fragment--dimmed {
@@ -85,6 +80,63 @@
 
 .spark-slot__btn--disabled:hover {
   background: transparent;
+}
+
+/* ─── Perimeter drag frame ────────────────────────────────────── */
+
+.fragment-drag-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.fragment-drag-frame__top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 12px;
+  pointer-events: all;
+}
+
+.fragment-drag-frame__bottom {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 12px;
+  pointer-events: all;
+}
+
+.fragment-drag-frame__left {
+  position: absolute;
+  top: 12px; bottom: 12px; left: 0;
+  width: 12px;
+  pointer-events: all;
+}
+
+.fragment-drag-frame__right {
+  position: absolute;
+  top: 12px; bottom: 12px; right: 0;
+  width: 12px;
+  pointer-events: all;
+}
+
+.fragment-wrapper:has(.fragment-drag-frame__top:hover),
+.fragment-wrapper:has(.fragment-drag-frame__bottom:hover),
+.fragment-wrapper:has(.fragment-drag-frame__left:hover),
+.fragment-wrapper:has(.fragment-drag-frame__right:hover) {
+  outline: 1.5px solid rgba(0, 0, 0, 0.15);
+  outline-offset: 0;
+}
+
+/* ─── Interior text selection ─────────────────────────────────── */
+
+.fragment-card__body-title,
+.accordion-slot__content {
+  user-select: text;
+}
+
+.tag-pill {
+  user-select: text;
+  cursor: default;
 }
 
 /* ─── LOD: compact (colored bar) ─────────────────────────────── */

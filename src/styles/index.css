@@ -52,6 +52,9 @@
   font-weight: 800; font-style: normal; font-display: swap;
 }
 
+/* ── Drag — clamp all text selection while any mouse drag is active ── */
+body.drag-active * { user-select: none !important; }
+
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

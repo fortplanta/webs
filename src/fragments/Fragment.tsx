@@ -96,8 +96,17 @@ export default function Fragment({
     }
   }, [isEditing]);
 
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const handleMouseUp = () => setIsDragging(false);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, []);
+
   const selectedClass = isSelected ? ' fragment-wrapper--selected' : '';
   const highlightClass = isHighlighted ? ' fragment-wrapper--timeline-highlight' : '';
+  const draggingClass = isDragging ? ' fragment-wrapper--dragging' : '';
   const widthStyle = width ? { ...style, width } : style;
 
   const contextValue = {
@@ -209,10 +218,13 @@ export default function Fragment({
     ? (fragmentId: string, promptId: string) => onAddAccordion(fragmentId, promptId)
     : () => Promise.resolve();
 
-  // Prevent drag when clicking directly on selectable text
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('[data-text-content]')) return;
-    onMouseDown(e);
+  const frameStripProps = fragment.anchored ? {} : {
+    onMouseDown: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setIsDragging(true);
+      onMouseDown(e);
+    },
   };
 
   return (
@@ -221,13 +233,27 @@ export default function Fragment({
         data-fragment-id={id}
         data-draggable={fragment.anchored ? undefined : 'true'}
         data-anchored={fragment.anchored ? 'true' : undefined}
-        className={`fragment-wrapper${layoutClass ? ` fragment-wrapper--${layoutClass}` : ''}${selectedClass}${highlightClass}${isDragOver ? ' fragment-wrapper--drag-over' : ''}`}
+        className={`fragment-wrapper${layoutClass ? ` fragment-wrapper--${layoutClass}` : ''}${selectedClass}${highlightClass}${draggingClass}${isDragOver ? ' fragment-wrapper--drag-over' : ''}`}
         style={widthStyle}
-        onMouseDown={handleMouseDown}
+        onMouseDown={!fragment.anchored ? (e: React.MouseEvent) => {
+          e.stopPropagation();
+          if (!e.altKey) {
+            setIsDragging(true);
+            onMouseDown(e);
+          }
+        } : undefined}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
+        {!fragment.anchored && (
+          <div className="fragment-drag-frame" aria-hidden="true">
+            <div className="fragment-drag-frame__top" {...frameStripProps} />
+            <div className="fragment-drag-frame__bottom" {...frameStripProps} />
+            <div className="fragment-drag-frame__left" {...frameStripProps} />
+            <div className="fragment-drag-frame__right" {...frameStripProps} />
+          </div>
+        )}
         <div className="fragment-card-inner">
           {fragment.anchored && (
             <div className="fragment__anchor-indicator" title="Anchored to cluster">
