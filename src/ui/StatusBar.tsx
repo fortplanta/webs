@@ -4,9 +4,10 @@ interface StatusBarProps {
   zoom: number;
   fragmentCount: number;
   clusterCount: number;
+  hasLinks?: boolean;
 }
 
-export default function StatusBar({ zoom, fragmentCount, clusterCount }: StatusBarProps) {
+export default function StatusBar({ zoom, fragmentCount, clusterCount, hasLinks }: StatusBarProps) {
   const [online, setOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -27,6 +28,9 @@ export default function StatusBar({ zoom, fragmentCount, clusterCount }: StatusB
         <span>{fragmentCount} fragments</span>
         <span>{clusterCount} clusters</span>
       </div>
+      {hasLinks && (
+        <span className="status-bar__linked-badge">LINKED</span>
+      )}
       <div className={`status-bar__dot status-bar__dot--${online ? 'online' : 'offline'}`} />
     </div>
   );

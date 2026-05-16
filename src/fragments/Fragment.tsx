@@ -34,6 +34,8 @@ interface FragmentProps {
   onAddAccordion?: (fragmentId: string, promptId: string) => Promise<void>;
   onConnectorDotStart?: (fragmentId: string, e: React.MouseEvent) => void;
   onConnectHandleMouseDown?: (fragmentId: string, e: React.MouseEvent) => void;
+  onLinkToExploration?: (fragmentId: string) => void;
+  depthScore?: number;
   isDropTarget?: boolean;
   onPromptDrop?: (fragmentId: string, promptId: string) => void;
   onNavigateSlotHistory?: (fragmentId: string, slotType: SlotType, direction: 'back' | 'forward') => void;
@@ -69,6 +71,8 @@ export default function Fragment({
   onAddAccordion,
   onConnectorDotStart,
   onConnectHandleMouseDown,
+  onLinkToExploration,
+  depthScore,
   isDropTarget,
   onPromptDrop,
   onNavigateSlotHistory,
@@ -271,6 +275,7 @@ export default function Fragment({
           <FragmentCard
             fragment={fragment}
             clusters={clusters}
+            depthScore={depthScore}
             onDuplicate={() => onDuplicate?.(id)}
             onMoveToCluster={clusterId => onMoveToCluster?.(id, clusterId)}
             onPin={() => onPin?.(id)}
@@ -278,6 +283,7 @@ export default function Fragment({
             onAnchor={onAnchor ? () => onAnchor(id) : undefined}
             onUnanchor={onUnanchor ? () => onUnanchor(id) : undefined}
             onResetPositions={onResetPositions}
+            onLinkToExploration={onLinkToExploration ? () => onLinkToExploration(id) : undefined}
           />
 
           <FragmentAccordions

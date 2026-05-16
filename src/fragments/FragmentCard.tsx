@@ -13,6 +13,7 @@ import ListProminent from './layouts/ListProminent';
 interface Props {
   fragment: Fragment;
   clusters: Cluster[];
+  depthScore?: number;
   onDuplicate: () => void;
   onMoveToCluster: (clusterId: string) => void;
   onPin: () => void;
@@ -20,11 +21,13 @@ interface Props {
   onAnchor?: () => void;
   onUnanchor?: () => void;
   onResetPositions?: () => void;
+  onLinkToExploration?: () => void;
 }
 
 export default function FragmentCard({
   fragment,
   clusters,
+  depthScore,
   onDuplicate,
   onMoveToCluster,
   onPin,
@@ -32,6 +35,7 @@ export default function FragmentCard({
   onAnchor,
   onUnanchor,
   onResetPositions,
+  onLinkToExploration,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
@@ -90,6 +94,7 @@ export default function FragmentCard({
               pinned={pinned}
               anchored={fragment.anchored}
               clusters={clusters}
+              depthScore={depthScore}
               onDuplicate={onDuplicate}
               onMoveToCluster={onMoveToCluster}
               onPin={onPin}
@@ -97,6 +102,7 @@ export default function FragmentCard({
               onAnchor={onAnchor}
               onUnanchor={onUnanchor}
               onResetPositions={onResetPositions}
+              onLinkToExploration={onLinkToExploration}
               onClose={() => setMenuOpen(false)}
               style={{ position: 'fixed', top: menuPos.top, right: menuPos.right }}
             />,

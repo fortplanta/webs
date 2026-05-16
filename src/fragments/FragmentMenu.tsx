@@ -6,6 +6,7 @@ interface Props {
   pinned?: boolean;
   anchored?: boolean;
   clusters: Cluster[];
+  depthScore?: number;
   onDuplicate: () => void;
   onMoveToCluster: (clusterId: string) => void;
   onPin: () => void;
@@ -13,6 +14,7 @@ interface Props {
   onAnchor?: () => void;
   onUnanchor?: () => void;
   onResetPositions?: () => void;
+  onLinkToExploration?: () => void;
   onClose: () => void;
   style?: React.CSSProperties;
 }
@@ -22,6 +24,7 @@ export default function FragmentMenu({
   pinned,
   anchored,
   clusters,
+  depthScore = 0,
   onDuplicate,
   onMoveToCluster,
   onPin,
@@ -29,6 +32,7 @@ export default function FragmentMenu({
   onAnchor,
   onUnanchor,
   onResetPositions,
+  onLinkToExploration,
   onClose,
   style,
 }: Props) {
@@ -61,6 +65,12 @@ export default function FragmentMenu({
       <button className="fragment-menu__item" onClick={() => { onDuplicate(); onClose(); }}>
         Duplicate
       </button>
+
+      {depthScore >= 200 && onLinkToExploration && (
+        <button className="fragment-menu__item" onClick={() => { onLinkToExploration(); onClose(); }}>
+          Link to another exploration →
+        </button>
+      )}
 
       <div style={{ position: 'relative' }}>
         <button

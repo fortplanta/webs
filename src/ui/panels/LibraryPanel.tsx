@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { ProjectMeta } from '../../api/types';
+import { getCrossLinksForExploration } from '../../canvas/crossLinks';
 
 function relativeTime(ms: number): string {
   if (!ms) return '—';
@@ -22,6 +24,28 @@ interface Props {
 }
 
 export default function LibraryPanel({ projects, openTabIds, canAddTab, onOpen, onViewAll }: Props) {
+  const [, forceUpdate] = useState(0);
+
+  useEffect(() => {
+    const handler = () => forceUpdate(n => n + 1);
+    window.addEventListener('webs-cross-links-changed', handler);
+    return () => window.removeEventListener('webs-cross-links-changed', handler);
+  }, []);
+
+  function getCrossLinkCount(projectId: string): number {
+    return getCrossLinksForExploration(projectId).length;
+  }
+
+  function getCrossLinkTooltip(projectId: string, allProjects: ProjectMeta[]): string {
+    const links = getCrossLinksForExploration(projectId);
+    if (links.length === 0) return '';
+    const names = links.map(l => {
+      const linkedId = l.explorationAId === projectId ? l.explorationBId : l.explorationAId;
+      return allProjects.find(p => p.id === linkedId)?.name ?? 'untitled';
+    });
+    return names.join(', ');
+  }
+
   return (
     <div className="library-panel">
       <div className="library-panel__view-all">
@@ -48,6 +72,14 @@ export default function LibraryPanel({ projects, openTabIds, canAddTab, onOpen, 
               <span className="library-panel__item-meta">
                 {p.fragmentCount ?? 0} fragments · {relativeTime(p.updatedAt)}
               </span>
+              {getCrossLinkCount(p.id) > 0 && (
+                <span
+                  className="library-panel__cross-link-badge"
+                  title={getCrossLinkTooltip(p.id, projects)}
+                >
+                  ⟷ {getCrossLinkCount(p.id)}
+                </span>
+              )}
             </button>
           );
         })

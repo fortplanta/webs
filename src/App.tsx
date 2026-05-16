@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import './styles/webs-tokens.css';
+import './styles/cross-link.css';
 import './styles/index.css';
 import './styles/canvas.css';
 import './styles/fragments.css';
@@ -236,6 +237,7 @@ export default function App() {
             ganttOpen={ganttOpen}
             onGanttOpen={() => setGanttOpen(true)}
             onGanttClose={() => setGanttOpen(false)}
+            projects={projectsMeta}
           />
           {isGenerating && (
             <div style={{ position: 'absolute', inset: 0, zIndex: 300 }}>
