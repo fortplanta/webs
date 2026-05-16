@@ -33,6 +33,8 @@ interface FragmentProps {
   onMoveToCluster?: (fragmentId: string, clusterId: string) => void;
   onAddAccordion?: (fragmentId: string, promptId: string) => Promise<void>;
   onConnectorDotStart?: (fragmentId: string, e: React.MouseEvent) => void;
+  onConnectHandleMouseDown?: (fragmentId: string, e: React.MouseEvent) => void;
+  isDropTarget?: boolean;
   onPromptDrop?: (fragmentId: string, promptId: string) => void;
   onNavigateSlotHistory?: (fragmentId: string, slotType: SlotType, direction: 'back' | 'forward') => void;
   onEmptySlotDblClick?: (fragmentId: string, slotType: SlotType, x: number, y: number) => void;
@@ -66,6 +68,8 @@ export default function Fragment({
   onMoveToCluster,
   onAddAccordion,
   onConnectorDotStart,
+  onConnectHandleMouseDown,
+  isDropTarget,
   onPromptDrop,
   onNavigateSlotHistory,
   onEmptySlotDblClick,
@@ -107,6 +111,7 @@ export default function Fragment({
   const selectedClass = isSelected ? ' fragment-wrapper--selected' : '';
   const highlightClass = isHighlighted ? ' fragment-wrapper--timeline-highlight' : '';
   const draggingClass = isDragging ? ' fragment-wrapper--dragging' : '';
+  const dropTargetClass = isDropTarget ? ' fragment--drop-target' : '';
   const widthStyle = width ? { ...style, width } : style;
 
   const contextValue = {
@@ -233,7 +238,7 @@ export default function Fragment({
         data-fragment-id={id}
         data-draggable={fragment.anchored ? undefined : 'true'}
         data-anchored={fragment.anchored ? 'true' : undefined}
-        className={`fragment-wrapper${layoutClass ? ` fragment-wrapper--${layoutClass}` : ''}${selectedClass}${highlightClass}${draggingClass}${isDragOver ? ' fragment-wrapper--drag-over' : ''}`}
+        className={`fragment-wrapper${layoutClass ? ` fragment-wrapper--${layoutClass}` : ''}${selectedClass}${highlightClass}${draggingClass}${isDragOver ? ' fragment-wrapper--drag-over' : ''}${dropTargetClass}`}
         style={widthStyle}
         onMouseDown={!fragment.anchored ? (e: React.MouseEvent) => {
           e.stopPropagation();
@@ -285,6 +290,17 @@ export default function Fragment({
           <ConnectorDot
             onDragStart={e => onConnectorDotStart(id, e)}
             dragging={dotDragging}
+          />
+        )}
+
+        {onConnectHandleMouseDown && (
+          <div
+            className="fragment-connect-handle"
+            onMouseDown={e => {
+              e.stopPropagation();
+              e.preventDefault();
+              onConnectHandleMouseDown(id, e);
+            }}
           />
         )}
 

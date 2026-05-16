@@ -10,6 +10,7 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | Session | Date | Focus | Outcome |
 |---------|------|-------|---------|
 | 23 | May 2026 | Data layer: connection state + depth score | UserConnection/ExplorationConnectionState types; calculateConnectionStrength; depthScoreFromConnections; addUserConnection; removeUserConnection; initExplorationState wired in App.tsx; fragment IDs changed to clusterSlug_index format; 10 unit tests via Vitest; no UI changes |
+| 24 | May 2026 | Connection drawing UX | .fragment-connect-handle (right-edge black dot, opacity 0→1 on hover); connectHandleRef + connectPreview + connectDropTargetId state in Canvas.tsx; window mousemove/mouseup handlers for drag; fragment--drop-target outline on hover; userConnections rendered as SVG lines in ConnectorLayer; connectPreview dashed black line; userConnections loaded from localStorage on mount + tab switch |
 | 01 | Apr 2026 | Foundation | React Flow + Ant Design removed; token system bootstrapped |
 | 02 | Apr 2026 | Pan-zoom canvas | usePanZoom.ts + Canvas.tsx + dot grid background |
 | 03 | Apr 2026 | LOD system | getLOD() with macro/compact/full thresholds |
@@ -138,6 +139,10 @@ Updated at the end of every session. Tracks what is built, what is in progress, 
 | Gantt view toggle | DONE | ganttOpen state in App.tsx; passed to Canvas.tsx as prop; TimelineBanner click → onGanttOpen; GanttView back button → onGanttClose; NavRail 4th icon (timeline bars) toggles gantt; Escape closes gantt | Session 19 |
 | Tab name on generation | DONE | App.tsx handleQuery: name = query.slice(0, 32) + ellipsis if longer; renameTab called after generation | Session 19 |
 
+| Connection draw handle | DONE | .fragment-connect-handle on each fragment-wrapper (except seed/text-note); opacity 0→1 on hover; cursor crosshair; 10px black circle right edge | Session 24 |
+| Connect drag preview line | DONE | connectHandleRef + connectPreview state; dashed black line x1/y1=fragment right edge → cursor; rendered in ConnectorLayer SVG | Session 24 |
+| Drop target highlight | DONE | connectDropTargetId state; fragment--drop-target CSS class (outline 1.5px solid #000) applied during drag; cleared on mouseup | Session 24 |
+| User connections SVG rendering | DONE | userConnectionsList loaded from webs_exploration_[id]; rendered as solid rgba(0,0,0,0.35) lines in ConnectorLayer; source right edge → target left edge; label rendered if non-empty | Session 24 |
 | Fragment IDs (deterministic format) | DONE | Format: clusterSlug_fragmentIndex (e.g. "engineering_0"); seed fragment uses "seed_0"; pivot fragments still use uuidv4 | Session 23 |
 | ExplorationConnectionState model | DONE | userConnections[], depthScore, fragmentStates map; persisted to webs_exploration_[id] in localStorage | Session 23 |
 | calculateConnectionStrength | DONE | Pure function, returns 1–3; same cluster→1, diff cluster same type→2, diff cluster diff type→3; AI edge cap at 2; thesis +1 capped at 3 | Session 23 |

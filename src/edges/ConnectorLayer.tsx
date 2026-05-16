@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react';
-import type { Connector, Fragment, Cluster } from '../api/types';
+import type { Connector, Fragment, Cluster, UserConnection } from '../api/types';
 import ConnectorEdge from './Connector';
+
+const LAYOUT_WIDTHS_CL: Record<string, number> = {
+  'vertical-flow': 320, 'image-hero': 480, 'quote-centered': 380,
+  'card-split': 320, 'timeline': 400, 'list-prominent': 480, 'text-note': 200,
+};
 
 interface PreviewConnector {
   x1: number;
@@ -19,6 +24,8 @@ interface Props {
   selectedTetherKey?: string | null;
   onTetherSelect?: (key: string) => void;
   onTetherDelete?: (key: string) => void;
+  userConnections?: UserConnection[];
+  connectPreview?: PreviewConnector | null;
 }
 
 const FRAG_COLOR_VAR: Record<string, string> = {
@@ -36,6 +43,8 @@ export default function ConnectorLayer({
   connectors, fragments, clusters,
   onLabelChange, onContextMenu, preview,
   selectedTetherKey, onTetherSelect, onTetherDelete,
+  userConnections = [],
+  connectPreview,
 }: Props) {
   const [hoveredTetherKey, setHoveredTetherKey] = useState<string | null>(null);
   const posById = useMemo(() => {
@@ -54,6 +63,12 @@ export default function ConnectorLayer({
   const clusterIdByFragId = useMemo(() => {
     const map = new Map<string, string>();
     fragments.forEach(f => map.set(f.id, f.clusterId));
+    return map;
+  }, [fragments]);
+
+  const fragWidthById = useMemo(() => {
+    const map = new Map<string, number>();
+    fragments.forEach(f => map.set(f.id, f.width ?? LAYOUT_WIDTHS_CL[f.layout] ?? 320));
     return map;
   }, [fragments]);
 
@@ -120,6 +135,42 @@ export default function ConnectorLayer({
           </g>
         );
       })}
+      {userConnections.map(uc => {
+        const src = posById.get(uc.sourceFragmentId);
+        const tgt = posById.get(uc.targetFragmentId);
+        if (!src || !tgt) return null;
+        const srcW = fragWidthById.get(uc.sourceFragmentId) ?? 320;
+        const tgtW = fragWidthById.get(uc.targetFragmentId) ?? 320;
+        const x1 = src.x + srcW / 2;
+        const y1 = src.y;
+        const x2 = tgt.x - tgtW / 2;
+        const y2 = tgt.y;
+        const mx = (x1 + x2) / 2;
+        const my = (y1 + y2) / 2;
+        return (
+          <g key={uc.id} pointerEvents="none">
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(0,0,0,0.35)" strokeWidth={1.5} />
+            {uc.label && (
+              <foreignObject x={mx - 60} y={my - 10} width={120} height={20} style={{ overflow: 'visible' }}>
+                <span className="connector-label-fo">{uc.label}</span>
+              </foreignObject>
+            )}
+          </g>
+        );
+      })}
+
+      {connectPreview && (
+        <line
+          x1={connectPreview.x1} y1={connectPreview.y1}
+          x2={connectPreview.x2} y2={connectPreview.y2}
+          stroke="#000"
+          strokeWidth={1.5}
+          strokeDasharray="6 4"
+          opacity={0.45}
+          pointerEvents="none"
+        />
+      )}
+
       {preview && (
         <path
           d={`M ${preview.x1} ${preview.y1} L ${preview.x2} ${preview.y2}`}
