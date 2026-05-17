@@ -1,6 +1,24 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Html, Line } from '@react-three/drei';
+import * as THREE from 'three';
 import type { Connector } from '../api/types';
-import { getPath, getMidpoint } from './bezier';
+import { getBezierPoints3D, getMidpoint } from './bezier';
+
+// ─── Z layers (mirrored from Canvas) ─────────────────────────────────────────
+const Z_CONNECTOR = 0;
+const Z_LABEL     = 1;
+
+// ─── Connector type → hex color (matches webs-tokens.css) ────────────────────
+export const FRAG_COLOR_HEX: Record<string, string> = {
+  person:  '#00E87B',
+  concept: '#FF6D00',
+  thesis:  '#FF3B30',
+  source:  '#00D4FF',
+  event:   '#FF9F0A',
+  era:     '#BF5AF2',
+  domain:  '#1a1a1a',
+  quote:   '#2563EB',
+};
 
 interface Props {
   connector: Connector;
@@ -14,10 +32,7 @@ interface Props {
   onContextMenu: (e: React.MouseEvent, id: string) => void;
 }
 
-const FO_W = 160;
-const FO_H = 32;
-
-export default function ConnectorEdge({
+export default function ConnectorLine({
   connector, x1, y1, x2, y2, scope, sourceColor,
   onLabelChange, onContextMenu,
 }: Props) {
@@ -29,13 +44,21 @@ export default function ConnectorEdge({
     if (editing) inputRef.current?.focus();
   }, [editing]);
 
-  const renderType = connector.renderType ?? 'straight';
-  const d = getPath(x1, y1, x2, y2, renderType);
+  const points = useMemo(
+    () => getBezierPoints3D(x1, y1, x2, y2, scope),
+    [x1, y1, x2, y2, scope],
+  );
+
   const { mx, my } = getMidpoint(x1, y1, x2, y2);
+  const isStrong = connector.type === 'strong';
+  const isInter  = scope === 'inter';
+  const color    = sourceColor ?? '#333333';
+  const opacity  = isInter ? 0.45 : 0.55;
+  const lineWidth = isInter ? 2 : 1.5;
 
   const startEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditValue(connector.label);
+    setEditValue(connector.label ?? '');
     setEditing(true);
   };
 
@@ -49,99 +72,84 @@ export default function ConnectorEdge({
     if (e.key === 'Escape') setEditing(false);
   };
 
-  const handleCtxOnPath = (e: React.MouseEvent<SVGPathElement>) => {
+  const handleCtx = (e: React.MouseEvent) => {
     e.stopPropagation();
     onContextMenu(e, connector.id);
   };
 
-  const handleCtxOnLabel = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    onContextMenu(e, connector.id);
-  };
-
-  const label = (
-    <foreignObject
-      x={mx - FO_W / 2}
-      y={my - FO_H / 2}
-      width={FO_W}
-      height={FO_H}
-      style={{ overflow: 'visible', pointerEvents: 'none' }}
-    >
-      <div
-        className="connector-label-fo"
-        style={{ pointerEvents: 'auto' }}
-        onClick={startEdit}
-        onContextMenu={handleCtxOnLabel}
-      >
-        {editing ? (
-          <input
-            ref={inputRef}
-            className="connector-label-fo__input"
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={confirm}
-            onClick={e => e.stopPropagation()}
-          />
-        ) : connector.label ? (
-          <span className="connector-label-fo__pill">{connector.label}</span>
-        ) : (
-          <span className="connector-label-fo__empty" />
-        )}
-      </div>
-    </foreignObject>
-  );
-
-  if (connector.type === 'standard') {
-    const opacity = scope === 'intra' ? 0.55 : 0.45;
-    return (
-      <g>
-        {/* wide transparent hit area for reliable context-menu trigger */}
-        <path
-          d={d}
-          stroke="transparent"
-          strokeWidth={12}
-          fill="none"
-          style={{ pointerEvents: 'stroke', cursor: 'context-menu' }}
-          onContextMenu={handleCtxOnPath}
-        />
-        <path
-          d={d}
-          stroke={`rgba(0,0,0,${opacity})`}
-          strokeWidth={2}
-          strokeLinecap="round"
-          fill="none"
-          style={{ pointerEvents: 'none' }}
-        />
-        {label}
-      </g>
-    );
-  }
-
-  // strong — 4 stacked paths for glow + foreignObject label
-  const color = sourceColor ?? 'rgba(0,0,0,0.8)';
   return (
-    <g>
-      {/* Wide invisible hit-target */}
-      <path
-        d={d}
-        stroke="transparent"
-        strokeWidth={16}
-        fill="none"
-        style={{ pointerEvents: 'stroke', cursor: 'context-menu' }}
-        onContextMenu={handleCtxOnPath}
-      />
-      <path d={d} className="connector-strong-outer-glow" style={{ stroke: color }} fill="none" strokeLinecap="round" />
-      <path d={d} className="connector-strong-mid-glow"   style={{ stroke: color }} fill="none" strokeLinecap="round" />
-      <path d={d} className="connector-strong-inner-glow" style={{ stroke: color }} fill="none" strokeLinecap="round" />
-      <path
-        d={d}
-        className="connector-strong-core"
-        style={{ stroke: color, pointerEvents: 'none' } as React.CSSProperties}
-        fill="none"
-        strokeLinecap="round"
-      />
-      {label}
-    </g>
+    <>
+      {/* ── Connector line(s) ── */}
+      {isStrong ? (
+        <>
+          {/* Glow layer — additive blending */}
+          <Line
+            points={points}
+            color={color}
+            lineWidth={8}
+            opacity={0.15}
+            transparent
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            position={[0, 0, Z_CONNECTOR]}
+          />
+          {/* Core line */}
+          <Line
+            points={points}
+            color={color}
+            lineWidth={2}
+            opacity={1}
+            transparent
+            position={[0, 0, Z_CONNECTOR]}
+          />
+        </>
+      ) : (
+        <Line
+          points={points}
+          color={color}
+          lineWidth={lineWidth}
+          opacity={opacity}
+          transparent
+          position={[0, 0, Z_CONNECTOR]}
+        />
+      )}
+
+      {/* ── Label + context-menu hit area at bezier midpoint ── */}
+      <group position={[mx, -my, Z_LABEL]}>
+        <Html
+          transform={false}
+          occlude={false}
+          center
+          zIndexRange={[50, 100]}
+          style={{ pointerEvents: 'auto', userSelect: 'none' }}
+        >
+          <div
+            className="connector-label-fo"
+            onClick={startEdit}
+            onContextMenu={handleCtx}
+          >
+            {editing ? (
+              <input
+                ref={inputRef}
+                className="connector-label-fo__input"
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={confirm}
+                onClick={e => e.stopPropagation()}
+              />
+            ) : connector.label ? (
+              <span className="connector-label-fo__pill">{connector.label}</span>
+            ) : (
+              /* Empty hit target — lets user right-click near midpoint */
+              <span
+                className="connector-label-fo__empty"
+                style={{ display: 'block', width: 20, height: 20 }}
+              />
+            )}
+          </div>
+        </Html>
+      </group>
+    </>
   );
 }
