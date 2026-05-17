@@ -16,9 +16,6 @@
   cursor: text;
 }
 
-.canvas-content {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: 0 0;
-}
+/* .canvas-content removed — Session 30 eliminated the CSS-transform hybrid.
+   All fragments, clusters, and connectors now live inside the R3F scene
+   as drei <Html> components or Three.js geometry. One coordinate system. */

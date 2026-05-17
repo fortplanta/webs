@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { Canvas as R3FCanvas, useFrame, useThree } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
+import * as THREE from 'three';
 import { usePanZoom } from './usePanZoom';
 import { useCanvas, getLOD } from './useCanvas';
+import type { LOD } from './useCanvas';
 import { useTools } from './useTools';
 import { useSelection, MIN_FRAGMENT_WIDTH, MAX_FRAGMENT_WIDTH } from './useSelection';
 import type { ResizeHandle } from './useSelection';
@@ -10,6 +14,7 @@ import { addUserConnection, updateUserConnectionAI, loadExplorationState } from 
 import { getCrossLinksForExploration, addCrossLink, getCrossLinks, updateCrossLinkLabel } from './crossLinks';
 import { loadCanvasState } from '../storage/storage';
 import { generatePivot, runPromptOnSlot, validateConnectionLabel, validateCrossLink } from '../api/generate';
+import type { Transform } from './usePanZoom';
 import type { ProjectMeta } from '../api/types';
 import CrossLinkModal from '../ui/CrossLinkModal';
 import { PROMPTS, PromptDefinition } from '../prompts/prompts';
@@ -30,7 +35,28 @@ import '../styles/toolbar.css';
 import '../styles/command-menu.css';
 import '../styles/timeline.css';
 
-// Default widths per layout (mirrors CSS) — used for resize start width when fragment.width is unset
+// ─── Scene coordinate helpers ─────────────────────────────────────────────────
+// All canvas coords use CSS convention: x right, y down.
+// Three.js uses y-up, so we negate y when placing objects in 3D space.
+
+const Z_LAYERS = {
+  background:  -10,
+  connectors:    0,
+  clusters:      1,
+  fragments:     2,
+  fragHovered:   5,
+  fragSelected:  8,
+};
+
+// Per-fragment z variation: subtle depth spread so clusters have parallax.
+// Deterministic per fragment ID → same value every render.
+const DEPTH_SPREAD = 8;
+function getFragmentZ(fragment: Fragment, clusterIndex: number): number {
+  const hash = (fragment.id.charCodeAt(0) ?? 0) % 10;
+  return Z_LAYERS.fragments + (clusterIndex % 3) * 3 + hash * 0.5;
+}
+
+// ─── Default widths per layout (mirrors CSS) ──────────────────────────────────
 const LAYOUT_WIDTHS: Partial<Record<LayoutType, number>> = {
   'vertical-flow':  320,
   'image-hero':     480,
@@ -42,6 +68,84 @@ const LAYOUT_WIDTHS: Partial<Record<LayoutType, number>> = {
 };
 
 const RENDER_TYPES: ConnectorRenderType[] = ['bezier', 'straight', 'step', 'smoothstep'];
+
+// ─── SceneSetup ───────────────────────────────────────────────────────────────
+// Lives inside the R3F Canvas. Restores saved camera position on mount,
+// then each frame updates LOD/zoom state and persists viewport.
+interface SceneSetupProps {
+  cameraRef: React.MutableRefObject<THREE.OrthographicCamera | null>;
+  sizeRef: React.MutableRefObject<{ width: number; height: number }>;
+  initialViewport: Transform;
+  onLodChange: (lod: LOD) => void;
+  onZoomChange: (zoom: number) => void;
+  onViewportChange: (t: Transform) => void;
+}
+
+function SceneSetup({
+  cameraRef, sizeRef, initialViewport,
+  onLodChange, onZoomChange, onViewportChange,
+}: SceneSetupProps) {
+  const { camera, size } = useThree();
+  const prevLod  = useRef<LOD>('full');
+  const prevZoom = useRef<number>(0.7);
+  const lastSave = useRef<number>(0);
+
+  // Restore saved viewport on mount
+  useEffect(() => {
+    const cam = camera as THREE.OrthographicCamera;
+    cameraRef.current = cam;
+    sizeRef.current = { width: size.width, height: size.height };
+
+    const vp = initialViewport;
+    if (vp.zoom > 0 && (vp.x !== 0 || vp.y !== 0)) {
+      cam.zoom = vp.zoom;
+      cam.position.x = (size.width / 2 - vp.x) / vp.zoom;
+      cam.position.y = -(size.height / 2 - vp.y) / vp.zoom;
+    } else {
+      cam.zoom = vp.zoom || 0.7;
+      cam.position.x = 0;
+      cam.position.y = 0;
+    }
+    cam.updateProjectionMatrix();
+  // initialViewport intentionally excluded — only restore once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    sizeRef.current = { width: size.width, height: size.height };
+  }, [size, sizeRef]);
+
+  useFrame(() => {
+    const cam = camera as THREE.OrthographicCamera;
+    sizeRef.current = { width: size.width, height: size.height };
+
+    // LOD threshold updates
+    const newLod = getLOD(cam.zoom);
+    if (newLod !== prevLod.current) {
+      prevLod.current = newLod;
+      onLodChange(newLod);
+    }
+
+    // Display zoom (throttled — skip tiny jitter)
+    if (Math.abs(cam.zoom - prevZoom.current) > 0.004) {
+      prevZoom.current = cam.zoom;
+      onZoomChange(cam.zoom);
+    }
+
+    // Persist viewport (~1s debounce)
+    const now = Date.now();
+    if (now - lastSave.current > 1000) {
+      lastSave.current = now;
+      const tx = size.width  / 2 - cam.position.x * cam.zoom;
+      const ty = size.height / 2 + cam.position.y * cam.zoom;
+      onViewportChange({ x: tx, y: ty, zoom: cam.zoom });
+    }
+  });
+
+  return null;
+}
+
+// ─── Canvas ───────────────────────────────────────────────────────────────────
 
 interface CanvasProps {
   projectId: string;
@@ -69,10 +173,11 @@ export default function Canvas({
   projects = [],
 }: CanvasProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const zoomRef = useRef(initialState.viewport.zoom || 0.7);
-  const transformRef = useRef({ x: 0, y: 0, zoom: 0.7 });
+  const cameraRef  = useRef<THREE.OrthographicCamera | null>(null);
+  const sizeRef    = useRef({ width: window.innerWidth, height: window.innerHeight });
 
-  const { transform, setTransform, handleWheel, onMouseDown: panMouseDown, onMouseMove, onMouseUp } = usePanZoom();
+  const { handleWheel, onMouseDown: panMouseDown, onMouseMove, onMouseUp } = usePanZoom(cameraRef, sizeRef, wrapperRef);
+
   const {
     state,
     startDrag, updateDrag, endDrag,
@@ -95,21 +200,18 @@ export default function Canvas({
   const { activeTool, switchTo } = useTools();
   const { selectedIds, selectionRect, selectId, deselectAll, selectMany, startRect, updateRect, finishRect } = useSelection();
 
-  const lod = getLOD(transform.zoom);
-
-  // Keep refs current
-  useEffect(() => { zoomRef.current = transform.zoom; }, [transform.zoom]);
-  useEffect(() => { transformRef.current = transform; }, [transform]);
+  // LOD and display zoom driven by SceneSetup via useFrame
+  const [lod, setLod] = useState<LOD>(() => getLOD(initialState.viewport.zoom || 0.7));
+  const [displayZoom, setDisplayZoom] = useState(initialState.viewport.zoom || 0.7);
 
   // Pivot state
   const [pivotingFragmentId, setPivotingFragmentId] = useState<string | null>(null);
   const [pivotErrors, setPivotErrors] = useState<Record<string, string>>({});
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Text note editing state
   const [editingFragmentId, setEditingFragmentId] = useState<string | null>(null);
 
-  // Connector dot drag state (Session 18)
+  // Connector dot drag state
   const dotDragRef = useRef<{
     sourceFragmentId: string;
     x1: number;
@@ -118,7 +220,7 @@ export default function Canvas({
   const [dotDragPreview, setDotDragPreview] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [dotDraggingFragmentId, setDotDraggingFragmentId] = useState<string | null>(null);
 
-  // User connection draw handle state (Session 24)
+  // User connection draw handle state
   const connectHandleRef = useRef<{ sourceFragmentId: string; x1: number; y1: number } | null>(null);
   const [connectPreview, setConnectPreview] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [connectDropTargetId, setConnectDropTargetId] = useState<string | null>(null);
@@ -126,42 +228,41 @@ export default function Canvas({
     loadExplorationState(projectId)?.userConnections ?? []
   );
 
-  // Cross-link modal state (Session 28)
+  // Cross-link modal state
   const [crossLinkSourceFragmentId, setCrossLinkSourceFragmentId] = useState<string | null>(null);
   const [explorationCrossLinks, setExplorationCrossLinks] = useState(() =>
     getCrossLinksForExploration(projectId)
   );
 
-  // AI-pending user connections (marching dashes while waiting for label)
-  // Map: connectionId → { heuristicStrength, badgeX, badgeY }
+  // AI-pending user connections
   const pendingConnectionsRef = useRef<Map<string, { heuristicStrength: 1 | 2 | 3; badgeX: number; badgeY: number }>>(new Map());
   const [pendingConnectionIds, setPendingConnectionIds] = useState<Set<string>>(new Set());
   const [fadingLabelIds, setFadingLabelIds] = useState<Set<string>>(new Set());
 
-  // Floating score badges: +N chips that float up and disappear
+  // Floating score badges (screen-space fixed overlays)
   const [scoreBadges, setScoreBadges] = useState<Array<{ id: string; delta: number; x: number; y: number }>>([]);
 
-  // Canvas drop menu (connector dot → empty canvas) — canvas-space coords
+  // Canvas drop menu — canvas-space coords
   const [canvasDropMenu, setCanvasDropMenu] = useState<{
     x: number; y: number; sourceFragmentId: string;
   } | null>(null);
 
-  // Prompt running state (Session 17)
+  // Prompt running state
   const [promptingFragmentIds, setPromptingFragmentIds] = useState<Set<string>>(new Set());
 
-  // Slot command menu (empty slot double-click) — screen coords
+  // Slot command menu — screen coords
   const [commandMenu, setCommandMenu] = useState<CommandMenuTarget | null>(null);
 
-  // Timeline highlight state (Session 17)
+  // Timeline highlight state
   const [highlightedFragmentId, setHighlightedFragmentId] = useState<string | null>(null);
 
   // Reset confirmation dialog
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Selected tether (cluster-spawn to fragment line)
+  // Selected tether
   const [selectedTetherKey, setSelectedTetherKey] = useState<string | null>(null);
 
-  // Connector context menu state — stored in screen coords so it can use position: fixed
+  // Connector context menu
   const connectorMenuRef = useRef<HTMLDivElement>(null);
   const [connectorMenu, setConnectorMenu] = useState<{
     connectorId: string;
@@ -179,7 +280,7 @@ export default function Canvas({
     isLeft: boolean;
   } | null>(null);
 
-  // Group drag — ref tracks start positions, state drives CSS class (Session 20)
+  // Group drag
   const groupDragRef = useRef<{
     startMouseX: number;
     startMouseY: number;
@@ -187,27 +288,69 @@ export default function Canvas({
   } | null>(null);
   const [groupDragging, setGroupDragging] = useState(false);
 
-  // Selection rect dragging ref (to avoid state lag in handlers)
+  // Selection rect dragging ref
   const selectionDragging = useRef(false);
 
-  // Double-click text mode — per fragment
+  // ─── Camera helpers ──────────────────────────────────────────────────────
+
+  // Convert screen coords to canvas-space coords using current camera state
+  const toCanvas = useCallback((clientX: number, clientY: number) => {
+    const cam = cameraRef.current;
+    const rect = wrapperRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
+    const { width, height } = sizeRef.current;
+    const screenX = clientX - rect.left;
+    const screenY = clientY - rect.top;
+    const zoom = cam?.zoom ?? 0.7;
+    const camX = cam?.position.x ?? 0;
+    const camY = cam?.position.y ?? 0;
+    return {
+      x: camX + (screenX - width / 2) / zoom,
+      y: (screenY - height / 2) / zoom - camY,
+    };
+  }, []);
+
+  // Convert canvas-space coords to screen-space (for overlays drawn outside R3F)
+  const canvasToScreen = useCallback((cx: number, cy: number) => {
+    const cam = cameraRef.current;
+    const { width, height } = sizeRef.current;
+    const zoom = cam?.zoom ?? 0.7;
+    const camX = cam?.position.x ?? 0;
+    const camY = cam?.position.y ?? 0;
+    return {
+      x: width  / 2 + (cx - camX) * zoom,
+      y: height / 2 + (cy + camY) * zoom,
+    };
+  }, []);
+
+  // Animate/navigate camera to a CSS-transform offset (tx/ty = screen translation)
+  const navigateCamera = useCallback((tx: number, ty: number, zoom: number) => {
+    const cam = cameraRef.current;
+    const { width, height } = sizeRef.current;
+    if (!cam) return;
+    cam.zoom = zoom;
+    cam.position.x = (width / 2 - tx) / zoom;
+    cam.position.y = -(height / 2 - ty) / zoom;
+    cam.updateProjectionMatrix();
+  }, []);
+
+  // ─── Effects ─────────────────────────────────────────────────────────────
 
   // Alt key: text-select cursor on fragment cards
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
     const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Alt') el.classList.add('canvas-wrapper--alt'); };
-    const onKeyUp = (e: KeyboardEvent) => { if (e.key === 'Alt') el.classList.remove('canvas-wrapper--alt'); };
+    const onKeyUp   = (e: KeyboardEvent) => { if (e.key === 'Alt') el.classList.remove('canvas-wrapper--alt'); };
     window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('keyup',   onKeyUp);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('keyup',   onKeyUp);
       el.classList.remove('canvas-wrapper--alt');
     };
   }, []);
 
-  // Prevent accidental text selection during any canvas drag
+  // Prevent accidental text selection during canvas drag
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -225,39 +368,7 @@ export default function Canvas({
     };
   }, []);
 
-  // Restore viewport
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    if (initialState.viewport.zoom > 0 && (initialState.viewport.x !== 0 || initialState.viewport.y !== 0)) {
-      setTransform(initialState.viewport);
-    } else {
-      setTransform(prev => ({
-        ...prev,
-        x: el.clientWidth / 2,
-        y: el.clientHeight / 2,
-      }));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Sync viewport to state
-  useEffect(() => { updateViewport(transform); }, [transform, updateViewport]);
-
-  // Reload user connections on tab switch
-  useEffect(() => {
-    setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
-    setExplorationCrossLinks(getCrossLinksForExploration(projectId));
-  }, [projectId]);
-
-  // Reload cross-links when any cross-link is added/updated
-  useEffect(() => {
-    const handler = () => setExplorationCrossLinks(getCrossLinksForExploration(projectId));
-    window.addEventListener('webs-cross-links-changed', handler);
-    return () => window.removeEventListener('webs-cross-links-changed', handler);
-  }, [projectId]);
-
-  // Passive wheel listener
+  // Passive wheel listener on wrapper
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -276,16 +387,20 @@ export default function Canvas({
     return () => window.removeEventListener('mousedown', handler);
   }, [connectorMenu]);
 
-  // Convert viewport-relative coords to canvas-space coords
-  // Must subtract wrapperRef's bounding rect because transform.x/y are wrapper-relative
-  const toCanvas = (clientX: number, clientY: number) => {
-    const rect = wrapperRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
-    const t = transformRef.current;
-    return {
-      x: (clientX - rect.left - t.x) / t.zoom,
-      y: (clientY - rect.top - t.y) / t.zoom,
-    };
-  };
+  // Reload user connections on tab switch
+  useEffect(() => {
+    setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+    setExplorationCrossLinks(getCrossLinksForExploration(projectId));
+  }, [projectId]);
+
+  // Reload cross-links when any cross-link is added/updated
+  useEffect(() => {
+    const handler = () => setExplorationCrossLinks(getCrossLinksForExploration(projectId));
+    window.addEventListener('webs-cross-links-changed', handler);
+    return () => window.removeEventListener('webs-cross-links-changed', handler);
+  }, [projectId]);
+
+  // ─── Drag handlers ───────────────────────────────────────────────────────
 
   const handleConnectorDotStart = (fragmentId: string, e: React.MouseEvent) => {
     const frag = state.fragments.find(f => f.id === fragmentId);
@@ -310,10 +425,12 @@ export default function Canvas({
   // Window-level mouse handlers — fragment drag, resize drag, selection rect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      const zoom = cameraRef.current?.zoom ?? 0.7;
+
       if (groupDragRef.current) {
         const gd = groupDragRef.current;
-        const dx = (e.clientX - gd.startMouseX) / zoomRef.current;
-        const dy = (e.clientY - gd.startMouseY) / zoomRef.current;
+        const dx = (e.clientX - gd.startMouseX) / zoom;
+        const dy = (e.clientY - gd.startMouseY) / zoom;
         const updates = Array.from(gd.startPositions.entries()).map(([id, pos]) => ({
           id, type: pos.type as 'fragment' | 'cluster',
           x: pos.x + dx, y: pos.y + dy,
@@ -341,21 +458,18 @@ export default function Canvas({
       }
       if (resizeDragRef.current) {
         const rd = resizeDragRef.current;
-        const rawDx = (e.clientX - rd.startMouseX) / zoomRef.current;
+        const rawDx = (e.clientX - rd.startMouseX) / zoom;
         const delta = rd.isLeft ? -rawDx : rawDx;
         const newWidth = Math.max(MIN_FRAGMENT_WIDTH, Math.min(MAX_FRAGMENT_WIDTH, rd.origWidth + delta));
         updateFragmentWidth(rd.fragmentId, newWidth);
         return;
       }
       if (selectionDragging.current) {
-        const rect = wrapperRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
-        const t = transformRef.current;
-        const cx = (e.clientX - rect.left - t.x) / t.zoom;
-        const cy = (e.clientY - rect.top - t.y) / t.zoom;
-        updateRect(cx, cy);
+        const pt = toCanvas(e.clientX, e.clientY);
+        updateRect(pt.x, pt.y);
         return;
       }
-      updateDrag(e.clientX, e.clientY, zoomRef.current);
+      updateDrag(e.clientX, e.clientY, zoom);
     };
 
     const handleMouseUp = (e: MouseEvent) => {
@@ -377,14 +491,11 @@ export default function Canvas({
           setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
           if (result) {
             const { id: connectionId, strength: heuristicStrength } = result;
-            // Show initial score badge at drop position
             const badgeId = crypto.randomUUID();
             setScoreBadges(prev => [...prev, { id: badgeId, delta: heuristicStrength * 10, x: e.clientX, y: e.clientY }]);
             setTimeout(() => setScoreBadges(prev => prev.filter(b => b.id !== badgeId)), 1000);
-            // Mark connection as AI-pending (marching dashes)
             pendingConnectionsRef.current.set(connectionId, { heuristicStrength, badgeX: e.clientX, badgeY: e.clientY });
             setPendingConnectionIds(prev => new Set(prev).add(connectionId));
-            // Fire background AI validation (non-blocking)
             const sourceFragment = state.fragments.find(f => f.id === sourceFragmentId);
             const targetFragment = state.fragments.find(f => f.id === targetId);
             if (sourceFragment && targetFragment) {
@@ -393,17 +504,14 @@ export default function Canvas({
                 pendingConnectionsRef.current.delete(connectionId);
                 setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
                 if (!aiResult) {
-                  // Error: keep heuristic, empty label
                   updateUserConnectionAI(projectId, connectionId, { label: '', strength: heuristicStrength, rationale: '' });
                   setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
                   return;
                 }
-                // Fade out label, update, fade in
                 setFadingLabelIds(prev => new Set(prev).add(connectionId));
                 setTimeout(() => {
                   const update = updateUserConnectionAI(projectId, connectionId, aiResult);
                   setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
-                  // Show delta badge if AI returned stronger score
                   if (update && pending && aiResult.strength > pending.heuristicStrength) {
                     const delta = (aiResult.strength - pending.heuristicStrength) * 10;
                     const deltaBadgeId = crypto.randomUUID();
@@ -418,7 +526,6 @@ export default function Canvas({
                 setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
               });
             } else {
-              // Fragments not found — clear pending immediately
               pendingConnectionsRef.current.delete(connectionId);
               setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
             }
@@ -431,15 +538,12 @@ export default function Canvas({
         dotDragRef.current = null;
         setDotDragPreview(null);
         setDotDraggingFragmentId(null);
-
-        // Check if dropped on a fragment
         const el = document.elementFromPoint(e.clientX, e.clientY);
         const fragEl = el?.closest('[data-fragment-id]');
         const targetId = fragEl?.getAttribute('data-fragment-id');
         if (targetId && targetId !== sourceFragmentId) {
           addConnector(sourceFragmentId, targetId);
         } else {
-          // Dropped on empty canvas — show canvas drop command menu
           const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
           setCanvasDropMenu({ x: cx, y: cy, sourceFragmentId });
         }
@@ -458,13 +562,12 @@ export default function Canvas({
           const minY = Math.min(rect.startY, rect.endY);
           const maxY = Math.max(rect.startY, rect.endY);
           if (maxX - minX > 4 || maxY - minY > 4) {
-            // Fragment wrappers are centered (translate -50%,-50%) so bounds are centered on x,y
             const hitFrags = state.fragments.filter(f => {
               const fw = f.width ?? LAYOUT_WIDTHS[f.layout] ?? 320;
               const fh = 480;
-              const left = f.x - fw / 2;
-              const right = f.x + fw / 2;
-              const top = f.y - fh / 2;
+              const left   = f.x - fw / 2;
+              const right  = f.x + fw / 2;
+              const top    = f.y - fh / 2;
               const bottom = f.y + fh / 2;
               return left < maxX && right > minX && top < maxY && bottom > minY;
             });
@@ -483,19 +586,19 @@ export default function Canvas({
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mouseup',   handleMouseUp);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseup',   handleMouseUp);
     };
-  }, [updateDrag, endDrag, updateFragmentWidth, updateRect, finishRect, selectMany, state.fragments, state.clusters, addConnector, moveGroupElements, projectId]);
+  }, [updateDrag, endDrag, updateFragmentWidth, updateRect, finishRect, selectMany, state.fragments, state.clusters, addConnector, moveGroupElements, projectId, toCanvas]);
 
-  // Keyboard: copy/paste + delete selected + undo
+  // ─── Keyboard ────────────────────────────────────────────────────────────
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true';
-
       const isMod = e.metaKey || e.ctrlKey;
 
       if (e.key === 'Escape') {
@@ -549,7 +652,6 @@ export default function Canvas({
       }
 
       if (!isTyping && (e.key === 'Delete' || e.key === 'Backspace')) {
-        // Delete selected tether
         if (selectedTetherKey) {
           e.preventDefault();
           const fragId = selectedTetherKey.split('-').slice(1).join('-');
@@ -557,7 +659,6 @@ export default function Canvas({
           setSelectedTetherKey(null);
           return;
         }
-        // Delete selected elements
         if (selectedIds.size > 0) {
           e.preventDefault();
           if (selectedIds.size > 3 && !window.confirm(`Delete ${selectedIds.size} selected elements?`)) return;
@@ -574,21 +675,20 @@ export default function Canvas({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [state.fragments, state.clusters, copiedFragment, selectedIds, selectedTetherKey, onFragmentCopy, onFragmentPaste, addCluster, addFragment, removeFragment, removeCluster, deselectAll, selectMany, finishRect, undo, unassignFromCluster]);
 
-  // Canvas background mouse down — select tool starts rect, text tool places note
+  // ─── Canvas event handlers ───────────────────────────────────────────────
+
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only handle direct clicks on canvas-content or canvas-wrapper (not on fragments)
     if ((e.target as HTMLElement).closest('[data-fragment-id]')) return;
-    if (activeTool === 'text') return; // text placement handled on click
+    if (activeTool === 'text') return;
 
     if (activeTool === 'select') {
       deselectAll();
-      const { x: cx, y: cy } = toCanvas(e.clientX, e.clientY);
-      startRect(cx, cy);
+      const pt = toCanvas(e.clientX, e.clientY);
+      startRect(pt.x, pt.y);
       selectionDragging.current = true;
       return;
     }
 
-    // Fallback: pan
     panMouseDown(e);
   };
 
@@ -613,13 +713,15 @@ export default function Canvas({
       layout: 'text-note',
       title: '',
       slots: [],
-      createdAtZoom: transformRef.current.zoom,
+      createdAtZoom: cameraRef.current?.zoom ?? 0.7,
       starred: false,
     });
 
     setEditingFragmentId(id);
     switchTo('select');
   };
+
+  // ─── Feature handlers ────────────────────────────────────────────────────
 
   const handlePivot = async (fragmentId: string) => {
     if (pivotingFragmentId !== null) return;
@@ -632,14 +734,12 @@ export default function Canvas({
       const midX = (fragment.x + result.cluster.x) / 2;
       const midY = (fragment.y + result.cluster.y) / 2;
       const el = wrapperRef.current;
-      if (el) {
-        setIsTransitioning(true);
-        setTransform(prev => ({
-          ...prev,
-          x: el.clientWidth / 2 - midX * prev.zoom,
-          y: el.clientHeight / 2 - midY * prev.zoom,
-        }));
-        setTimeout(() => setIsTransitioning(false), 400);
+      const cam = cameraRef.current;
+      if (el && cam) {
+        const currentZoom = cam.zoom;
+        const newX = el.clientWidth  / 2 - midX * currentZoom;
+        const newY = el.clientHeight / 2 - midY * currentZoom;
+        navigateCamera(newX, newY, currentZoom);
       }
       setPivotingFragmentId(null);
     } catch (err) {
@@ -652,11 +752,10 @@ export default function Canvas({
     }
   };
 
-  // Session 17: run a prompt on a fragment's slot via drag-drop
   const handlePromptDrop = async (fragmentId: string, promptId: string) => {
     if (promptingFragmentIds.has(fragmentId)) return;
     const fragment = state.fragments.find(f => f.id === fragmentId);
-    const prompt = PROMPTS.find(p => p.id === promptId);
+    const prompt   = PROMPTS.find(p => p.id === promptId);
     if (!fragment || !prompt) return;
 
     const targetSlotType: SlotType = prompt.allowedOutputSlots[0];
@@ -675,7 +774,6 @@ export default function Canvas({
     }
   };
 
-  // Session 17: run a prompt from the slot command menu
   const handleCommandMenuSelect = async (fragmentId: string, slotType: SlotType, prompt: PromptDefinition) => {
     if (promptingFragmentIds.has(fragmentId)) return;
     const fragment = state.fragments.find(f => f.id === fragmentId);
@@ -696,7 +794,6 @@ export default function Canvas({
     }
   };
 
-  // Session 18: add an accordion slot (stub content, no API call)
   const handleAddAccordion = async (fragmentId: string, promptId: string) => {
     const frag = state.fragments.find(f => f.id === fragmentId);
     if (!frag) return;
@@ -711,14 +808,14 @@ export default function Canvas({
   };
 
   const handleResizeStart = (fragment: Fragment, handle: ResizeHandle, e: React.MouseEvent) => {
-    pushUndo(); // capture state before resize
+    pushUndo();
     const isLeft = handle === 'nw' || handle === 'w' || handle === 'sw';
     resizeDragRef.current = {
-      fragmentId: fragment.id,
+      fragmentId:  fragment.id,
       handle,
       startMouseX: e.clientX,
-      origWidth: fragment.width ?? LAYOUT_WIDTHS[fragment.layout] ?? 320,
-      origX: fragment.x,
+      origWidth:   fragment.width ?? LAYOUT_WIDTHS[fragment.layout] ?? 320,
+      origX:       fragment.x,
       isLeft,
     };
   };
@@ -739,18 +836,15 @@ export default function Canvas({
     }
   };
 
-  // Session 17: navigate to fragment from timeline banner
   const handleNavigateToFragment = (fragmentId: string) => {
     const fragment = state.fragments.find(f => f.id === fragmentId);
     if (!fragment || !wrapperRef.current) return;
     const { clientWidth: w, clientHeight: h } = wrapperRef.current;
-    const currentZoom = transformRef.current.zoom;
+    const currentZoom = cameraRef.current?.zoom ?? 0.7;
     const newZoom = currentZoom < 0.4 ? 0.8 : currentZoom;
     const newX = w / 2 - fragment.x * newZoom;
     const newY = h / 2 - fragment.y * newZoom;
-    setIsTransitioning(true);
-    setTransform({ x: newX, y: newY, zoom: newZoom });
-    setTimeout(() => setIsTransitioning(false), 400);
+    navigateCamera(newX, newY, newZoom);
     setHighlightedFragmentId(fragmentId);
     setTimeout(() => setHighlightedFragmentId(null), 600);
   };
@@ -761,7 +855,6 @@ export default function Canvas({
     setConnectorMenu({ connectorId, screenX: e.clientX, screenY: e.clientY });
   };
 
-  // Session 28: cross-link handlers
   const explorationDepthScore = userConnectionsList.reduce((sum, c) => sum + c.strength * 10, 0);
 
   const handleLinkToExploration = (fragmentId: string) => {
@@ -771,18 +864,17 @@ export default function Canvas({
   const handleCrossLinkConfirm = (targetExplorationId: string, targetFragmentId: string) => {
     if (!crossLinkSourceFragmentId) return;
     const link = {
-      id: crypto.randomUUID(),
-      explorationAId: projectId,
-      fragmentAId: crossLinkSourceFragmentId,
-      explorationBId: targetExplorationId,
-      fragmentBId: targetFragmentId,
-      label: '',
-      createdAt: Date.now(),
+      id:              crypto.randomUUID(),
+      explorationAId:  projectId,
+      fragmentAId:     crossLinkSourceFragmentId,
+      explorationBId:  targetExplorationId,
+      fragmentBId:     targetFragmentId,
+      label:           '',
+      createdAt:       Date.now(),
     };
     addCrossLink(link);
     setExplorationCrossLinks(getCrossLinksForExploration(projectId));
 
-    // First-ever cross-link reward
     if (getCrossLinks().length === 1 && !localStorage.getItem('webs_first_cross_link_shown')) {
       localStorage.setItem('webs_first_cross_link_shown', 'true');
       const overlay = document.createElement('div');
@@ -794,7 +886,6 @@ export default function Canvas({
       ).onfinish = () => overlay.remove();
     }
 
-    // Background AI label generation
     const fragA = state.fragments.find(f => f.id === crossLinkSourceFragmentId);
     if (fragA) {
       const targetCanvas = loadCanvasState(targetExplorationId);
@@ -820,6 +911,11 @@ export default function Canvas({
 
   const canvasClass = `canvas-wrapper canvas--${activeTool}-tool`;
 
+  // ─── Cluster index map (for z-depth variation) ───────────────────────────
+  const clusterIndexById = new Map(state.clusters.map((c, i) => [c.id, i]));
+
+  // ─── Render ──────────────────────────────────────────────────────────────
+
   return (
     <div
       ref={wrapperRef}
@@ -830,15 +926,37 @@ export default function Canvas({
       onMouseLeave={onMouseUp}
       onClick={handleCanvasClick}
     >
-      <CanvasBackground transform={transform} />
-      <div
-        className="canvas-content"
-        data-group-dragging={groupDragging || undefined}
-        style={{
-          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
-          transition: isTransitioning ? 'transform 400ms ease-out' : 'none',
-        }}
+      {/*
+        ── R3F scene ──────────────────────────────────────────────────────────
+        Everything lives here: background, connectors, clusters, fragments.
+        No canvas-content CSS div. One coordinate system.
+      */}
+      <R3FCanvas
+        orthographic
+        camera={{ zoom: initialState.viewport.zoom || 0.7, position: [0, 0, 100], near: 0.1, far: 2000 }}
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+        gl={{ antialias: false, alpha: true }}
+        dpr={1}
       >
+        {/* Dot grid background (shader-based) */}
+        <CanvasBackground />
+
+        {/* Camera restore + LOD/zoom tracking */}
+        <SceneSetup
+          cameraRef={cameraRef}
+          sizeRef={sizeRef}
+          initialViewport={initialState.viewport}
+          onLodChange={setLod}
+          onZoomChange={setDisplayZoom}
+          onViewportChange={updateViewport}
+        />
+
+        {/*
+          Connectors: Three.js Lines + Html labels.
+          Rendered at z=0 (below fragments).
+          NOTE: Html inside R3F uses a DOM portal — pointer events work
+          through the 'pointerEvents: auto' style on the Html component.
+        */}
         <ConnectorLayer
           connectors={state.connectors}
           fragments={state.fragments}
@@ -859,157 +977,256 @@ export default function Canvas({
           }}
         />
 
+        {/*
+          Cluster spawn points.
+          Each cluster renders its label/marker as Html anchored to its canvas position.
+          position={[x, -y, Z_LAYERS.clusters]}: y-flipped for Three.js y-up.
+        */}
+        {state.clusters.map(cluster => {
+          if (cluster.isSeed) {
+            const seedFrag  = state.fragments.find(f => f.clusterId === cluster.id);
+            const context   = seedFrag?.slots.find(s => s.type === 'body')?.content ?? '';
+            return (
+              <group
+                key={cluster.id}
+                position={[cluster.x, -cluster.y, Z_LAYERS.fragments]}
+              >
+                <Html
+                  transform={false}
+                  occlude={false}
+                  center={false}
+                  style={{ pointerEvents: 'auto', userSelect: 'none' }}
+                  zIndexRange={[100, 200]}
+                >
+                  <SeedFragment
+                    query={state.query || cluster.label}
+                    context={context}
+                    x={cluster.x}
+                    y={cluster.y}
+                    onMouseDown={e => {
+                      e.stopPropagation();
+                      startDrag(cluster.id, 'cluster', e.clientX, e.clientY, cluster.x, cluster.y);
+                    }}
+                  />
+                </Html>
+              </group>
+            );
+          }
+
+          return (
+            <group
+              key={cluster.id}
+              position={[cluster.x, -cluster.y, Z_LAYERS.clusters]}
+            >
+              <Html
+                transform={false}
+                occlude={false}
+                center={false}
+                style={{ pointerEvents: 'auto', userSelect: 'none' }}
+                zIndexRange={[50, 100]}
+              >
+                <Cluster
+                  cluster={cluster}
+                  lod={lod}
+                  onDragStart={(id, mx, my, ox, oy) =>
+                    startDrag(id, 'cluster', mx, my, ox, oy)
+                  }
+                />
+              </Html>
+            </group>
+          );
+        })}
+
+        {/*
+          Fragment cards: Html anchored to each fragment's canvas position.
+          Fragment.tsx uses position:absolute — left:0,top:0 places it at
+          the Html anchor (the Three.js group's projected screen position).
+          Fragment is off-limits, so we pass style={{ left: 0, top: 0 }}.
+
+          NOTE: Performance — Html creates one DOM portal per fragment.
+          Fine for 12-15 visible fragments. Flag if count exceeds 50.
+        */}
         {state.fragments
-          // Skip the seed fragment — rendered via SeedFragment below
           .filter(f => {
             const cluster = state.clusters.find(c => c.id === f.clusterId);
             return !cluster?.isSeed;
           })
-          .map(f => (
-          <FragmentComponent
-            key={f.id}
-            fragment={f}
-            lod={lod}
-            clusters={state.clusters}
-            onMouseDown={e => {
-              e.stopPropagation();
-              if (f.anchored) return;
-              // Group drag: mousedown on a selected element when multiple are selected
-              if (
-                activeTool === 'select' &&
-                selectedIds.size > 1 &&
-                selectedIds.has(f.id) &&
-                !e.shiftKey &&
-                !(e.target as HTMLElement).closest('.resize-handle') &&
-                !(e.target as HTMLElement).closest('.connector-dot')
-              ) {
-                pushUndo();
-                const startPositions = new Map<string, { x: number; y: number; type: 'fragment' | 'cluster' }>();
-                state.fragments.filter(fr => selectedIds.has(fr.id))
-                  .forEach(fr => startPositions.set(fr.id, { x: fr.x, y: fr.y, type: 'fragment' }));
-                state.clusters.filter(c => selectedIds.has(c.id))
-                  .forEach(c => startPositions.set(c.id, { x: c.x, y: c.y, type: 'cluster' }));
-                groupDragRef.current = { startMouseX: e.clientX, startMouseY: e.clientY, startPositions };
-                setGroupDragging(true);
-                return;
-              }
-              if (activeTool === 'select') {
-                selectId(f.id, e.shiftKey);
-              }
-              startDrag(f.id, 'fragment', e.clientX, e.clientY, f.x, f.y);
-            }}
-            onDelete={removeFragment}
-            onToggleStar={toggleStarFragment}
-            onPivot={handlePivot}
-            onDuplicate={duplicateFragment}
-            onPin={pinFragment}
-            onAnchor={anchorFragment}
-            onUnanchor={unanchorFragment}
-            onResetPositions={() => setShowResetConfirm(true)}
-            onMoveToCluster={moveFragmentToCluster}
-            onAddAccordion={handleAddAccordion}
-            onConnectorDotStart={handleConnectorDotStart}
-            onConnectHandleMouseDown={handleConnectHandleStart}
-            onLinkToExploration={handleLinkToExploration}
-            depthScore={explorationDepthScore}
-            isDropTarget={connectDropTargetId === f.id}
-            onPromptDrop={handlePromptDrop}
-            onNavigateSlotHistory={navigateSlotHistory}
-            onEmptySlotDblClick={(fragmentId, slotType, x, y) =>
-              setCommandMenu({ fragmentId, slotType, x, y })
-            }
-            isPivoting={f.id === pivotingFragmentId}
-            pivotDisabled={pivotingFragmentId !== null && f.id !== pivotingFragmentId}
-            pivotError={pivotErrors[f.id] ?? null}
-            isSelected={selectedIds.has(f.id)}
-            isEditing={editingFragmentId === f.id}
-            onTitleChange={handleTitleChange}
-            onDoubleClick={handleFragmentDoubleClick}
-            onResizeStart={(handle, e) => handleResizeStart(f, handle, e)}
-            dotDragging={dotDraggingFragmentId === f.id}
-            isRunningPrompt={promptingFragmentIds.has(f.id)}
-            isHighlighted={highlightedFragmentId === f.id}
-            style={{ left: f.x, top: f.y }}
-          />
-        ))}
+          .map(f => {
+            const clusterIdx = clusterIndexById.get(f.clusterId) ?? 0;
+            const fragZ = getFragmentZ(f, clusterIdx);
+            const isSelected = selectedIds.has(f.id);
+            const zIndex = isSelected
+              ? Z_LAYERS.fragSelected
+              : fragZ;
 
-        {state.clusters.map(cluster => {
-          if (cluster.isSeed) {
-            // Find the seed fragment for context text
-            const seedFrag = state.fragments.find(f => f.clusterId === cluster.id);
-            const context = seedFrag?.slots.find(s => s.type === 'body')?.content ?? '';
             return (
-              <SeedFragment
-                key={cluster.id}
-                query={state.query || cluster.label}
-                context={context}
-                x={cluster.x}
-                y={cluster.y}
-                onMouseDown={e => {
-                  e.stopPropagation();
-                  startDrag(cluster.id, 'cluster', e.clientX, e.clientY, cluster.x, cluster.y);
-                }}
-              />
+              <group key={f.id} position={[f.x, -f.y, zIndex]}>
+                <Html
+                  transform={false}
+                  occlude={false}
+                  center={false}
+                  style={{ pointerEvents: 'auto', userSelect: 'none' }}
+                  zIndexRange={isSelected ? [300, 400] : [100, 200]}
+                >
+                  <FragmentComponent
+                    fragment={f}
+                    lod={lod}
+                    clusters={state.clusters}
+                    onMouseDown={e => {
+                      e.stopPropagation();
+                      if (f.anchored) return;
+                      if (
+                        activeTool === 'select' &&
+                        selectedIds.size > 1 &&
+                        selectedIds.has(f.id) &&
+                        !e.shiftKey &&
+                        !(e.target as HTMLElement).closest('.resize-handle') &&
+                        !(e.target as HTMLElement).closest('.connector-dot')
+                      ) {
+                        pushUndo();
+                        const startPositions = new Map<string, { x: number; y: number; type: 'fragment' | 'cluster' }>();
+                        state.fragments.filter(fr => selectedIds.has(fr.id))
+                          .forEach(fr => startPositions.set(fr.id, { x: fr.x, y: fr.y, type: 'fragment' }));
+                        state.clusters.filter(c => selectedIds.has(c.id))
+                          .forEach(c => startPositions.set(c.id, { x: c.x, y: c.y, type: 'cluster' }));
+                        groupDragRef.current = { startMouseX: e.clientX, startMouseY: e.clientY, startPositions };
+                        setGroupDragging(true);
+                        return;
+                      }
+                      if (activeTool === 'select') {
+                        selectId(f.id, e.shiftKey);
+                      }
+                      startDrag(f.id, 'fragment', e.clientX, e.clientY, f.x, f.y);
+                    }}
+                    onDelete={removeFragment}
+                    onToggleStar={toggleStarFragment}
+                    onPivot={handlePivot}
+                    onDuplicate={duplicateFragment}
+                    onPin={pinFragment}
+                    onAnchor={anchorFragment}
+                    onUnanchor={unanchorFragment}
+                    onResetPositions={() => setShowResetConfirm(true)}
+                    onMoveToCluster={moveFragmentToCluster}
+                    onAddAccordion={handleAddAccordion}
+                    onConnectorDotStart={handleConnectorDotStart}
+                    onConnectHandleMouseDown={handleConnectHandleStart}
+                    onLinkToExploration={handleLinkToExploration}
+                    depthScore={explorationDepthScore}
+                    isDropTarget={connectDropTargetId === f.id}
+                    onPromptDrop={handlePromptDrop}
+                    onNavigateSlotHistory={navigateSlotHistory}
+                    onEmptySlotDblClick={(fragmentId, slotType, x, y) =>
+                      setCommandMenu({ fragmentId, slotType, x, y })
+                    }
+                    isPivoting={f.id === pivotingFragmentId}
+                    pivotDisabled={pivotingFragmentId !== null && f.id !== pivotingFragmentId}
+                    pivotError={pivotErrors[f.id] ?? null}
+                    isSelected={isSelected}
+                    isEditing={editingFragmentId === f.id}
+                    onTitleChange={handleTitleChange}
+                    onDoubleClick={handleFragmentDoubleClick}
+                    onResizeStart={(handle, e) => handleResizeStart(f, handle, e)}
+                    dotDragging={dotDraggingFragmentId === f.id}
+                    isRunningPrompt={promptingFragmentIds.has(f.id)}
+                    isHighlighted={highlightedFragmentId === f.id}
+                    style={{ left: 0, top: 0 }}
+                  />
+                </Html>
+              </group>
             );
-          }
-          return (
-            <Cluster
-              key={cluster.id}
-              cluster={cluster}
-              lod={lod}
-              onDragStart={(id, mx, my, ox, oy) =>
-                startDrag(id, 'cluster', mx, my, ox, oy)
-              }
-            />
-          );
-        })}
+          })}
 
-        {/* Canvas drop menu — inside transform so it pans with canvas */}
+        {/*
+          Canvas drop menu — appears at the canvas position where user dropped
+          a connector dot. Rendered as Html inside the scene so it follows pan.
+          Callbacks use stored canvasDropMenu coords (not the x/y props passed
+          back from CanvasCommandMenu, which are screen-space 0,0).
+        */}
         {canvasDropMenu && (
-          <CanvasCommandMenu
-            x={canvasDropMenu.x}
-            y={canvasDropMenu.y}
-            sourceFragmentId={canvasDropMenu.sourceFragmentId}
-            onCreateFragment={(type: FragmentType, x: number, y: number) => {
-              const FALLBACK_CLUSTER = 'canvas-drops';
-              if (!state.clusters.some(c => c.id === FALLBACK_CLUSTER)) {
-                addCluster({ id: FALLBACK_CLUSTER, x: 0, y: 0, label: 'canvas drops', isSeed: false });
-              }
-              const newId = addEmptyFragment(type, x, y, FALLBACK_CLUSTER);
-              addConnector(canvasDropMenu.sourceFragmentId, newId);
-            }}
-            onCreateTextNote={(x: number, y: number) => {
-              const TEXT_NOTES_CLUSTER = 'text-notes';
-              if (!state.clusters.some(c => c.id === TEXT_NOTES_CLUSTER)) {
-                addCluster({ id: TEXT_NOTES_CLUSTER, x: 0, y: 0, label: 'notes', isSeed: false });
-              }
-              const newId = uuidv4();
-              addFragment({ id: newId, clusterId: TEXT_NOTES_CLUSTER, x, y, type: 'text-note', layout: 'text-note', title: '', slots: [], createdAtZoom: transformRef.current.zoom, starred: false });
-              addConnector(canvasDropMenu.sourceFragmentId, newId);
-              setEditingFragmentId(newId);
-            }}
-            onPivot={handlePivot}
-            onCreateCluster={(x: number, y: number) => {
-              const newClusterId = uuidv4();
-              addCluster({ id: newClusterId, x, y, label: 'new cluster', isSeed: false });
-            }}
-            onClose={() => setCanvasDropMenu(null)}
-          />
+          <group position={[canvasDropMenu.x, -canvasDropMenu.y, Z_LAYERS.fragSelected + 5]}>
+            <Html
+              transform={false}
+              occlude={false}
+              center={false}
+              zIndexRange={[500, 600]}
+              style={{ pointerEvents: 'auto' }}
+            >
+              <CanvasCommandMenu
+                x={0}
+                y={0}
+                sourceFragmentId={canvasDropMenu.sourceFragmentId}
+                onCreateFragment={(type: FragmentType) => {
+                  const FALLBACK_CLUSTER = 'canvas-drops';
+                  if (!state.clusters.some(c => c.id === FALLBACK_CLUSTER)) {
+                    addCluster({ id: FALLBACK_CLUSTER, x: 0, y: 0, label: 'canvas drops', isSeed: false });
+                  }
+                  const newId = addEmptyFragment(type, canvasDropMenu.x, canvasDropMenu.y, FALLBACK_CLUSTER);
+                  addConnector(canvasDropMenu.sourceFragmentId, newId);
+                  setCanvasDropMenu(null);
+                }}
+                onCreateTextNote={() => {
+                  const TEXT_NOTES_CLUSTER = 'text-notes';
+                  if (!state.clusters.some(c => c.id === TEXT_NOTES_CLUSTER)) {
+                    addCluster({ id: TEXT_NOTES_CLUSTER, x: 0, y: 0, label: 'notes', isSeed: false });
+                  }
+                  const newId = uuidv4();
+                  addFragment({
+                    id: newId,
+                    clusterId: TEXT_NOTES_CLUSTER,
+                    x: canvasDropMenu.x,
+                    y: canvasDropMenu.y,
+                    type: 'text-note',
+                    layout: 'text-note',
+                    title: '',
+                    slots: [],
+                    createdAtZoom: cameraRef.current?.zoom ?? 0.7,
+                    starred: false,
+                  });
+                  addConnector(canvasDropMenu.sourceFragmentId, newId);
+                  setEditingFragmentId(newId);
+                  setCanvasDropMenu(null);
+                }}
+                onPivot={handlePivot}
+                onCreateCluster={() => {
+                  const newClusterId = uuidv4();
+                  addCluster({ id: newClusterId, x: canvasDropMenu.x, y: canvasDropMenu.y, label: 'new cluster', isSeed: false });
+                  setCanvasDropMenu(null);
+                }}
+                onClose={() => setCanvasDropMenu(null)}
+              />
+            </Html>
+          </group>
         )}
+      </R3FCanvas>
 
-        {/* Selection rectangle */}
-        {selectionRect && (
+      {/*
+        ── Screen-space overlays (outside R3F) ────────────────────────────────
+        These elements need to be in DOM space and are not part of the 3D scene.
+      */}
+
+      {/* Selection rect — canvas-space coords converted to screen-space for rendering */}
+      {selectionRect && (() => {
+        const tl = canvasToScreen(
+          Math.min(selectionRect.startX, selectionRect.endX),
+          Math.min(selectionRect.startY, selectionRect.endY),
+        );
+        const br = canvasToScreen(
+          Math.max(selectionRect.startX, selectionRect.endX),
+          Math.max(selectionRect.startY, selectionRect.endY),
+        );
+        return (
           <div
             className="selection-rect"
             style={{
-              left:   Math.min(selectionRect.startX, selectionRect.endX),
-              top:    Math.min(selectionRect.startY, selectionRect.endY),
-              width:  Math.abs(selectionRect.endX - selectionRect.startX),
-              height: Math.abs(selectionRect.endY - selectionRect.startY),
+              position: 'absolute',
+              left:   tl.x,
+              top:    tl.y,
+              width:  Math.max(0, br.x - tl.x),
+              height: Math.max(0, br.y - tl.y),
             }}
           />
-        )}
-      </div>
+        );
+      })()}
 
       {/* Score badges — fixed position, float up on connection drawn */}
       {scoreBadges.map(b => (
@@ -1022,7 +1239,7 @@ export default function Canvas({
         </div>
       ))}
 
-      {/* Connector context menu — fixed position, outside canvas-content transform */}
+      {/* Connector context menu */}
       {connectorMenu && activeConnector && (
         <div
           ref={connectorMenuRef}
@@ -1068,13 +1285,12 @@ export default function Canvas({
       <Toolbar activeTool={activeTool} onSelect={switchTo} onNewExploration={onNewExploration} />
 
       <StatusBar
-        zoom={transform.zoom}
+        zoom={displayZoom}
         fragmentCount={state.fragments.length}
         clusterCount={state.clusters.length}
         hasLinks={explorationCrossLinks.length > 0}
       />
 
-      {/* Slot command menu — fixed position */}
       {commandMenu && (
         <CommandMenu
           target={commandMenu}
@@ -1083,7 +1299,6 @@ export default function Canvas({
         />
       )}
 
-      {/* Cross-link modal (Session 28) */}
       {crossLinkSourceFragmentId && (() => {
         const sourceFragment = state.fragments.find(f => f.id === crossLinkSourceFragmentId);
         return sourceFragment ? (
@@ -1097,7 +1312,6 @@ export default function Canvas({
         ) : null;
       })()}
 
-      {/* Reset positions confirmation */}
       {showResetConfirm && (
         <div className="reset-confirm-panel">
           <span className="reset-confirm-panel__msg">Reset all positions to initial layout? This cannot be undone.</span>

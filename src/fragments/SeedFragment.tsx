@@ -8,11 +8,11 @@ interface Props {
   onMouseDown: (e: React.MouseEvent) => void;
 }
 
-export default function SeedFragment({ query, context, x, y, onMouseDown }: Props) {
+export default function SeedFragment({ query, context, x: _x, y: _y, onMouseDown }: Props) {
+  // x, y are no longer used for positioning — the Three.js group in Canvas handles that.
   return (
     <div
       className="seed-fragment"
-      style={{ left: x, top: y }}
       onMouseDown={onMouseDown}
     >
       <span className="seed-fragment__eyebrow">exploring</span>

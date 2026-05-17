@@ -54,3 +54,27 @@ export const getBezierPath = (x1: number, y1: number, x2: number, y2: number) =>
 
 export const getBezierMidpoint = (x1: number, y1: number, x2: number, y2: number) =>
   getMidpoint(x1, y1, x2, y2);
+
+// ─── Three.js bezier points (for R3F Line component) ─────────────────────────
+// Returns sampled points along a cubic bezier curve, y-flipped for Three.js
+// (canvas y-down → Three.js y-up). Z is always 0; callers set z via group position.
+export function getBezierPoints3D(
+  x1: number, y1: number,
+  x2: number, y2: number,
+  scope: 'intra' | 'inter',
+  segments: number = 32,
+): [number, number, number][] {
+  const dx = Math.abs(x2 - x1) * (scope === 'inter' ? 0.6 : 0.3);
+  // Control points: horizontal-bias cubic bezier
+  const cx1 = x1 + dx; const cy1 = y1;
+  const cx2 = x2 - dx; const cy2 = y2;
+  const pts: [number, number, number][] = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const mt = 1 - t;
+    const bx = mt*mt*mt*x1 + 3*mt*mt*t*cx1 + 3*mt*t*t*cx2 + t*t*t*x2;
+    const by = mt*mt*mt*y1 + 3*mt*mt*t*cy1 + 3*mt*t*t*cy2 + t*t*t*y2;
+    pts.push([bx, -by, 0]); // y-flip: canvas y → Three.js -y
+  }
+  return pts;
+}

@@ -16,7 +16,6 @@ export default function Cluster({ cluster, lod = 'full', onDragStart }: Props) {
   return (
     <div
       className="cluster-spawn"
-      style={{ left: cluster.x, top: cluster.y }}
       onMouseDown={(e) => {
         e.stopPropagation();
         onDragStart(cluster.id, e.clientX, e.clientY, cluster.x, cluster.y);
