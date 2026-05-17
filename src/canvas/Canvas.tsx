@@ -1,8 +1,14 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Canvas as R3FCanvas, useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
+import { computeFragmentFog, camToCanvas, fogStyle } from '../effects/DepthFog';
+import { makeSpringState, computePhysicsTarget, stepSpring } from './useHoverPhysics';
+import type { SpringState } from './useHoverPhysics';
+import SemanticEcho from '../effects/SemanticEcho';
+import ColorBleed from '../effects/ColorBleed';
+import DiscoveryParticles from '../effects/DiscoveryParticles';
 import { usePanZoom } from './usePanZoom';
 import { useCanvas, getLOD } from './useCanvas';
 import type { LOD } from './useCanvas';
@@ -34,6 +40,7 @@ import '../styles/selection.css';
 import '../styles/toolbar.css';
 import '../styles/command-menu.css';
 import '../styles/timeline.css';
+import '../styles/discovery.css';
 
 // ─── Scene coordinate helpers ─────────────────────────────────────────────────
 // All canvas coords use CSS convention: x right, y down.
@@ -68,6 +75,187 @@ const LAYOUT_WIDTHS: Partial<Record<LayoutType, number>> = {
 };
 
 const RENDER_TYPES: ConnectorRenderType[] = ['bezier', 'straight', 'step', 'smoothstep'];
+
+// ─── Discovery constants ──────────────────────────────────────────────────────
+const EXPLORED_RADIUS = 600; // camera must come within this to discover a fragment
+const ECHO_RADIUS     = 1000; // max distance echoes are rendered
+
+// ─── DiscoveryTracker ────────────────────────────────────────────────────────
+// Lives inside R3F Canvas. Reads camera position each frame (throttled to 10fps)
+// and reports which fragments have been discovered and which are near-undiscovered.
+
+interface DiscoveryTrackerProps {
+  fragments: Fragment[];
+  discoveredIdsRef: React.MutableRefObject<Set<string>>;
+  onNearUndiscoveredChange: (frags: Fragment[]) => void;
+}
+
+function DiscoveryTracker({ fragments, discoveredIdsRef, onNearUndiscoveredChange }: DiscoveryTrackerProps) {
+  const { camera }      = useThree();
+  const lastTickRef     = useRef(0);
+  const nearPrevRef     = useRef<string[]>([]);
+
+  useFrame(() => {
+    const now = performance.now();
+    if (now - lastTickRef.current < 100) return; // 10fps throttle
+    lastTickRef.current = now;
+
+    const cam    = camera as THREE.OrthographicCamera;
+    const { x: camX, y: camY } = camToCanvas(cam);
+
+    let changed = false;
+    const ids = discoveredIdsRef.current;
+    for (const f of fragments) {
+      if (ids.has(f.id)) continue;
+      const dist = Math.sqrt((f.x - camX) ** 2 + (f.y - camY) ** 2);
+      if (dist < EXPLORED_RADIUS) {
+        ids.add(f.id);
+        changed = true;
+      }
+    }
+
+    // Recompute near-undiscovered (closest 4 outside explored, within echo radius)
+    const near = fragments
+      .filter(f => !ids.has(f.id))
+      .map(f => ({ f, dist: Math.sqrt((f.x - camX) ** 2 + (f.y - camY) ** 2) }))
+      .filter(({ dist }) => dist < ECHO_RADIUS)
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 4)
+      .map(({ f }) => f);
+
+    const nearIds = near.map(f => f.id).join(',');
+    if (changed || nearIds !== nearPrevRef.current.join(',')) {
+      nearPrevRef.current = near.map(f => f.id);
+      onNearUndiscoveredChange(near);
+    }
+  });
+
+  return null;
+}
+
+// ─── FragmentNode ─────────────────────────────────────────────────────────────
+// R3F wrapper for each fragment card: applies hover-physics spring offsets to the
+// Three.js group position and depth-fog CSS to the Html wrapper imperatively.
+// All imperative — no React state updates happen inside this component.
+
+interface FragmentNodeProps {
+  fragment: Fragment;
+  clusterIdx: number;
+  isSelected: boolean;
+  lod: LOD;
+  clusters: Cluster[];
+  cursorPosRef: React.MutableRefObject<{ x: number; y: number }>;
+  activeToolRef: React.MutableRefObject<string>;
+  discoveredIdsRef: React.MutableRefObject<Set<string>>;
+  // Fragment event handlers (forwarded directly to FragmentComponent)
+  onMouseDown: (e: React.MouseEvent) => void;
+  onDelete: (id: string) => void;
+  onToggleStar: (id: string) => void;
+  onPivot: (id: string) => Promise<void>;
+  onDuplicate: (id: string) => void;
+  onPin: (id: string) => void;
+  onAnchor: (id: string) => void;
+  onUnanchor: (id: string) => void;
+  onResetPositions: () => void;
+  onMoveToCluster: (fragmentId: string, clusterId: string) => void;
+  onAddAccordion: (fragmentId: string, promptId: string) => Promise<void>;
+  onConnectorDotStart: (fragmentId: string, e: React.MouseEvent) => void;
+  onConnectHandleMouseDown: (fragmentId: string, e: React.MouseEvent) => void;
+  onLinkToExploration: (fragmentId: string) => void;
+  depthScore: number;
+  isDropTarget: boolean;
+  onPromptDrop: (fragmentId: string, promptId: string) => Promise<void>;
+  onNavigateSlotHistory: (fragmentId: string, slotType: import('../api/types').SlotType, direction: 'back' | 'forward') => void;
+  onEmptySlotDblClick: (fragmentId: string, slotType: import('../api/types').SlotType, x: number, y: number) => void;
+  isPivoting: boolean;
+  pivotDisabled: boolean;
+  pivotError: string | null;
+  isEditing: boolean;
+  onTitleChange: (id: string, title: string) => void;
+  onDoubleClick: (id: string) => void;
+  onResizeStart: (handle: import('./useSelection').ResizeHandle, e: React.MouseEvent) => void;
+  dotDragging: boolean;
+  isRunningPrompt: boolean;
+  isHighlighted: boolean;
+}
+
+function FragmentNode({
+  fragment, clusterIdx, isSelected, lod, clusters,
+  cursorPosRef, activeToolRef, discoveredIdsRef,
+  ...handlers
+}: FragmentNodeProps) {
+  const groupRef    = useRef<THREE.Group>(null);
+  const fogDivRef   = useRef<HTMLDivElement>(null);
+  const springState = useRef<SpringState>(makeSpringState());
+  const lastFogTick = useRef(0);
+  const { camera }  = useThree();
+
+  const zIndex = isSelected
+    ? Z_LAYERS.fragSelected
+    : getFragmentZ(fragment, clusterIdx);
+
+  useFrame((_, delta) => {
+    const g = groupRef.current;
+    if (!g) return;
+
+    // ── Spring physics ────────────────────────────────────────────────────
+    const isActive = activeToolRef.current === 'select';
+    const cursor   = cursorPosRef.current;
+    const { targetOx, targetOy } = computePhysicsTarget(
+      cursor.x, cursor.y,
+      fragment.x, fragment.y,
+      isActive,
+    );
+    stepSpring(springState.current, targetOx, targetOy, delta);
+    const { ox, oy } = springState.current;
+
+    g.position.x = fragment.x + ox;
+    g.position.y = -(fragment.y + oy);
+    g.position.z = zIndex;
+
+    // ── Depth fog (CSS, throttled to 10fps) ───────────────────────────────
+    const now = performance.now();
+    if (now - lastFogTick.current < 100) return;
+    lastFogTick.current = now;
+
+    const fogDiv = fogDivRef.current;
+    if (!fogDiv) return;
+
+    const cam            = camera as THREE.OrthographicCamera;
+    const { x: camX, y: camY } = camToCanvas(cam);
+    const fogAmt         = computeFragmentFog(fragment.x, fragment.y, camX, camY);
+    const isDiscovered   = discoveredIdsRef.current.has(fragment.id);
+    const { opacity, filter } = fogStyle(fogAmt, isDiscovered);
+
+    fogDiv.style.opacity = String(opacity);
+    fogDiv.style.filter  = filter;
+    // Undiscovered fragments also lose pointer events
+    fogDiv.style.pointerEvents = isDiscovered ? 'auto' : 'none';
+  });
+
+  return (
+    <group ref={groupRef} position={[fragment.x, -fragment.y, zIndex]}>
+      <Html
+        transform={false}
+        occlude={false}
+        center={false}
+        style={{ pointerEvents: 'auto', userSelect: 'none' }}
+        zIndexRange={isSelected ? [300, 400] : [100, 200]}
+      >
+        <div ref={fogDivRef} className="fragment-fog-wrapper">
+          <FragmentComponent
+            fragment={fragment}
+            lod={lod}
+            clusters={clusters}
+            isSelected={isSelected}
+            style={{ left: 0, top: 0 }}
+            {...handlers}
+          />
+        </div>
+      </Html>
+    </group>
+  );
+}
 
 // ─── SceneSetup ───────────────────────────────────────────────────────────────
 // Lives inside the R3F Canvas. Restores saved camera position on mount,
@@ -176,6 +364,16 @@ export default function Canvas({
   const cameraRef  = useRef<THREE.OrthographicCamera | null>(null);
   const sizeRef    = useRef({ width: window.innerWidth, height: window.innerHeight });
 
+  // Discovery state — tracked in refs to avoid per-frame React re-renders
+  const discoveredIdsRef = useRef<Set<string>>(new Set());
+  const [nearUndiscovered, setNearUndiscovered] = useState<Fragment[]>([]);
+
+  // Cursor position in canvas space — updated in window mousemove, read in useFrame
+  const cursorPosRef  = useRef({ x: 0, y: 0 });
+
+  // Active tool ref — mirrors activeTool state for synchronous useFrame reads
+  const activeToolRef = useRef('select');
+
   const { handleWheel, onMouseDown: panMouseDown, onMouseMove, onMouseUp } = usePanZoom(cameraRef, sizeRef, wrapperRef);
 
   const {
@@ -198,6 +396,8 @@ export default function Canvas({
   } = useCanvas(projectId, initialState);
 
   const { activeTool, switchTo } = useTools();
+  // Keep ref in sync so useFrame in FragmentNode can read it without closure staleness
+  activeToolRef.current = activeTool;
   const { selectedIds, selectionRect, selectId, deselectAll, selectMany, startRect, updateRect, finishRect } = useSelection();
 
   // LOD and display zoom driven by SceneSetup via useFrame
@@ -425,6 +625,10 @@ export default function Canvas({
   // Window-level mouse handlers — fragment drag, resize drag, selection rect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      // Track cursor in canvas space for hover-physics (no state update — ref only)
+      const cp = toCanvas(e.clientX, e.clientY);
+      cursorPosRef.current = cp;
+
       const zoom = cameraRef.current?.zoom ?? 0.7;
 
       if (groupDragRef.current) {
@@ -1053,86 +1257,76 @@ export default function Canvas({
           })
           .map(f => {
             const clusterIdx = clusterIndexById.get(f.clusterId) ?? 0;
-            const fragZ = getFragmentZ(f, clusterIdx);
             const isSelected = selectedIds.has(f.id);
-            const zIndex = isSelected
-              ? Z_LAYERS.fragSelected
-              : fragZ;
 
             return (
-              <group key={f.id} position={[f.x, -f.y, zIndex]}>
-                <Html
-                  transform={false}
-                  occlude={false}
-                  center={false}
-                  style={{ pointerEvents: 'auto', userSelect: 'none' }}
-                  zIndexRange={isSelected ? [300, 400] : [100, 200]}
-                >
-                  <FragmentComponent
-                    fragment={f}
-                    lod={lod}
-                    clusters={state.clusters}
-                    onMouseDown={e => {
-                      e.stopPropagation();
-                      if (f.anchored) return;
-                      if (
-                        activeTool === 'select' &&
-                        selectedIds.size > 1 &&
-                        selectedIds.has(f.id) &&
-                        !e.shiftKey &&
-                        !(e.target as HTMLElement).closest('.resize-handle') &&
-                        !(e.target as HTMLElement).closest('.connector-dot')
-                      ) {
-                        pushUndo();
-                        const startPositions = new Map<string, { x: number; y: number; type: 'fragment' | 'cluster' }>();
-                        state.fragments.filter(fr => selectedIds.has(fr.id))
-                          .forEach(fr => startPositions.set(fr.id, { x: fr.x, y: fr.y, type: 'fragment' }));
-                        state.clusters.filter(c => selectedIds.has(c.id))
-                          .forEach(c => startPositions.set(c.id, { x: c.x, y: c.y, type: 'cluster' }));
-                        groupDragRef.current = { startMouseX: e.clientX, startMouseY: e.clientY, startPositions };
-                        setGroupDragging(true);
-                        return;
-                      }
-                      if (activeTool === 'select') {
-                        selectId(f.id, e.shiftKey);
-                      }
-                      startDrag(f.id, 'fragment', e.clientX, e.clientY, f.x, f.y);
-                    }}
-                    onDelete={removeFragment}
-                    onToggleStar={toggleStarFragment}
-                    onPivot={handlePivot}
-                    onDuplicate={duplicateFragment}
-                    onPin={pinFragment}
-                    onAnchor={anchorFragment}
-                    onUnanchor={unanchorFragment}
-                    onResetPositions={() => setShowResetConfirm(true)}
-                    onMoveToCluster={moveFragmentToCluster}
-                    onAddAccordion={handleAddAccordion}
-                    onConnectorDotStart={handleConnectorDotStart}
-                    onConnectHandleMouseDown={handleConnectHandleStart}
-                    onLinkToExploration={handleLinkToExploration}
-                    depthScore={explorationDepthScore}
-                    isDropTarget={connectDropTargetId === f.id}
-                    onPromptDrop={handlePromptDrop}
-                    onNavigateSlotHistory={navigateSlotHistory}
-                    onEmptySlotDblClick={(fragmentId, slotType, x, y) =>
-                      setCommandMenu({ fragmentId, slotType, x, y })
-                    }
-                    isPivoting={f.id === pivotingFragmentId}
-                    pivotDisabled={pivotingFragmentId !== null && f.id !== pivotingFragmentId}
-                    pivotError={pivotErrors[f.id] ?? null}
-                    isSelected={isSelected}
-                    isEditing={editingFragmentId === f.id}
-                    onTitleChange={handleTitleChange}
-                    onDoubleClick={handleFragmentDoubleClick}
-                    onResizeStart={(handle, e) => handleResizeStart(f, handle, e)}
-                    dotDragging={dotDraggingFragmentId === f.id}
-                    isRunningPrompt={promptingFragmentIds.has(f.id)}
-                    isHighlighted={highlightedFragmentId === f.id}
-                    style={{ left: 0, top: 0 }}
-                  />
-                </Html>
-              </group>
+              <FragmentNode
+                key={f.id}
+                fragment={f}
+                clusterIdx={clusterIdx}
+                isSelected={isSelected}
+                lod={lod}
+                clusters={state.clusters}
+                cursorPosRef={cursorPosRef}
+                activeToolRef={activeToolRef}
+                discoveredIdsRef={discoveredIdsRef}
+                onMouseDown={e => {
+                  e.stopPropagation();
+                  if (f.anchored) return;
+                  if (
+                    activeTool === 'select' &&
+                    selectedIds.size > 1 &&
+                    selectedIds.has(f.id) &&
+                    !e.shiftKey &&
+                    !(e.target as HTMLElement).closest('.resize-handle') &&
+                    !(e.target as HTMLElement).closest('.connector-dot')
+                  ) {
+                    pushUndo();
+                    const startPositions = new Map<string, { x: number; y: number; type: 'fragment' | 'cluster' }>();
+                    state.fragments.filter(fr => selectedIds.has(fr.id))
+                      .forEach(fr => startPositions.set(fr.id, { x: fr.x, y: fr.y, type: 'fragment' }));
+                    state.clusters.filter(c => selectedIds.has(c.id))
+                      .forEach(c => startPositions.set(c.id, { x: c.x, y: c.y, type: 'cluster' }));
+                    groupDragRef.current = { startMouseX: e.clientX, startMouseY: e.clientY, startPositions };
+                    setGroupDragging(true);
+                    return;
+                  }
+                  if (activeTool === 'select') {
+                    selectId(f.id, e.shiftKey);
+                  }
+                  startDrag(f.id, 'fragment', e.clientX, e.clientY, f.x, f.y);
+                }}
+                onDelete={removeFragment}
+                onToggleStar={toggleStarFragment}
+                onPivot={handlePivot}
+                onDuplicate={duplicateFragment}
+                onPin={pinFragment}
+                onAnchor={anchorFragment}
+                onUnanchor={unanchorFragment}
+                onResetPositions={() => setShowResetConfirm(true)}
+                onMoveToCluster={moveFragmentToCluster}
+                onAddAccordion={handleAddAccordion}
+                onConnectorDotStart={handleConnectorDotStart}
+                onConnectHandleMouseDown={handleConnectHandleStart}
+                onLinkToExploration={handleLinkToExploration}
+                depthScore={explorationDepthScore}
+                isDropTarget={connectDropTargetId === f.id}
+                onPromptDrop={handlePromptDrop}
+                onNavigateSlotHistory={navigateSlotHistory}
+                onEmptySlotDblClick={(fragmentId, slotType, x, y) =>
+                  setCommandMenu({ fragmentId, slotType, x, y })
+                }
+                isPivoting={f.id === pivotingFragmentId}
+                pivotDisabled={pivotingFragmentId !== null && f.id !== pivotingFragmentId}
+                pivotError={pivotErrors[f.id] ?? null}
+                isEditing={editingFragmentId === f.id}
+                onTitleChange={handleTitleChange}
+                onDoubleClick={handleFragmentDoubleClick}
+                onResizeStart={(handle, e) => handleResizeStart(f, handle, e)}
+                dotDragging={dotDraggingFragmentId === f.id}
+                isRunningPrompt={promptingFragmentIds.has(f.id)}
+                isHighlighted={highlightedFragmentId === f.id}
+              />
             );
           })}
 
@@ -1142,6 +1336,47 @@ export default function Canvas({
           Callbacks use stored canvasDropMenu coords (not the x/y props passed
           back from CanvasCommandMenu, which are screen-space 0,0).
         */}
+        {/* ── Discovery effects ─────────────────────────────────────────────── */}
+
+        {/* Ambient particle field — always visible, drifts slowly */}
+        <DiscoveryParticles />
+
+        {/* Discovery tracker — reads camera pos each frame, updates discoveredIds */}
+        <DiscoveryTracker
+          fragments={state.fragments}
+          discoveredIdsRef={discoveredIdsRef}
+          onNearUndiscoveredChange={setNearUndiscovered}
+        />
+
+        {/* Color bleeds — rendered for all undiscovered fragments (max 8) */}
+        {useMemo(() => {
+          const undiscovered = state.fragments.filter(f => !discoveredIdsRef.current.has(f.id));
+          return undiscovered.slice(0, 8).map(f => {
+            const clusterIdx = clusterIndexById.get(f.clusterId) ?? 0;
+            return (
+              <ColorBleed
+                key={`bleed-${f.id}`}
+                fragment={f}
+                fragmentZ={getFragmentZ(f, clusterIdx)}
+                intensity={1}
+              />
+            );
+          });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [state.fragments])}
+
+        {/* Semantic echoes — ghost particles for the 4 nearest undiscovered fragments */}
+        {nearUndiscovered.map(f => {
+          const clusterIdx = clusterIndexById.get(f.clusterId) ?? 0;
+          return (
+            <SemanticEcho
+              key={`echo-${f.id}`}
+              fragment={f}
+              fragmentZ={getFragmentZ(f, clusterIdx)}
+            />
+          );
+        })}
+
         {canvasDropMenu && (
           <group position={[canvasDropMenu.x, -canvasDropMenu.y, Z_LAYERS.fragSelected + 5]}>
             <Html
@@ -1322,3 +1557,4 @@ export default function Canvas({
     </div>
   );
 }
+

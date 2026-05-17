@@ -1,0 +1,16 @@
+/* ─── Discovery layer: fog, echoes, physics ────────────────────────────────── */
+
+/* Fog wrapper — wraps every fragment Html element.
+   Opacity and filter are updated imperatively in useFrame (throttled to 10fps).
+   transition eases the discrete jumps between fog updates. */
+.fragment-fog-wrapper {
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+
+/* Undiscovered fragments start invisible; JS will set opacity 0.08 imperatively.
+   This class provides a CSS fallback for the first frame. */
+.fragment-fog-wrapper--undiscovered {
+  opacity: 0.08;
+  filter: blur(3px);
+  pointer-events: none;
+}
