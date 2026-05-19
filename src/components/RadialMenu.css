@@ -1,0 +1,79 @@
+.rm {
+  position: fixed;
+  z-index: 9000;
+  pointer-events: none;
+  font-family: var(--font-primary);
+  user-select: none;
+}
+
+.rm__center-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  pointer-events: none;
+  text-align: center;
+}
+
+.rm__center-text {
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-interactive);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--line-height-tight);
+  max-width: 56px;
+  word-break: break-word;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.rm__center-text--visible {
+  opacity: 1;
+}
+
+.rm__item {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.rm__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-overlay);
+  color: var(--color-text-secondary);
+  cursor: default;
+  box-shadow: var(--shadow-card);
+  transition: background var(--dur-fast) var(--ease),
+              color var(--dur-fast) var(--ease),
+              transform var(--dur-fast) var(--ease),
+              border-color var(--dur-fast) var(--ease);
+  font-family: var(--font-primary);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+/* Angle is pointing at this item — will select on release */
+.rm__btn--pointed {
+  background: var(--color-interactive);
+  color: #ffffff;
+  border-color: var(--color-interactive);
+  transform: scale(1.22);
+  box-shadow: 0 0 0 4px var(--color-interactive-dim);
+}
+
+/* Previously selected item */
+.rm__btn--active {
+  background: var(--color-interactive-dim);
+  color: var(--color-interactive);
+  border-color: var(--color-interactive);
+}

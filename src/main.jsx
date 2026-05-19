@@ -1,4 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { Demo } from './components/Demo';
 
-createRoot(document.getElementById('root')).render(<App />);
+const isDemo = new URLSearchParams(window.location.search).has('demo');
+
+createRoot(document.getElementById('root')).render(isDemo ? <Demo /> : <App />);

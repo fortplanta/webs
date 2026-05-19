@@ -1,0 +1,51 @@
+.tsg {
+  background: var(--color-bg-overlay);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-none);
+  box-shadow: var(--shadow-toolbar);
+  padding: var(--spacing-sm);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xs);
+  min-width: 180px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: var(--font-primary);
+}
+
+.tsg__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+  letter-spacing: var(--tracking-normal);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  text-align: center;
+}
+
+.tsg__item:hover {
+  background: var(--color-interactive-dim);
+  color: var(--color-text-primary);
+}
+
+.tsg__item--active {
+  background: var(--color-interactive-dim);
+  color: var(--color-interactive);
+}
+
+.tsg__icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

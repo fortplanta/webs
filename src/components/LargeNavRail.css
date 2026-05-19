@@ -1,0 +1,209 @@
+.lnr {
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  font-family: var(--font-primary);
+}
+
+.lnr__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 72px;
+  height: 100%;
+  padding: var(--spacing-sm) 0;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.lnr__items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex: 1;
+}
+
+.lnr__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease),
+              color var(--dur-fast) var(--ease),
+              box-shadow var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+  outline: none;
+}
+
+.lnr__btn:hover:not(:disabled) {
+  background: var(--color-border-subtle);
+  color: var(--color-text-primary);
+}
+
+.lnr__btn--active {
+  background: var(--color-interactive-dim);
+  color: var(--color-interactive);
+  box-shadow: inset 0 0 0 1.5px var(--fragment-discovery);
+}
+
+.lnr__btn--panel-open {
+  background: var(--color-interactive-dim);
+  color: var(--color-interactive);
+}
+
+.lnr__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.lnr__footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: var(--spacing-sm);
+}
+
+.lnr__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  display: block;
+}
+
+.lnr__avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-tag);
+  color: var(--color-text-secondary);
+  font-family: var(--font-primary);
+}
+
+/* Slide-out panel — absolute so the rail never moves */
+.lnr__panel {
+  position: absolute;
+  left: 72px;
+  top: 0;
+  bottom: 0;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: lnr-slide-in var(--dur) var(--ease);
+  z-index: 1;
+}
+
+/* Blur layer — real element so it doesn't force a stacking context on .lnr
+   (pseudo-elements with backdrop-filter can contaminate the parent's compositing).
+   Extends 72px past the panel right edge so the blur feathers out. */
+.lnr__panel-blur {
+  position: absolute;
+  left: 54px;   /* starts inside the rail so the blur fades across the edge */
+  top: 0;
+  bottom: 0;
+  width: 344px; /* 18px left overhang + 240px panel + 86px right bleed */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  /* no fill — blurring a flat bg produces the same flat color, no color line */
+  background: transparent;
+  mask-image: linear-gradient(to right, transparent 0%, black 6%, black 72%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 6%, black 72%, transparent 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+@keyframes lnr-slide-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.lnr__panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.lnr__panel-close {
+  flex-shrink: 0;
+  border: none;
+  background: var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--font-size-meta);
+  font-family: var(--font-primary);
+  letter-spacing: var(--tracking-normal);
+  padding: 0 var(--spacing-sm);
+  height: 28px;
+  border-radius: var(--radius-sm);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.lnr__panel-close:hover {
+  background: var(--color-border-default);
+  color: var(--color-text-primary);
+}
+
+/* Prompt card grid */
+.lnr__panel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.lnr__prompt-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  min-height: 80px;
+  background: var(--color-bg-overlay);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-none);
+  cursor: pointer;
+  font-family: var(--font-primary);
+  text-align: left;
+  transition: border-color var(--dur-fast) var(--ease);
+}
+
+.lnr__prompt-card:hover {
+  border-color: var(--color-interactive);
+}
+
+.lnr__prompt-icon {
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.lnr__prompt-label {
+  font-size: var(--font-size-meta);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-primary);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--line-height-normal);
+}

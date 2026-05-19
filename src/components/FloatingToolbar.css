@@ -1,0 +1,61 @@
+.ftb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  background: var(--color-bg-overlay);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-toolbar);
+  padding: var(--spacing-xs);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: var(--font-primary);
+}
+
+.ftb__divider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border-default);
+  margin: 0 var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.ftb__btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+}
+
+.ftb__btn:hover:not(:disabled) {
+  background: var(--color-border-subtle);
+  color: var(--color-text-primary);
+}
+
+.ftb__btn--active {
+  background: var(--color-interactive) !important;
+  color: #ffffff !important;
+}
+
+.ftb__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Subtype grid popup */
+.ftb__popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8000;
+}

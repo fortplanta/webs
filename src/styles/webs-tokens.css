@@ -88,6 +88,27 @@
   --color-edge:                  rgba(0, 0, 0, 0.15);
   --color-edge-midpoint:         rgba(0, 0, 0, 0.3);
 
+  /* ─── Semantic UI tokens ─────────────────────────────────── */
+  --color-interactive:      #8A38F5;
+  --color-interactive-dim:  rgba(138, 56, 245, 0.12);
+  --color-error:            #FF0207;
+  --color-error-dim:        rgba(255, 2, 7, 0.12);
+  --color-text-primary:     #000000;
+  --color-text-tertiary:    rgba(0, 0, 0, 0.45);
+  --color-bg-overlay:       rgba(255, 255, 255, 0.97);
+  --color-bg-elevated:      #ffffff;
+  --color-border-default:   rgba(0, 0, 0, 0.1);
+  --color-border-subtle:    rgba(0, 0, 0, 0.04);
+
+  /* ─── Radius scale ────────────────────────────────────────── */
+  --radius-none:  0px;
+  --radius-sm:    2px;
+  --radius-lg:    12px;
+  --radius-full:  9999px;
+
+  /* ─── Fragment discovery accent ──────────────────────────── */
+  --fragment-discovery:     #D2F34C;
+
   /* ─── Neurodive component aliases ────────────────────────── */
   /* Bridge so nd/ components resolve their tokens against webs vars */
   --surface:      var(--color-surface);
