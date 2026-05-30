@@ -16,7 +16,7 @@ import './styles/modal.css';
 import { CanvasState, Fragment, ProjectMeta, ExplorationConnectionState } from './api/types';
 import { generateCanvas } from './api/generate';
 import { createEmptyCanvasState } from './canvas/useCanvas';
-import Canvas from './canvas/Canvas';
+import Canvas from './canvas/CanvasRF';
 import TabStrip from './tabs/TabStrip';
 import { useTabs } from './tabs/useTabs';
 import { loadCanvasState, saveCanvasState, updateProjectMeta, loadProjectsIndex } from './storage/storage';
