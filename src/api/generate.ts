@@ -17,9 +17,8 @@ import {
 import { SYSTEM_PROMPT, buildUserMessage, PIVOT_SYSTEM_PROMPT, buildPivotUserMessage, PROMPT_SYSTEM_PROMPT, buildPromptOnSlotMessage } from './prompt';
 import { PromptDefinition } from '../prompts/prompts';
 import { getMockCanvasState, getMockPivotResult } from './mock';
+import { callLlm, isLlmEnabled } from './llm';
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-5';
 const MAX_TOKENS = 8000;
 
 const BASE_RADIUS = 800;
@@ -138,9 +137,6 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
 
   const allClusters = positionClusters([seedCluster, ...contentClusters]);
 
-  const clusterByTitle = new Map<string, Cluster>();
-  allClusters.forEach(c => clusterByTitle.set(c.label, c));
-
   const fragments: Fragment[] = [seedFragment];
 
   data.clusters.forEach((apiCluster, ci) => {
@@ -170,10 +166,21 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
     });
   });
 
+  const firstFragmentByClusterTitle = new Map<string, Fragment>();
+  data.clusters.forEach((apiCluster, ci) => {
+    const cluster = allClusters[ci + 1]; // +1 because seed is index 0
+    const first = cluster ? fragments.find(f => f.clusterId === cluster.id) : undefined;
+    if (first) firstFragmentByClusterTitle.set(apiCluster.title, first);
+  });
+
   const edgeConnectors: Connector[] = data.edges
     .flatMap(e => {
-      const source = clusterByTitle.get(e.source);
-      const target = clusterByTitle.get(e.target);
+      const source = e.source === seedCluster.label
+        ? seedFragment
+        : firstFragmentByClusterTitle.get(e.source);
+      const target = e.target === seedCluster.label
+        ? seedFragment
+        : firstFragmentByClusterTitle.get(e.target);
       if (!source || !target) return [];
       return [{
         id: uuidv4(),
@@ -195,36 +202,24 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
 }
 
 export async function generateCanvas(query: string): Promise<CanvasState> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-
-  if (!apiKey) {
+  if (!isLlmEnabled()) {
     return getMockCanvasState(query);
   }
 
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
+  let text: string;
+  try {
+    text = await callLlm({
       system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: buildUserMessage(query) }],
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(err?.error?.message ?? `API error ${response.status}`);
+      user: buildUserMessage(query),
+      maxTokens: MAX_TOKENS,
+      json: true,
+    });
+  } catch (err) {
+    console.error('Generation failed, falling back to mock:', err);
+    return getMockCanvasState(query);
   }
 
-  const data = await response.json() as { content?: Array<{ text?: string }> };
-  const text = data.content?.[0]?.text ?? '';
-  console.log('[Webs API] Raw response text:\n', text);
+  console.log('[Webs LLM] Raw response text:\n', text);
   // Extract JSON robustly: find first { and last } to handle any preamble/postamble/fences
   const jsonStart = text.indexOf('{');
   const jsonEnd = text.lastIndexOf('}');
@@ -368,37 +363,18 @@ export async function runPromptOnSlot(
   prompt: PromptDefinition,
   targetSlotType: SlotType,
 ): Promise<PromptResult> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-
-  if (!apiKey) {
+  if (!isLlmEnabled()) {
     await new Promise(resolve => setTimeout(resolve, 800));
     return getMockPromptResult(fragment, prompt);
   }
 
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 1000,
-        system: PROMPT_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: buildPromptOnSlotMessage(fragment, prompt, targetSlotType) }],
-      }),
+    const text = await callLlm({
+      system: PROMPT_SYSTEM_PROMPT,
+      user: buildPromptOnSlotMessage(fragment, prompt, targetSlotType),
+      maxTokens: 1000,
+      json: true,
     });
-
-    if (!response.ok) {
-      console.error('Prompt API error', response.status, '— falling back to mock');
-      return getMockPromptResult(fragment, prompt);
-    }
-
-    const data = await response.json() as { content?: Array<{ text?: string }> };
-    const text = data.content?.[0]?.text ?? '';
     const jsonStart = text.indexOf('{');
     const jsonEnd = text.lastIndexOf('}');
     const cleaned = jsonStart !== -1 && jsonEnd > jsonStart ? text.slice(jsonStart, jsonEnd + 1) : text.trim();
@@ -452,37 +428,18 @@ export async function validateConnectionLabel(
   sourceFragment: Fragment,
   targetFragment: Fragment,
 ): Promise<ConnectionValidationResult | null> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-
-  if (!apiKey) {
+  if (!isLlmEnabled()) {
     await new Promise(resolve => setTimeout(resolve, 1200));
     return getMockConnectionValidation(sourceFragment, targetFragment);
   }
 
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 200,
-        system: CONNECTION_VALIDATION_SYSTEM,
-        messages: [{ role: 'user', content: buildConnectionValidationMessage(sourceFragment, targetFragment) }],
-      }),
+    const text = await callLlm({
+      system: CONNECTION_VALIDATION_SYSTEM,
+      user: buildConnectionValidationMessage(sourceFragment, targetFragment),
+      maxTokens: 200,
+      json: true,
     });
-
-    if (!response.ok) {
-      console.error('Connection validation API error', response.status);
-      return null;
-    }
-
-    const data = await response.json() as { content?: Array<{ text?: string }> };
-    const text = data.content?.[0]?.text ?? '';
     const jsonStart = text.indexOf('{');
     const jsonEnd = text.lastIndexOf('}');
     const cleaned = jsonStart !== -1 && jsonEnd > jsonStart ? text.slice(jsonStart, jsonEnd + 1) : text.trim();
@@ -521,9 +478,7 @@ export async function validateCrossLink(
   fragmentA: { type: string; title: string; body: string },
   fragmentB: { type: string; title: string; body: string },
 ): Promise<CrossLinkValidationResult | null> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-
-  if (!apiKey) {
+  if (!isLlmEnabled()) {
     await new Promise(resolve => setTimeout(resolve, 1200));
     return getMockCrossLinkValidation(fragmentA, fragmentB);
   }
@@ -534,29 +489,12 @@ Return JSON: { "label": "2–4 word verb phrase (lowercase)", "strength": 1|2|3,
 Strength guide: 1 = loose or tangential, 2 = clear relationship, 3 = strong causal or structural link.`;
 
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 200,
-        system: CONNECTION_VALIDATION_SYSTEM,
-        messages: [{ role: 'user', content: message }],
-      }),
+    const text = await callLlm({
+      system: CONNECTION_VALIDATION_SYSTEM,
+      user: message,
+      maxTokens: 200,
+      json: true,
     });
-
-    if (!response.ok) {
-      console.error('Cross-link validation API error', response.status);
-      return null;
-    }
-
-    const data = await response.json() as { content?: Array<{ text?: string }> };
-    const text = data.content?.[0]?.text ?? '';
     const jsonStart = text.indexOf('{');
     const jsonEnd = text.lastIndexOf('}');
     const cleaned = jsonStart !== -1 && jsonEnd > jsonStart ? text.slice(jsonStart, jsonEnd + 1) : text.trim();
@@ -572,36 +510,17 @@ Strength guide: 1 = loose or tangential, 2 = clear relationship, 3 = strong caus
 }
 
 export async function generatePivot(sourceFragment: Fragment, sourceClusterId: string): Promise<PivotResult> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-
-  if (!apiKey) {
+  if (!isLlmEnabled()) {
     return buildPivotResult(getMockPivotResult(sourceFragment), sourceFragment, sourceClusterId);
   }
 
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 2000,
-        system: PIVOT_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: buildPivotUserMessage(sourceFragment) }],
-      }),
+    const text = await callLlm({
+      system: PIVOT_SYSTEM_PROMPT,
+      user: buildPivotUserMessage(sourceFragment),
+      maxTokens: 2000,
+      json: true,
     });
-
-    if (!response.ok) {
-      console.error('Pivot API error', response.status, '— falling back to mock');
-      return buildPivotResult(getMockPivotResult(sourceFragment), sourceFragment, sourceClusterId);
-    }
-
-    const data = await response.json() as { content?: Array<{ text?: string }> };
-    const text = data.content?.[0]?.text ?? '';
     const jsonStart = text.indexOf('{');
     const jsonEnd = text.lastIndexOf('}');
     const cleaned = jsonStart !== -1 && jsonEnd > jsonStart ? text.slice(jsonStart, jsonEnd + 1) : text.trim();

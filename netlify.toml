@@ -4,5 +4,5 @@
 
 [build.environment]
   # VITE_ vars are intentionally bundled into the client JS.
-  # The password gate provides access control; the API key is not a user-facing secret.
-  SECRETS_SCAN_OMIT_KEYS = "VITE_ANTHROPIC_API_KEY,VITE_SITE_PASSWORD"
+  # The password gate provides access control; do not put paid provider secrets in VITE_ vars.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_LLM_API_KEY,VITE_SITE_PASSWORD"

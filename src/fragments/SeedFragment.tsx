@@ -9,7 +9,7 @@ interface Props {
 }
 
 export default function SeedFragment({ query, context, x: _x, y: _y, onMouseDown }: Props) {
-  // x, y are no longer used for positioning — the Three.js group in Canvas handles that.
+  // x/y are no longer used here; React Flow owns node positioning.
   return (
     <div
       className="seed-fragment"

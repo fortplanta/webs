@@ -112,8 +112,6 @@ const NODE_TYPES: NodeTypes = {
   fragment: FragmentNodeComponent,
 };
 
-const EDGE_TYPES = {};
-
 // ── Data builders ─────────────────────────────────────────────────────────────
 
 function buildNodes(clusters: Cluster[], fragments: Fragment[], query: string): Node[] {
@@ -152,7 +150,6 @@ function buildEdges(connectors: CanvasState['connectors']): Edge[] {
     source: c.sourceId,
     target: c.targetId,
     label:  c.label || undefined,
-    type:   'default',
   }));
 }
 
@@ -438,7 +435,6 @@ function CanvasRFInner({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={NODE_TYPES}
-        edgeTypes={EDGE_TYPES}
         colorMode="dark"
         panOnDrag
         panOnScroll

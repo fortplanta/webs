@@ -14,6 +14,11 @@
   z-index: 1;
 }
 
+.react-flow__node .seed-fragment {
+  position: relative;
+  transform: none;
+}
+
 .seed-fragment:active {
   cursor: grabbing;
 }

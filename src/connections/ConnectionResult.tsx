@@ -6,7 +6,7 @@ import '../styles/connections.css';
 const TIER_LABEL: Record<ConnectionTier, string> = {
   'obvious':            'obvious connection',
   'non-obvious-user':   'non-obvious connection',
-  'non-obvious-claude': 'claude-found connection',
+  'non-obvious-claude': 'llm-found connection',
 };
 
 interface Props {

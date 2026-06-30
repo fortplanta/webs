@@ -98,7 +98,7 @@
 
 .connection-validator__find:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* Loading state shown while Claude evaluates */
+/* Loading state shown while the LLM evaluates */
 .connection-validator__loading {
   display: flex;
   align-items: center;

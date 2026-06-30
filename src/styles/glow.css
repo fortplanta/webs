@@ -50,7 +50,7 @@
   100% { filter: hue-rotate(30deg); }
 }
 
-/* Dimmed variant for Claude-found connections */
+/* Dimmed variant for LLM-found connections */
 .fragment-glow-active--dim::before {
   box-shadow:
     inset 0 0 8px var(--glow-color-primary),

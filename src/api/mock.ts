@@ -1,4 +1,4 @@
-// Mock canvas state — shown when VITE_ANTHROPIC_API_KEY is absent.
+// Mock canvas state — shown when VITE_LLM_PROVIDER=mock or the configured LLM is unavailable.
 // Covers all 8 fragment types and all 6 layout types.
 // Uses the correct CanvasState schema (Cluster with label, flat fragments array).
 
@@ -99,10 +99,10 @@ const FRAGMENTS: Fragment[] = [
 ];
 
 const CONNECTORS: Connector[] = [
-  { id: 'e1', sourceId: 'seed', targetId: 'c1', type: 'standard', label: 'structured by' },
-  { id: 'e2', sourceId: 'seed', targetId: 'c2', type: 'standard', label: 'enacted by' },
-  { id: 'e3', sourceId: 'seed', targetId: 'c3', type: 'standard', label: 'challenged by' },
-  { id: 'e4', sourceId: 'seed', targetId: 'c4', type: 'standard', label: 'resulted in' },
+  { id: 'e1', sourceId: 's1', targetId: 'c1f1', type: 'standard', label: 'structured by' },
+  { id: 'e2', sourceId: 's1', targetId: 'c2f1', type: 'standard', label: 'enacted by' },
+  { id: 'e3', sourceId: 's1', targetId: 'c3f1', type: 'standard', label: 'challenged by' },
+  { id: 'e4', sourceId: 's1', targetId: 'c4f1', type: 'standard', label: 'resulted in' },
 ];
 
 export const INITIAL_STATE: CanvasState = {

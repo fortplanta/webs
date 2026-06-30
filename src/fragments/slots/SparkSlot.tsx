@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Fragment } from '../../api/types';
 
 interface Props {
@@ -7,16 +8,18 @@ interface Props {
 
 export default function SparkSlot({ fragment, onAction }: Props) {
   const isProcessing = fragment.sparkStatus === 'processing';
+  const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <div className="spark-slot">
-      {fragment.sparkMediaUrl && (
+      {fragment.sparkMediaUrl && !imageFailed && (
         <div className="spark-slot__image-wrap">
           <img
             src={fragment.sparkMediaUrl}
             alt="spark"
             className="spark-slot__image"
             draggable={false}
+            onError={() => setImageFailed(true)}
           />
         </div>
       )}

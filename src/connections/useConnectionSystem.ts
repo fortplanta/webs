@@ -45,7 +45,7 @@ export function makeInitialProgressState(): ProgressState {
 export interface ConnectionSystemState {
   progressState: ProgressState;
   glowingFragmentIds: Set<string>;
-  glowDimFragmentIds: Set<string>; // Claude-found connections get dim glow
+  glowDimFragmentIds: Set<string>; // LLM-found connections get dim glow
 }
 
 export interface ConnectionSystemActions {

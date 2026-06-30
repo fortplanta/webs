@@ -56,7 +56,7 @@ Do not build any of the following. If a feature isn't in this document, it doesn
 ```
 Vite + React + TypeScript
 React Flow (@xyflow/react) — canvas, pan/zoom, nodes, edges
-Anthropic API (claude-sonnet-4-5 or latest Sonnet)
+Local/open-source LLM via Ollama by default; OpenAI-compatible endpoints supported
 Plain CSS with custom properties (no CSS-in-JS, no Tailwind)
 No Ant Design
 No Three.js, no WebGL, no custom transform math
@@ -66,13 +66,13 @@ No Three.js, no WebGL, no custom transform math
 ```
 src/
   canvas/
-    Canvas.tsx              ← pan-zoom root component
-    usePanZoom.ts           ← custom hook: wheel, drag, transform state
+    CanvasRF.tsx            ← React Flow canvas, nodes, edges, pan/zoom
     useCanvas.ts            ← canvas state: clusters, fragments, edges
-    CanvasBackground.tsx    ← dot grid SVG
+    connections.ts          ← connection state helpers
+    crossLinks.ts           ← cross-exploration links
   fragments/
     Fragment.tsx            ← master fragment component
-    FragmentHeader.tsx      ← colored type label
+    FragmentCard.tsx        ← card shell and layout switcher
     slots/
       BodySlot.tsx
       ImageSlot.tsx
@@ -87,12 +87,12 @@ src/
       Timeline.tsx
       ListProminent.tsx
   clusters/
-    Cluster.tsx             ← cluster wrapper + fragment positioning
-    ClusterLabel.tsx        ← title shown at macro zoom level
+    Cluster.tsx             ← legacy cluster display helper
+    ClusterLabel.tsx        ← cluster title display helper
   edges/
-    Edge.tsx                ← connection between clusters
-    EdgeLabel.tsx           ← verb label on edge
-    EdgeMidpoint.tsx        ← midpoint dot, hover bloom menu
+    Edge.tsx                ← legacy/custom edge helpers
+    EdgeLabel.tsx           ← edge label helper
+    EdgeMidpoint.tsx        ← edge midpoint helper
   ui/
     Sidebar.tsx
     StatusBar.tsx
@@ -110,7 +110,7 @@ src/
     generate.ts             ← Anthropic API call + prompt
     types.ts                ← all TypeScript interfaces
   App.tsx
-  main.tsx
+  main.jsx
 ```
 
 ### TypeScript Interfaces
@@ -126,7 +126,9 @@ type FragmentType =
   | "event"
   | "era"
   | "domain"
-  | "quote";
+  | "quote"
+  | "spark"
+  | "text-note";
 
 type LayoutType =
   | "vertical-flow"
@@ -134,7 +136,8 @@ type LayoutType =
   | "quote-centered"
   | "card-split"
   | "timeline"
-  | "list-prominent";
+  | "list-prominent"
+  | "text-note";
 
 interface FragmentSlot {
   type: "body" | "image" | "tags" | "list" | "disclaimer";
@@ -144,33 +147,55 @@ interface FragmentSlot {
 
 interface Fragment {
   id: string;
+  clusterId: string;
+  x: number;
+  y: number;
+  initialX?: number;
+  initialY?: number;
   type: FragmentType;
   layout: LayoutType;      // API decides, rules defined below
   title: string;
   slots: FragmentSlot[];
   createdAtZoom: number;   // zoom level at time of creation
   starred: boolean;
+  pinned?: boolean;
+  anchored?: boolean;
+  width?: number;
+  note?: string;
+  sources?: FragmentSource[];
+  accordions?: AccordionSlot[];
+  sparkMediaUrl?: string;
+  sparkMediaType?: "image" | "text";
+  sparkStatus?: "idle" | "processing" | "done";
+  emptySlots?: SlotType[];
+  historicalEra?: string;
 }
 
 interface Cluster {
   id: string;
   x: number;              // canvas position
   y: number;
-  title: string;
+  initialX?: number;
+  initialY?: number;
+  label: string;
   isSeed: boolean;
-  fragments: Fragment[];
+  note?: string;
+  collapsed?: boolean;
 }
 
-interface Edge {
+interface Connector {
   id: string;
-  sourceClusterId: string;
-  targetClusterId: string;
+  sourceId: string;       // React Flow node id (usually a fragment id)
+  targetId: string;       // React Flow node id (usually a fragment id)
+  type: "standard" | "strong";
+  renderType?: "bezier" | "straight" | "step" | "smoothstep";
   label: string;          // verb: "shaped by", "resulted in", etc.
 }
 
 interface CanvasState {
   clusters: Cluster[];
-  edges: Edge[];
+  fragments: Fragment[];
+  connectors: Connector[];
   viewport: {
     x: number;
     y: number;
@@ -440,23 +465,17 @@ User drags from one cluster to another. On release, inline text input prompts fo
 
 ### API Call
 ```typescript
-// src/api/generate.ts
-const response = await fetch("https://api.anthropic.com/v1/messages", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    model: "claude-sonnet-4-5",
-    max_tokens: 4000,
-    messages: [{
-      role: "user",
-      content: buildPrompt(query)
-    }]
-  })
+// src/api/llm.ts
+await callLlm({
+  system: SYSTEM_PROMPT,
+  user: buildUserMessage(query),
+  maxTokens: 8000,
+  json: true,
 });
 ```
 
 ### Prompt Structure
-The prompt must instruct Claude to return a JSON object with:
+The prompt must instruct the configured LLM to return a JSON object with:
 ```typescript
 {
   context: string,          // 2-3 sentence grounding paragraph for seed
@@ -484,7 +503,13 @@ Rules for AI output:
 - Layout is assigned by the client based on `LAYOUT_FOR_TYPE` mapping, not by the API
 
 ### API Key
-`VITE_ANTHROPIC_API_KEY` in `.env.local`. Never committed. If key is absent, use mock data (a hardcoded example `CanvasState` that covers all fragment types and layouts).
+Default local config in `.env.local`:
+```
+VITE_LLM_PROVIDER=ollama
+VITE_LLM_BASE_URL=http://localhost:11434
+VITE_LLM_MODEL=qwen3:8b
+```
+Set `VITE_LLM_PROVIDER=mock` to force mock data. Set `VITE_LLM_PROVIDER=openai-compatible` plus `VITE_LLM_BASE_URL`, `VITE_LLM_MODEL`, and optional `VITE_LLM_API_KEY` to use a hosted or self-hosted OpenAI-compatible endpoint.
 
 ### Pivot Action
 When user clicks 🔀 on a fragment:

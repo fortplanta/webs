@@ -16,6 +16,5 @@
   cursor: text;
 }
 
-/* .canvas-content removed — Session 30 eliminated the CSS-transform hybrid.
-   All fragments, clusters, and connectors now live inside the R3F scene
-   as drei <Html> components or Three.js geometry. One coordinate system. */
+/* .canvas-content removed — React Flow now owns pan/zoom and node transforms.
+   Keep cards dimensioned inside RF nodes; do not reintroduce custom transform math. */

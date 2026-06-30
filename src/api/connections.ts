@@ -1,11 +1,9 @@
 // Connection evaluation and validation API calls for the Session 32 gamification layer.
 // Three tiers: obvious (auto-label, small score), non-obvious-user (user explains, large score),
-// non-obvious-claude (Claude finds it, medium score).
+// non-obvious-claude (LLM finds it, medium score).
 
 import type { Fragment } from './types';
-
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-5';
+import { callLlm, isLlmEnabled } from './llm';
 
 const POINT_VALUES = {
   obvious:          { min: 10,  max: 30  },
@@ -55,33 +53,17 @@ function mockSuggestion(): { title: string; explanation: string } {
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
-async function callClaude(
+async function callConnectionLlm(
   systemPrompt: string,
   userMessage: string,
   maxTokens = 400,
 ): Promise<string> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-  if (!apiKey) throw new Error('no-api-key');
-
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
+  return callLlm({
+    system: systemPrompt,
+    user: userMessage,
+    maxTokens,
+    json: maxTokens > 20,
   });
-
-  if (!response.ok) throw new Error(`api-error-${response.status}`);
-  const data = await response.json() as { content?: Array<{ text?: string }> };
-  return data.content?.[0]?.text ?? '';
 }
 
 function extractJson(text: string): unknown {
@@ -97,8 +79,7 @@ export async function evaluateConnectionTier(
   source: Fragment,
   target: Fragment,
 ): Promise<'obvious' | 'non-obvious'> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-  if (!apiKey) {
+  if (!isLlmEnabled()) {
     await new Promise(r => setTimeout(r, 600));
     const tier = mockEvaluation(source, target);
     return tier === 'obvious' ? 'obvious' : 'non-obvious';
@@ -115,7 +96,7 @@ Fragment B: "${target.title}" (${target.type}) — ${tgtBody.slice(0, 200)}
 Is the relationship between these two fragments OBVIOUS (a well-known historical connection, direct causal chain, or commonly understood relationship most people would immediately recognise) or NON-OBVIOUS (an unexpected, lateral, or creative connection that requires original thinking to see)?`;
 
   try {
-    const text = await callClaude(system, message, 10);
+    const text = await callConnectionLlm(system, message, 10);
     return text.trim().toLowerCase().startsWith('non') ? 'non-obvious' : 'obvious';
   } catch {
     return mockEvaluation(source, target) === 'obvious' ? 'obvious' : 'non-obvious';
@@ -127,8 +108,7 @@ export async function validateUserExplanation(
   target: Fragment,
   userExplanation: string,
 ): Promise<{ isValid: boolean; points: number; explanation: string; context?: string }> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-  if (!apiKey) {
+  if (!isLlmEnabled()) {
     await new Promise(r => setTimeout(r, 1000));
     return mockValidation(userExplanation);
   }
@@ -152,7 +132,7 @@ Assess this explanation. Return:
 }`;
 
   try {
-    const text = await callClaude(system, message, 300);
+    const text = await callConnectionLlm(system, message, 300);
     const parsed = extractJson(text) as {
       isValid?: boolean;
       originality?: number;
@@ -175,8 +155,7 @@ export async function findConnection(
   source: Fragment,
   target: Fragment,
 ): Promise<{ found: boolean; explanation?: string; points?: number }> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-  if (!apiKey) {
+  if (!isLlmEnabled()) {
     await new Promise(r => setTimeout(r, 1200));
     return mockFind(source, target);
   }
@@ -201,7 +180,7 @@ If no valid connection exists:
 }`;
 
   try {
-    const text = await callClaude(system, message, 300);
+    const text = await callConnectionLlm(system, message, 300);
     const parsed = extractJson(text) as {
       found?: boolean;
       originality?: number;
@@ -228,8 +207,7 @@ export async function generateSuggestion(
   tier2Connections: Array<{ sourceTitle: string; targetTitle: string; explanation: string }>,
   _fragmentTitles: string[],
 ): Promise<Suggestion> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-  if (!apiKey) {
+  if (!isLlmEnabled()) {
     await new Promise(r => setTimeout(r, 800));
     return mockSuggestion();
   }
@@ -251,7 +229,7 @@ Suggest a new exploration topic that fits the pattern of lateral thinking this u
 }`;
 
   try {
-    const text = await callClaude(system, message, 200);
+    const text = await callConnectionLlm(system, message, 200);
     const parsed = extractJson(text) as { title?: string; explanation?: string };
     return {
       title: String(parsed.title ?? 'unexpected connections'),
@@ -267,8 +245,7 @@ export async function generateObviousLabel(
   source: Fragment,
   target: Fragment,
 ): Promise<string> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-  if (!apiKey) {
+  if (!isLlmEnabled()) {
     const labels = ['led to', 'shaped', 'enabled', 'responded to', 'built on', 'challenged'];
     return labels[Math.floor(Math.random() * labels.length)];
   }
@@ -279,10 +256,9 @@ Fragment B: "${target.title}" (${target.type})
 What is the relationship from A to B? (e.g. "led to", "was shaped by", "challenged", "enabled")`;
 
   try {
-    const text = await callClaude(system, message, 20);
+    const text = await callConnectionLlm(system, message, 20);
     return text.trim().replace(/[".]/g, '').slice(0, 40) || 'relates to';
   } catch {
     return 'relates to';
   }
 }
-

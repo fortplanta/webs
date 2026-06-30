@@ -5,19 +5,22 @@ A spatial thinking tool for associative, non-linear minds. Scatter fragments of 
 ## Stack
 
 - Vite 8 + React 19 + TypeScript
-- Custom pan-zoom canvas (no diagram library)
-- Anthropic API (claude-sonnet-4-5)
+- React Flow canvas
+- Local/open-source LLM via Ollama by default
 - Plain CSS with custom properties
 
 ## Run locally
 
 ```bash
 npm install
-cp .env.example .env.local   # add VITE_ANTHROPIC_API_KEY
+cp .env.example .env.local
+ollama pull qwen3:8b
+ollama serve
 npm run dev
 ```
 
-Without an API key, the app falls back to mock data covering all fragment types and layouts.
+Set `VITE_LLM_PROVIDER=mock` to force mock data covering all fragment types and layouts.
+Set `VITE_LLM_PROVIDER=openai-compatible` to use a hosted or self-hosted OpenAI-compatible endpoint.
 
 ## Docs
 
