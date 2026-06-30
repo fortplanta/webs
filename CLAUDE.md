@@ -55,12 +55,11 @@ Do not build any of the following. If a feature isn't in this document, it doesn
 ### Stack
 ```
 Vite + React + TypeScript
-Custom pan-zoom canvas (no canvas library)
+React Flow (@xyflow/react) — canvas, pan/zoom, nodes, edges
 Anthropic API (claude-sonnet-4-5 or latest Sonnet)
 Plain CSS with custom properties (no CSS-in-JS, no Tailwind)
 No Ant Design
-No React Flow
-No external canvas/diagram libraries
+No Three.js, no WebGL, no custom transform math
 ```
 
 ### Folder Structure
@@ -186,38 +185,7 @@ interface CanvasState {
 
 ## PAN-ZOOM CANVAS
 
-Build a custom pan-zoom layer. Do not use any library for this.
-
-```typescript
-// usePanZoom.ts — core logic
-
-const MIN_ZOOM = 0.05;
-const MAX_ZOOM = 4;
-const ZOOM_SPEED = 0.006;
-
-// State
-const [transform, setTransform] = useState({ x: 0, y: 0, zoom: 0.7 });
-
-// Wheel handler — zoom toward cursor position
-const onWheel = (e: WheelEvent) => {
-  e.preventDefault();
-  const delta = e.deltaY * ZOOM_SPEED * -1;
-  const newZoom = clamp(transform.zoom + delta * transform.zoom, MIN_ZOOM, MAX_ZOOM);
-  const ratio = newZoom / transform.zoom;
-  setTransform({
-    x: e.clientX - ratio * (e.clientX - transform.x),
-    y: e.clientY - ratio * (e.clientY - transform.y),
-    zoom: newZoom,
-  });
-};
-
-// Pan — mouse drag on canvas background only
-// Apply to canvas element:
-// style={{ transform: `translate(${x}px, ${y}px) scale(${zoom})` }}
-// transform-origin: 0 0
-```
-
-Canvas element receives `transform: translate(x, y) scale(zoom)` with `transform-origin: 0 0`. All cluster positions are in canvas-space coordinates. Convert to screen space for pointer events.
+Pan and zoom are handled by React Flow (`@xyflow/react`). Do not implement custom transform math or a custom pan-zoom hook. Use React Flow's built-in `<ReactFlow>` component with `minZoom`/`maxZoom` props and the `useReactFlow` hook for imperative viewport control (e.g. `fitView`, `setCenter`).
 
 ---
 
@@ -636,9 +604,8 @@ localStorage.setItem("webs-sessions", JSON.stringify(allSessions));
 
 Before considering any task complete, verify:
 
-1. **No React Flow imports anywhere** in the codebase
-2. **No Ant Design imports anywhere** in the codebase
-3. **No hardcoded hex values** in component files — only CSS variable references
+1. **No Ant Design imports anywhere** in the codebase (React Flow is allowed — it is the canvas layer)
+2. **No hardcoded hex values** in component files — only CSS variable references
 4. **No hardcoded pixel values** in component files — only CSS variable references
 5. **No font-weight above 400** anywhere in the codebase
 6. **Fragment header is `fit-content` width** — never stretches to card width

@@ -117,6 +117,7 @@ export interface CanvasState {
   query: string;
   createdAt: number;
   scratchpad?: string;
+  progressState?: ProgressState;
 }
 
 export interface SessionRecord {
@@ -168,6 +169,22 @@ export interface PivotApiResponse {
 
 // Raw API response shape before client-side processing.
 // Uses flat fields — client converts to FragmentSlot[] via buildSlots().
+export type ConnectionTier = "obvious" | "non-obvious-user" | "non-obvious-claude";
+
+export interface ConnectionScore {
+  tier: ConnectionTier;
+  points: number;
+  explanation: string;
+  context?: string;
+  isValid: boolean;
+}
+
+export interface ProgressState {
+  current: number;        // 0–1000
+  threshold: number;      // always 1000
+  totalLifetime: number;  // never resets
+}
+
 export interface UserConnection {
   id: string;
   sourceFragmentId: string;
@@ -176,6 +193,10 @@ export interface UserConnection {
   strength: 0 | 1 | 2 | 3;
   rationale?: string;
   createdAt: number;
+  tier?: ConnectionTier;
+  score?: number;
+  claudeExplanation?: string;
+  isGlowing?: boolean;
 }
 
 export interface FragmentConnectionState {

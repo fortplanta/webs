@@ -19,7 +19,15 @@ import { CanvasState, ConnectorRenderType, Fragment, FragmentType, LayoutType, A
 import { addUserConnection, updateUserConnectionAI, loadExplorationState } from './connections';
 import { getCrossLinksForExploration, addCrossLink, getCrossLinks, updateCrossLinkLabel } from './crossLinks';
 import { loadCanvasState } from '../storage/storage';
-import { generatePivot, runPromptOnSlot, validateConnectionLabel, validateCrossLink } from '../api/generate';
+import { generatePivot, runPromptOnSlot, validateCrossLink } from '../api/generate';
+import { evaluateConnectionTier, validateUserExplanation, findConnection, generateSuggestion, generateObviousLabel } from '../api/connections';
+import { useConnectionSystem, makeInitialProgressState } from '../connections/useConnectionSystem';
+import { getGlowColors } from '../effects/FragmentGlow';
+import ConnectionValidator from '../connections/ConnectionValidator';
+import ConnectionResult from '../connections/ConnectionResult';
+import ScoreIndicator from '../ui/ScoreIndicator';
+import SuggestionCard from '../ui/SuggestionCard';
+import type { ConnectionTier } from '../api/types';
 import type { Transform } from './usePanZoom';
 import type { ProjectMeta } from '../api/types';
 import CrossLinkModal from '../ui/CrossLinkModal';
@@ -41,6 +49,9 @@ import '../styles/toolbar.css';
 import '../styles/command-menu.css';
 import '../styles/timeline.css';
 import '../styles/discovery.css';
+import '../styles/connections.css';
+import '../styles/glow.css';
+import '../styles/progress.css';
 
 // ─── Scene coordinate helpers ─────────────────────────────────────────────────
 // All canvas coords use CSS convention: x right, y down.
@@ -177,11 +188,14 @@ interface FragmentNodeProps {
   dotDragging: boolean;
   isRunningPrompt: boolean;
   isHighlighted: boolean;
+  isGlowing?: boolean;
+  glowDim?: boolean;
 }
 
 function FragmentNode({
   fragment, clusterIdx, isSelected, lod, clusters,
   cursorPosRef, activeToolRef, discoveredIdsRef,
+  isGlowing, glowDim,
   ...handlers
 }: FragmentNodeProps) {
   const groupRef    = useRef<THREE.Group>(null);
@@ -189,6 +203,23 @@ function FragmentNode({
   const springState = useRef<SpringState>(makeSpringState());
   const lastFogTick = useRef(0);
   const { camera }  = useThree();
+
+  // Glow — applied imperatively so it doesn't cause useFrame re-renders
+  useEffect(() => {
+    const div = fogDivRef.current;
+    if (!div) return;
+    if (isGlowing) {
+      const colors = getGlowColors(fragment.type);
+      div.style.setProperty('--glow-color-primary',   colors.primary);
+      div.style.setProperty('--glow-color-secondary', colors.secondary);
+      div.style.setProperty('--glow-color-tertiary',  colors.tertiary);
+      div.classList.add('fragment-glow-active');
+      if (glowDim) div.classList.add('fragment-glow-active--dim');
+      else         div.classList.remove('fragment-glow-active--dim');
+    } else {
+      div.classList.remove('fragment-glow-active', 'fragment-glow-active--dim');
+    }
+  }, [isGlowing, glowDim, fragment.type]);
 
   const zIndex = isSelected
     ? Z_LAYERS.fragSelected
@@ -442,6 +473,28 @@ export default function Canvas({
   // Floating score badges (screen-space fixed overlays)
   const [scoreBadges, setScoreBadges] = useState<Array<{ id: string; delta: number; x: number; y: number }>>([]);
 
+  // ── Session 32: connection gamification ─────────────────────────────────
+  const [connectionSysState, connectionSysActions] = useConnectionSystem(makeInitialProgressState());
+  const [pendingNonObvious, setPendingNonObvious] = useState<{
+    sourceFragmentId: string;
+    targetFragmentId: string;
+    screenX: number;
+    screenY: number;
+  } | null>(null);
+  const [validating, setValidating] = useState<'submitting' | 'finding' | null>(null);
+  const [connectionResultState, setConnectionResultState] = useState<{
+    tier: ConnectionTier;
+    points: number;
+    explanation: string;
+    context?: string;
+    screenX: number;
+    screenY: number;
+  } | null>(null);
+  const [scoreIndicators, setScoreIndicators] = useState<Array<{ id: string; points: number; x: number; y: number }>>([]);
+  const [suggestionState, setSuggestionState] = useState<{ title: string; explanation: string } | null>(null);
+  const [glowingConnectionIds, setGlowingConnectionIds] = useState<Set<string>>(new Set());
+  const [glowDimConnectionIds, setGlowDimConnectionIds] = useState<Set<string>>(new Set());
+
   // Canvas drop menu — canvas-space coords
   const [canvasDropMenu, setCanvasDropMenu] = useState<{
     x: number; y: number; sourceFragmentId: string;
@@ -691,49 +744,65 @@ export default function Canvas({
         const fragEl = el?.closest('[data-fragment-id]');
         const targetId = fragEl?.getAttribute('data-fragment-id');
         if (targetId && targetId !== sourceFragmentId) {
-          const result = addUserConnection(projectId, sourceFragmentId, targetId);
-          setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
-          if (result) {
-            const { id: connectionId, strength: heuristicStrength } = result;
-            const badgeId = crypto.randomUUID();
-            setScoreBadges(prev => [...prev, { id: badgeId, delta: heuristicStrength * 10, x: e.clientX, y: e.clientY }]);
-            setTimeout(() => setScoreBadges(prev => prev.filter(b => b.id !== badgeId)), 1000);
-            pendingConnectionsRef.current.set(connectionId, { heuristicStrength, badgeX: e.clientX, badgeY: e.clientY });
-            setPendingConnectionIds(prev => new Set(prev).add(connectionId));
-            const sourceFragment = state.fragments.find(f => f.id === sourceFragmentId);
-            const targetFragment = state.fragments.find(f => f.id === targetId);
-            if (sourceFragment && targetFragment) {
-              validateConnectionLabel(sourceFragment, targetFragment).then(aiResult => {
-                const pending = pendingConnectionsRef.current.get(connectionId);
-                pendingConnectionsRef.current.delete(connectionId);
-                setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
-                if (!aiResult) {
-                  updateUserConnectionAI(projectId, connectionId, { label: '', strength: heuristicStrength, rationale: '' });
+          const mx = e.clientX;
+          const my = e.clientY;
+          const srcFrag = state.fragments.find(f => f.id === sourceFragmentId);
+          const tgtFrag = state.fragments.find(f => f.id === targetId);
+          if (!srcFrag || !tgtFrag) return;
+
+          // Silently evaluate obvious vs non-obvious (< 2s, no UI shown while evaluating)
+          evaluateConnectionTier(srcFrag, tgtFrag).then(tier => {
+            if (tier === 'obvious') {
+              // Create connection immediately
+              const result = addUserConnection(projectId, sourceFragmentId, targetId);
+              setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+              if (result) {
+                const { id: connectionId } = result;
+                // Mark pending while auto-labeling
+                setPendingConnectionIds(prev => new Set(prev).add(connectionId));
+                generateObviousLabel(srcFrag, tgtFrag).then(label => {
+                  updateUserConnectionAI(projectId, connectionId, { label, strength: 2, rationale: 'obvious connection' });
                   setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
-                  return;
+                  setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
+                }).catch(() => {
+                  setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
+                });
+
+                // Award obvious points (10-30)
+                const points = 10 + Math.floor(Math.random() * 21);
+                const { thresholdReached } = connectionSysActions.applyConnectionResult({
+                  tier: 'obvious', points, sourceFragmentId, targetFragmentId: targetId,
+                });
+                // Dim glow for obvious
+                setGlowingConnectionIds(prev => new Set(prev).add(connectionId));
+                setGlowDimConnectionIds(prev => new Set(prev).add(connectionId));
+
+                const siId = crypto.randomUUID();
+                setScoreIndicators(prev => [...prev, { id: siId, points, x: mx, y: my }]);
+
+                if (thresholdReached) {
+                  triggerSuggestion(projectId, state.fragments);
                 }
-                setFadingLabelIds(prev => new Set(prev).add(connectionId));
-                setTimeout(() => {
-                  const update = updateUserConnectionAI(projectId, connectionId, aiResult);
-                  setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
-                  if (update && pending && aiResult.strength > pending.heuristicStrength) {
-                    const delta = (aiResult.strength - pending.heuristicStrength) * 10;
-                    const deltaBadgeId = crypto.randomUUID();
-                    setScoreBadges(prev => [...prev, { id: deltaBadgeId, delta, x: pending.badgeX, y: pending.badgeY - 20 }]);
-                    setTimeout(() => setScoreBadges(prev => prev.filter(b => b.id !== deltaBadgeId)), 1000);
-                  }
-                  setFadingLabelIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
-                }, 150);
-              }).catch(err => {
-                console.error('Connection validation error:', err);
-                pendingConnectionsRef.current.delete(connectionId);
-                setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
-              });
+              }
             } else {
-              pendingConnectionsRef.current.delete(connectionId);
-              setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(connectionId); return next; });
+              // Non-obvious — show ConnectionValidator
+              setPendingNonObvious({ sourceFragmentId, targetFragmentId: targetId, screenX: mx, screenY: my });
             }
-          }
+          }).catch(() => {
+            // Fallback: treat as obvious without score
+            const result = addUserConnection(projectId, sourceFragmentId, targetId);
+            setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+            if (result) {
+              setPendingConnectionIds(prev => new Set(prev).add(result.id));
+              generateObviousLabel(srcFrag, tgtFrag).then(label => {
+                updateUserConnectionAI(projectId, result.id, { label, strength: 1, rationale: '' });
+                setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+                setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(result.id); return next; });
+              }).catch(() => {
+                setPendingConnectionIds(prev => { const next = new Set(prev); next.delete(result.id); return next; });
+              });
+            }
+          });
         }
         return;
       }
@@ -1061,6 +1130,109 @@ export default function Canvas({
 
   const explorationDepthScore = userConnectionsList.reduce((sum, c) => sum + c.strength * 10, 0);
 
+  // ── Session 32 helpers ────────────────────────────────────────────────────
+
+  const triggerSuggestion = useCallback(async (pid: string, fragments: Fragment[]) => {
+    const explorationState = loadExplorationState(pid);
+    const tier2 = (explorationState?.userConnections ?? [])
+      .filter(uc => uc.tier === 'non-obvious-user' || uc.tier === 'non-obvious-claude')
+      .map(uc => {
+        const src = fragments.find(f => f.id === uc.sourceFragmentId);
+        const tgt = fragments.find(f => f.id === uc.targetFragmentId);
+        return { sourceTitle: src?.title ?? '', targetTitle: tgt?.title ?? '', explanation: uc.rationale ?? '' };
+      });
+    try {
+      const sug = await generateSuggestion(tier2, fragments.map(f => f.title));
+      setSuggestionState(sug);
+    } catch {}
+  }, []);
+
+  const handleValidatorSubmit = useCallback(async (explanation: string) => {
+    if (!pendingNonObvious) return;
+    const { sourceFragmentId, targetFragmentId, screenX, screenY } = pendingNonObvious;
+    const srcFrag = state.fragments.find(f => f.id === sourceFragmentId);
+    const tgtFrag = state.fragments.find(f => f.id === targetFragmentId);
+    if (!srcFrag || !tgtFrag) return;
+
+    setValidating('submitting');
+    try {
+      const vResult = await validateUserExplanation(srcFrag, tgtFrag, explanation);
+      setValidating(null);
+
+      const result = addUserConnection(projectId, sourceFragmentId, targetFragmentId);
+      setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+
+      if (result) {
+        const shortLabel = vResult.explanation.split(/\s+/).slice(0, 4).join(' ').toLowerCase();
+        updateUserConnectionAI(projectId, result.id, { label: shortLabel, strength: 3, rationale: explanation });
+        setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+        // Mark tier on connection
+        const state2 = loadExplorationState(projectId);
+        const uc = state2?.userConnections.find(c => c.id === result.id);
+        if (uc) { uc.tier = 'non-obvious-user'; }
+        // Full glow (non-dim) for user-validated
+        setGlowingConnectionIds(prev => new Set(prev).add(result.id));
+      }
+
+      const { thresholdReached } = connectionSysActions.applyConnectionResult({
+        tier: 'non-obvious-user', points: vResult.points, sourceFragmentId, targetFragmentId,
+      });
+
+      setPendingNonObvious(null);
+      setConnectionResultState({ tier: 'non-obvious-user', points: vResult.points, explanation: vResult.explanation, context: vResult.context, screenX, screenY });
+
+      const siId = crypto.randomUUID();
+      setScoreIndicators(prev => [...prev, { id: siId, points: vResult.points, x: screenX, y: screenY - 40 }]);
+
+      if (thresholdReached) triggerSuggestion(projectId, state.fragments);
+    } catch (err) {
+      console.error('Validation failed:', err);
+      setValidating(null);
+    }
+  }, [pendingNonObvious, state.fragments, projectId, connectionSysActions, triggerSuggestion]);
+
+  const handleFindConnection = useCallback(async () => {
+    if (!pendingNonObvious) return;
+    const { sourceFragmentId, targetFragmentId, screenX, screenY } = pendingNonObvious;
+    const srcFrag = state.fragments.find(f => f.id === sourceFragmentId);
+    const tgtFrag = state.fragments.find(f => f.id === targetFragmentId);
+    if (!srcFrag || !tgtFrag) return;
+
+    setValidating('finding');
+    try {
+      const fResult = await findConnection(srcFrag, tgtFrag);
+      setValidating(null);
+      setPendingNonObvious(null);
+
+      const result = addUserConnection(projectId, sourceFragmentId, targetFragmentId);
+      setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+
+      if (fResult.found && fResult.explanation && fResult.points && result) {
+        updateUserConnectionAI(projectId, result.id, { label: 'found connection', strength: 2, rationale: fResult.explanation });
+        setUserConnectionsList(loadExplorationState(projectId)?.userConnections ?? []);
+        // Dim glow for Claude-found
+        setGlowingConnectionIds(prev => new Set(prev).add(result.id));
+        setGlowDimConnectionIds(prev => new Set(prev).add(result.id));
+
+        const { thresholdReached } = connectionSysActions.applyConnectionResult({
+          tier: 'non-obvious-claude', points: fResult.points, sourceFragmentId, targetFragmentId,
+        });
+
+        setConnectionResultState({ tier: 'non-obvious-claude', points: fResult.points, explanation: fResult.explanation, screenX, screenY });
+
+        const siId = crypto.randomUUID();
+        setScoreIndicators(prev => [...prev, { id: siId, points: fResult.points, x: screenX, y: screenY - 40 }]);
+
+        if (thresholdReached) triggerSuggestion(projectId, state.fragments);
+      }
+      // If not found: connection created as plain (no glow, no score, no result panel)
+    } catch (err) {
+      console.error('Find connection failed:', err);
+      setValidating(null);
+      setPendingNonObvious(null);
+    }
+  }, [pendingNonObvious, state.fragments, projectId, connectionSysActions, triggerSuggestion]);
+
   const handleLinkToExploration = (fragmentId: string) => {
     setCrossLinkSourceFragmentId(fragmentId);
   };
@@ -1172,6 +1344,8 @@ export default function Canvas({
           connectPreview={connectPreview}
           pendingConnectionIds={pendingConnectionIds}
           fadingLabelIds={fadingLabelIds}
+          glowingConnectionIds={glowingConnectionIds}
+          glowDimConnectionIds={glowDimConnectionIds}
           selectedTetherKey={selectedTetherKey}
           onTetherSelect={key => { setSelectedTetherKey(key); deselectAll(); }}
           onTetherDelete={key => {
@@ -1326,6 +1500,8 @@ export default function Canvas({
                 dotDragging={dotDraggingFragmentId === f.id}
                 isRunningPrompt={promptingFragmentIds.has(f.id)}
                 isHighlighted={highlightedFragmentId === f.id}
+                isGlowing={connectionSysState.glowingFragmentIds.has(f.id)}
+                glowDim={connectionSysState.glowDimFragmentIds.has(f.id)}
               />
             );
           })}
@@ -1553,6 +1729,66 @@ export default function Canvas({
           <button className="reset-confirm-panel__btn reset-confirm-panel__btn--cancel" onClick={() => setShowResetConfirm(false)}>Cancel</button>
           <button className="reset-confirm-panel__btn reset-confirm-panel__btn--confirm" onClick={() => { resetToInitialPositions(); setShowResetConfirm(false); }}>Reset positions</button>
         </div>
+      )}
+
+      {/* ── Session 32: connection gamification overlays ─────────────────── */}
+
+      {/* ConnectionValidator — appears for non-obvious connections */}
+      {pendingNonObvious && (() => {
+        const srcFrag = state.fragments.find(f => f.id === pendingNonObvious.sourceFragmentId);
+        const tgtFrag = state.fragments.find(f => f.id === pendingNonObvious.targetFragmentId);
+        if (!srcFrag || !tgtFrag) return null;
+        return (
+          <ConnectionValidator
+            sourceFragment={srcFrag}
+            targetFragment={tgtFrag}
+            screenX={pendingNonObvious.screenX}
+            screenY={pendingNonObvious.screenY}
+            isEvaluating={validating !== null}
+            onSubmitExplanation={handleValidatorSubmit}
+            onFindConnection={handleFindConnection}
+            onCancel={() => setPendingNonObvious(null)}
+          />
+        );
+      })()}
+
+      {/* ConnectionResult — shown after successful validation */}
+      {connectionResultState && (
+        <ConnectionResult
+          tier={connectionResultState.tier}
+          points={connectionResultState.points}
+          explanation={connectionResultState.explanation}
+          context={connectionResultState.context}
+          screenX={connectionResultState.screenX}
+          screenY={connectionResultState.screenY}
+          onDismiss={() => setConnectionResultState(null)}
+        />
+      )}
+
+      {/* ScoreIndicators — float-up point popups */}
+      {scoreIndicators.map(si => (
+        <ScoreIndicator
+          key={si.id}
+          points={si.points}
+          screenX={si.x}
+          screenY={si.y}
+          onDone={() => setScoreIndicators(prev => prev.filter(s => s.id !== si.id))}
+        />
+      ))}
+
+      {/* SuggestionCard — appears when progress bar fills to 1000 */}
+      {suggestionState && (
+        <SuggestionCard
+          title={suggestionState.title}
+          explanation={suggestionState.explanation}
+          onExplore={title => {
+            setSuggestionState(null);
+            onNewExploration?.();
+            // The new exploration modal will open via App.tsx; we pass the title via a custom event
+            window.dispatchEvent(new CustomEvent('webs-suggested-exploration', { detail: { title } }));
+          }}
+          onDismiss={() => setSuggestionState(null)}
+        />
       )}
     </div>
   );

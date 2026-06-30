@@ -3,7 +3,7 @@ import { NavPanel as NavPanelType } from './NavRail';
 import ExplorationPanel from './panels/ExplorationPanel';
 import PromptsPanel from './panels/PromptsPanel';
 import LibraryPanel from './panels/LibraryPanel';
-import { ProjectMeta } from '../api/types';
+import { ProjectMeta, ProgressState } from '../api/types';
 
 const PANEL_HEADERS: Record<NavPanelType, string> = {
   exploration: 'exploration',
@@ -29,6 +29,7 @@ interface Props {
   scratchpad: string;
   onScratchpadChange: (text: string) => void;
   onNewExploration: () => void;
+  progressState?: ProgressState;
   // LibraryPanel props
   projects: ProjectMeta[];
   openTabIds: string[];
@@ -54,6 +55,7 @@ export default function NavPanel({
   scratchpad,
   onScratchpadChange,
   onNewExploration,
+  progressState,
   projects,
   openTabIds,
   canAddTab,
@@ -84,6 +86,7 @@ export default function NavPanel({
                 onScratchpadChange={onScratchpadChange}
                 onOpenLibrary={onViewAllLibrary}
                 onNewExploration={onNewExploration}
+                progressState={progressState}
               />
             )}
             {activePanel === 'prompts' && <PromptsPanel />}

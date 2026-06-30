@@ -1,0 +1,165 @@
+/* Progress bar + score indicator + suggestion card — Session 32 */
+
+/* ─── Progress bar (inside ExplorationPanel) ────────────────────────────── */
+
+.progress-bar-section {
+  padding: var(--spacing-base, 16px) 0;
+  border-top: 1px solid var(--color-border-subtle, rgba(255,255,255,0.07));
+}
+
+.progress-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-meta, 10px);
+  letter-spacing: var(--tracking-wide, 0.05em);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary, rgba(255,255,255,0.58));
+  margin-bottom: var(--spacing-sm, 8px);
+}
+
+.progress-bar-track {
+  height: 3px;
+  background: var(--color-border-subtle, rgba(255,255,255,0.07));
+  position: relative;
+  overflow: visible;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--color-interactive, rgba(255,255,255,0.5));
+  transition: width 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.progress-bar-fill--near-full {
+  background: var(--color-discovery, #bf5af2);
+}
+
+/* ─── Score indicator (fixed, portal-rendered) ──────────────────────────── */
+
+.score-indicator {
+  position: fixed;
+  pointer-events: none;
+  font-family: var(--font-primary);
+  font-size: 24px;
+  letter-spacing: var(--tracking-tight, -0.05em);
+  color: var(--color-text-primary, #fff);
+  animation: score-float 2s ease-out forwards;
+  z-index: 600;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.score-indicator--large {
+  font-size: 32px;
+  color: #d2f34c;
+}
+
+@keyframes score-float {
+  0%   { opacity: 1; transform: translateY(0px);   }
+  30%  { opacity: 1; transform: translateY(-12px);  }
+  100% { opacity: 0; transform: translateY(-48px);  }
+}
+
+/* ─── Suggestion card (fixed, portal-rendered, centered) ─────────────────── */
+
+.suggestion-card-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: suggestion-overlay-in 200ms ease both;
+}
+
+@keyframes suggestion-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.suggestion-card {
+  background: var(--color-bg-overlay, #1a1a1a);
+  border: 1px solid var(--color-border-default, rgba(255,255,255,0.12));
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  width: 420px;
+  padding: 32px;
+  font-family: var(--font-primary);
+  animation: suggestion-card-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes suggestion-card-in {
+  from { opacity: 0; transform: scale(0.94) translateY(16px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+.suggestion-card__eyebrow {
+  font-size: var(--font-size-meta, 10px);
+  letter-spacing: var(--tracking-wide, 0.05em);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary, rgba(255,255,255,0.58));
+  margin-bottom: var(--spacing-base, 16px);
+}
+
+.suggestion-card__intro {
+  font-size: var(--font-size-body, 16px);
+  color: var(--color-text-secondary, rgba(255,255,255,0.75));
+  letter-spacing: var(--tracking-normal, -0.01em);
+  margin-bottom: var(--spacing-sm, 8px);
+}
+
+.suggestion-card__title {
+  font-size: 24px;
+  letter-spacing: var(--tracking-tight, -0.05em);
+  color: var(--color-text-primary, #fff);
+  margin-bottom: var(--spacing-base, 16px);
+  line-height: var(--line-height-tight, 1);
+}
+
+.suggestion-card__explanation {
+  font-size: var(--font-size-body, 16px);
+  color: var(--color-text-secondary, rgba(255,255,255,0.75));
+  line-height: var(--line-height-relaxed, 1.5);
+  letter-spacing: var(--tracking-normal, -0.01em);
+  margin-bottom: var(--spacing-lg, 32px);
+}
+
+.suggestion-card__actions {
+  display: flex;
+  gap: var(--spacing-sm, 8px);
+  align-items: center;
+}
+
+.suggestion-card__explore {
+  flex: 1;
+  background: #d2f34c;
+  color: #0a0a0a;
+  border: none;
+  padding: 12px var(--spacing-base, 16px);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body, 16px);
+  letter-spacing: var(--tracking-normal, -0.01em);
+  cursor: pointer;
+  transition: opacity 100ms;
+  text-align: left;
+}
+
+.suggestion-card__explore:hover { opacity: 0.88; }
+
+.suggestion-card__dismiss {
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary, rgba(255,255,255,0.58));
+  font-family: var(--font-primary);
+  font-size: var(--font-size-body, 16px);
+  letter-spacing: var(--tracking-normal, -0.01em);
+  cursor: pointer;
+  padding: 12px;
+  transition: color 100ms;
+}
+
+.suggestion-card__dismiss:hover {
+  color: var(--color-text-secondary, rgba(255,255,255,0.75));
+}
