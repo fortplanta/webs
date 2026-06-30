@@ -58,7 +58,6 @@ export default function App() {
     const saved = loadCanvasState(activeTabId) ?? createEmptyCanvasState();
     setTabState(saved);
     setScratchpad(saved.scratchpad ?? '');
-    setIsGenerating(false);
     setGenerateError(null);
     setGanttOpen(false);
     setPrevActiveTabId(activeTabId);

@@ -70,6 +70,7 @@ async function callOllama({
     body: JSON.stringify({
       model: llmModelName(),
       stream: false,
+      think: false,
       format: json ? 'json' : undefined,
       messages: [
         { role: 'system', content: system },
