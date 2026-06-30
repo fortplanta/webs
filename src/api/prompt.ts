@@ -8,6 +8,10 @@ export const SYSTEM_PROMPT = `You are a knowledge canvas generator. The user giv
 
 CRITICAL: Return ONLY valid JSON. No markdown code fences. No preamble. No explanation. No trailing text. Your response must start with { and end with }.`;
 
+export const JSON_REPAIR_SYSTEM_PROMPT = `You repair malformed Webs canvas JSON.
+
+CRITICAL: Return ONLY valid JSON. No markdown code fences. No preamble. No explanation. No trailing text. Your response must start with { and end with }.`;
+
 export function buildUserMessage(query: string): string {
   return `Topic: "${query}"
 
@@ -69,6 +73,50 @@ Rules:
 - Edge labels must be verb phrases, not nouns: "shaped by", "resulted in", "challenged by", "enabled", "inspired".
 - Edge source and target must EXACTLY match cluster titles in your response.
 - Return raw JSON only. No markdown. No code fences. Start with { and end with }.`;
+}
+
+export function buildJsonRepairMessage(query: string, rawText: string, reason: string): string {
+  return `Topic: "${query}"
+
+The previous model response could not be used because: ${reason}
+
+Malformed response:
+${rawText}
+
+Repair or regenerate it into ONLY valid JSON matching this exact shape:
+
+{
+  "context": "2-3 sentences grounding the topic",
+  "clusters": [
+    {
+      "title": "cluster theme (2-4 words)",
+      "fragments": [
+        {
+          "type": "person | concept | thesis | source | event | era | domain | quote",
+          "title": "fragment title (2-5 words, lowercase)",
+          "body": "2-4 sentences of substantive content",
+          "tags": ["tag1", "tag2", "tag3"],
+          "list": ["optional item 1", "optional item 2"],
+          "era": "optional year or date range"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "cluster title — must exactly match a cluster title above",
+      "target": "cluster title — must exactly match a cluster title above",
+      "label": "verb phrase"
+    }
+  ]
+}
+
+Rules:
+- Return exactly 4 clusters and exactly 3 fragments per cluster.
+- Include "context", "clusters", and "edges".
+- Every edge source and target must exactly match one of the cluster titles.
+- If repairing is impossible, regenerate the full object for the same topic.
+- Return raw JSON only. Start with { and end with }.`;
 }
 
 export const PROMPT_SYSTEM_PROMPT = `You are a knowledge assistant. The user gives you a fragment of knowledge and a transformation prompt. You return a JSON object with updated slot content.

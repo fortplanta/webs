@@ -14,7 +14,16 @@ import {
   GenerateApiResponse,
   PivotApiResponse,
 } from './types';
-import { SYSTEM_PROMPT, buildUserMessage, PIVOT_SYSTEM_PROMPT, buildPivotUserMessage, PROMPT_SYSTEM_PROMPT, buildPromptOnSlotMessage } from './prompt';
+import {
+  SYSTEM_PROMPT,
+  JSON_REPAIR_SYSTEM_PROMPT,
+  buildUserMessage,
+  buildJsonRepairMessage,
+  PIVOT_SYSTEM_PROMPT,
+  buildPivotUserMessage,
+  PROMPT_SYSTEM_PROMPT,
+  buildPromptOnSlotMessage,
+} from './prompt';
 import { PromptDefinition } from '../prompts/prompts';
 import { getMockCanvasState, getMockPivotResult } from './mock';
 import { callLlm, isLlmEnabled } from './llm';
@@ -201,6 +210,55 @@ function parseApiResponse(data: GenerateApiResponse, query: string): CanvasState
   };
 }
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function extractJson(text: string): string {
+  if (!text.trim()) {
+    throw new Error('Local model returned an empty response.');
+  }
+
+  const jsonStart = text.indexOf('{');
+  const jsonEnd = text.lastIndexOf('}');
+  return jsonStart !== -1 && jsonEnd > jsonStart ? text.slice(jsonStart, jsonEnd + 1) : text.trim();
+}
+
+function validateGenerateApiResponse(parsed: GenerateApiResponse): void {
+  if (!parsed.context || !Array.isArray(parsed.clusters) || !Array.isArray(parsed.edges)) {
+    throw new Error('Response missing required fields: context, clusters, or edges.');
+  }
+
+  if (parsed.clusters.length !== 4) {
+    throw new Error(`Expected 4 clusters, received ${parsed.clusters.length}.`);
+  }
+
+  const clusterTitles = new Set<string>();
+  parsed.clusters.forEach((cluster, index) => {
+    if (!cluster.title || !Array.isArray(cluster.fragments)) {
+      throw new Error(`Cluster ${index + 1} is missing title or fragments.`);
+    }
+    if (cluster.fragments.length !== 3) {
+      throw new Error(`Cluster "${cluster.title}" expected 3 fragments, received ${cluster.fragments.length}.`);
+    }
+    clusterTitles.add(cluster.title);
+  });
+
+  const invalidEdge = parsed.edges.find(edge =>
+    !edge.source || !edge.target || !edge.label || !clusterTitles.has(edge.source) || !clusterTitles.has(edge.target)
+  );
+  if (invalidEdge) {
+    throw new Error(`Edge references unknown cluster: ${invalidEdge.source} -> ${invalidEdge.target}.`);
+  }
+}
+
+function parseGenerateApiResponse(text: string): GenerateApiResponse {
+  const cleaned = extractJson(text);
+  const parsed = JSON.parse(cleaned) as GenerateApiResponse;
+  validateGenerateApiResponse(parsed);
+  return parsed;
+}
+
 export async function generateCanvas(query: string): Promise<CanvasState> {
   if (!isLlmEnabled()) {
     return getMockCanvasState(query);
@@ -220,29 +278,30 @@ export async function generateCanvas(query: string): Promise<CanvasState> {
   }
 
   console.log('[Webs LLM] Raw response text:\n', text);
-  if (!text.trim()) {
-    throw new Error('Local model returned an empty response.');
-  }
-
-  // Extract JSON robustly: find first { and last } to handle any preamble/postamble/fences
-  const jsonStart = text.indexOf('{');
-  const jsonEnd = text.lastIndexOf('}');
-  const cleaned = jsonStart !== -1 && jsonEnd > jsonStart ? text.slice(jsonStart, jsonEnd + 1) : text.trim();
 
   let parsed: GenerateApiResponse;
   try {
-    parsed = JSON.parse(cleaned) as GenerateApiResponse;
-    console.log('[Webs API] Fragment types returned:', parsed.clusters?.flatMap(c => c.fragments.map(f => f.type)));
+    parsed = parseGenerateApiResponse(text);
   } catch (err) {
-    console.error('Failed to parse API response:', err, '\nRaw text:', text);
-    throw new Error('Local model response was not valid Webs JSON. Try again or switch to a stronger instruct model.');
+    const reason = errorMessage(err);
+    console.warn('Initial model response was not valid Webs JSON, attempting repair:', err);
+    try {
+      const repairedText = await callLlm({
+        system: JSON_REPAIR_SYSTEM_PROMPT,
+        user: buildJsonRepairMessage(query, text, reason),
+        maxTokens: MAX_TOKENS,
+        json: true,
+        temperature: 0.2,
+      });
+      console.log('[Webs LLM] Repaired response text:\n', repairedText);
+      parsed = parseGenerateApiResponse(repairedText);
+    } catch (repairErr) {
+      console.error('Failed to repair API response:', repairErr, '\nRaw text:', text);
+      throw new Error('Local model response was not valid Webs JSON after repair. Try again or switch to a stronger instruct model.');
+    }
   }
 
-  if (!parsed.context || !Array.isArray(parsed.clusters) || !Array.isArray(parsed.edges)) {
-    console.error('API response missing required fields');
-    throw new Error('Local model response was missing required Webs fields.');
-  }
-
+  console.log('[Webs API] Fragment types returned:', parsed.clusters.flatMap(c => c.fragments.map(f => f.type)));
   return parseApiResponse(parsed, query);
 }
 
