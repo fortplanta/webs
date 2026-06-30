@@ -4,6 +4,7 @@
    Opacity and filter are updated imperatively in useFrame (throttled to 10fps).
    transition eases the discrete jumps between fog updates. */
 .fragment-fog-wrapper {
+  position: relative;
   transition: opacity 0.4s ease, filter 0.4s ease;
 }
 

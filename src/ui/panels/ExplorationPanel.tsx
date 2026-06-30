@@ -1,4 +1,6 @@
 import { useRef, useCallback, useEffect } from 'react';
+import ProgressBar from '../ProgressBar';
+import type { ProgressState } from '../../api/types';
 
 const MILESTONE_THRESHOLDS = [100, 200, 300];
 const MILESTONE_LABELS: Record<number, string> = {
@@ -39,6 +41,7 @@ interface Props {
   onScratchpadChange: (text: string) => void;
   onOpenLibrary: () => void;
   onNewExploration: () => void;
+  progressState?: ProgressState;
 }
 
 export default function ExplorationPanel({
@@ -57,6 +60,7 @@ export default function ExplorationPanel({
   onScratchpadChange,
   onOpenLibrary,
   onNewExploration,
+  progressState,
 }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fillRef = useRef<HTMLDivElement | null>(null);
@@ -164,6 +168,12 @@ export default function ExplorationPanel({
           })}
         </div>
       </div>
+
+      {progressState && (
+        <div className="exploration-panel__section">
+          <ProgressBar progressState={progressState} />
+        </div>
+      )}
 
       <div className="exploration-panel__section">
         <p className="exploration-panel__label">scratchpad</p>

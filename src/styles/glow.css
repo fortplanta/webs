@@ -1,0 +1,72 @@
+/* Fragment glow wrapper — Session 32 */
+
+.fragment-glow-wrapper {
+  position: relative;
+  display: contents; /* transparent wrapper — does not affect layout */
+}
+
+/* When active, the glow is rendered via pseudo-elements on the inner card wrapper */
+.fragment-glow-active {
+  position: relative;
+}
+
+.fragment-glow-active::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow:
+    inset 0 0 12px var(--glow-color-primary),
+    inset 0 0 24px var(--glow-color-secondary),
+    inset 0 0 48px var(--glow-color-tertiary);
+  pointer-events: none;
+  z-index: 10;
+  animation: glow-inner-shift 8s linear infinite;
+}
+
+.fragment-glow-active::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow:
+    0 0 20px var(--glow-color-primary),
+    0 0 40px var(--glow-color-secondary),
+    0 0 80px var(--glow-color-tertiary);
+  pointer-events: none;
+  z-index: -1;
+  animation: glow-breathe 3s ease-in-out infinite;
+}
+
+@keyframes glow-breathe {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 1.0; }
+}
+
+@keyframes glow-inner-shift {
+  0%   { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(30deg); }
+}
+
+/* Dimmed variant for Claude-found connections */
+.fragment-glow-active--dim::before {
+  box-shadow:
+    inset 0 0 8px var(--glow-color-primary),
+    inset 0 0 16px var(--glow-color-secondary),
+    inset 0 0 32px var(--glow-color-tertiary);
+}
+
+.fragment-glow-active--dim::after {
+  box-shadow:
+    0 0 12px var(--glow-color-primary),
+    0 0 24px var(--glow-color-secondary),
+    0 0 48px var(--glow-color-tertiary);
+  animation: glow-breathe-dim 3s ease-in-out infinite;
+}
+
+@keyframes glow-breathe-dim {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.65; }
+}

@@ -3,6 +3,7 @@ import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Connector } from '../api/types';
 import { getBezierPoints3D, getMidpoint } from './bezier';
+import ConnectionGlow from '../effects/ConnectionGlow';
 
 // ─── Z layers (mirrored from Canvas) ─────────────────────────────────────────
 const Z_CONNECTOR = 0;
@@ -28,12 +29,15 @@ interface Props {
   y2: number;
   scope: 'intra' | 'inter';
   sourceColor?: string;
+  isGlowing?: boolean;
+  glowDim?: boolean;
   onLabelChange: (id: string, label: string) => void;
   onContextMenu: (e: React.MouseEvent, id: string) => void;
 }
 
 export default function ConnectorLine({
   connector, x1, y1, x2, y2, scope, sourceColor,
+  isGlowing = false, glowDim = false,
   onLabelChange, onContextMenu,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -80,7 +84,9 @@ export default function ConnectorLine({
   return (
     <>
       {/* ── Connector line(s) ── */}
-      {isStrong ? (
+      {isGlowing ? (
+        <ConnectionGlow points={points} color={color} dim={glowDim} />
+      ) : isStrong ? (
         <>
           {/* Glow layer — additive blending */}
           <Line

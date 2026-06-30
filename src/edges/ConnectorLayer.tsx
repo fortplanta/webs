@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Html, Line } from '@react-three/drei';
 import type { Connector, Fragment, Cluster, UserConnection } from '../api/types';
 import ConnectorLine from './Connector';
+import ConnectionGlow from '../effects/ConnectionGlow';
 
 // ─── Z layers ────────────────────────────────────────────────────────────────
 const Z_CONNECTORS = 0;
@@ -32,6 +33,8 @@ interface Props {
   connectPreview?: PreviewConnector | null;
   pendingConnectionIds?: Set<string>;
   fadingLabelIds?: Set<string>;
+  glowingConnectionIds?: Set<string>;
+  glowDimConnectionIds?: Set<string>;
 }
 
 // Fragment type → hex color for connector coloring
@@ -54,6 +57,8 @@ export default function ConnectorLayer({
   connectPreview,
   pendingConnectionIds,
   fadingLabelIds,
+  glowingConnectionIds,
+  glowDimConnectionIds,
 }: Props) {
   const [hoveredTetherKey, setHoveredTetherKey] = useState<string | null>(null);
 
@@ -163,19 +168,30 @@ export default function ConnectorLayer({
         const ly = (y1 + y2) / 2;
         const isPending     = pendingConnectionIds?.has(uc.id) ?? false;
         const isLabelFading = fadingLabelIds?.has(uc.id) ?? false;
+        const isGlowing     = glowingConnectionIds?.has(uc.id) ?? false;
+        const isGlowDim     = glowDimConnectionIds?.has(uc.id) ?? true;
+
+        // Source fragment type for glow color
+        const srcType  = fragTypeById.get(uc.sourceFragmentId) ?? 'concept';
+        const glowColor = FRAG_COLOR_HEX[srcType] ?? '#ffffff';
+        const glowPoints: [number, number, number][] = [[x1, cy(y1), Z_CONNECTORS], [x2, cy(y2), Z_CONNECTORS]];
 
         return (
           <group key={uc.id}>
-            <Line
-              points={[[x1, cy(y1), Z_CONNECTORS], [x2, cy(y2), Z_CONNECTORS]]}
-              color="#000000"
-              lineWidth={1.5}
-              opacity={0.35}
-              transparent
-              dashed={isPending}
-              dashSize={isPending ? 6 : undefined}
-              gapSize={isPending ? 4 : undefined}
-            />
+            {isGlowing ? (
+              <ConnectionGlow points={glowPoints} color={glowColor} dim={isGlowDim} />
+            ) : (
+              <Line
+                points={glowPoints}
+                color="#000000"
+                lineWidth={1.5}
+                opacity={0.35}
+                transparent
+                dashed={isPending}
+                dashSize={isPending ? 6 : undefined}
+                gapSize={isPending ? 4 : undefined}
+              />
+            )}
             {uc.label && (
               <group position={[lx, cy(ly), Z_CONNECTORS + 0.5]}>
                 <Html

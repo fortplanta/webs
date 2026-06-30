@@ -13,7 +13,8 @@ import './styles/prompt-sidebar.css';
 import './styles/nav-rail.css';
 import './styles/nav-panel.css';
 import './styles/modal.css';
-import { CanvasState, Fragment, ProjectMeta, ExplorationConnectionState } from './api/types';
+import { CanvasState, Fragment, ProjectMeta, ExplorationConnectionState, ProgressState } from './api/types';
+import { loadProgressState } from './connections/useConnectionSystem';
 import { generateCanvas } from './api/generate';
 import { createEmptyCanvasState } from './canvas/useCanvas';
 import Canvas from './canvas/Canvas';
@@ -49,6 +50,7 @@ export default function App() {
   const [explorationState, setExplorationState] = useState<ExplorationConnectionState | null>(() =>
     loadExplorationState(activeTabId)
   );
+  const [progressState, setProgressState] = useState<ProgressState | null>(() => loadProgressState());
 
   // Synchronous tab switch: update tabState during render so Canvas mounts with correct state.
   // useEffect fires after children mount — too late when key changes force a remount.
@@ -74,6 +76,13 @@ export default function App() {
     window.addEventListener('webs-connections-changed', handler);
     return () => window.removeEventListener('webs-connections-changed', handler);
   }, [activeTabId]);
+
+  // Reload progress state whenever a connection awards points.
+  useEffect(() => {
+    const handler = () => setProgressState(loadProgressState());
+    window.addEventListener('webs-progress-changed', handler);
+    return () => window.removeEventListener('webs-progress-changed', handler);
+  }, []);
 
   const handleScratchpadChange = useCallback((text: string) => {
     setScratchpad(text);
@@ -219,6 +228,7 @@ export default function App() {
           scratchpad={scratchpad}
           onScratchpadChange={handleScratchpadChange}
           onNewExploration={handleNewExploration}
+          progressState={progressState ?? undefined}
           projects={projectsMeta}
           openTabIds={tabs.map(t => t.id)}
           canAddTab={canAddTab}
