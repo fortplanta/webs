@@ -11,6 +11,13 @@ CRITICAL: Return ONLY valid JSON. No markdown code fences. No preamble. No expla
 export function buildUserMessage(query: string): string {
   return `Topic: "${query}"
 
+Webs product context:
+- Webs is evolving into a live canvas, project brain, and local transfer broker for Figma, Cavalry, Blender, and Eagle.
+- Figma is the design home base. Cavalry is the 2D motion design/animation app, not horse soldiers. Blender is the 3D tool. Eagle is the asset library reached through a local API for cataloging assets with provenance.
+- The target workflow is copy from a source app, paste into a destination through Webs, choose the best available format at paste time, then optionally file the result into Eagle with source app, source object, timestamp, and format metadata.
+- Be honest about format preservation: Figma to Cavalry can preserve editable SVG/layers; Cavalry to Figma usually returns rendered MP4/GIF/PNG previews; Figma to Blender can use SVG curves; Cavalry and Blender usually exchange rendered image/EXR sequences rather than editable motion.
+- If the topic mentions Figma, Cavalry, Blender, Eagle, Webs, clipboard transfer, provenance, bridge, broker, or handoff, interpret it in this creative-tool workflow context.
+
 Return ONLY valid JSON matching this exact shape:
 
 {

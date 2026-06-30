@@ -215,11 +215,15 @@ export async function generateCanvas(query: string): Promise<CanvasState> {
       json: true,
     });
   } catch (err) {
-    console.error('Generation failed, falling back to mock:', err);
-    return getMockCanvasState(query);
+    console.error('Generation failed:', err);
+    throw new Error('Local model generation failed. Check that Ollama is running and the selected model is installed.');
   }
 
   console.log('[Webs LLM] Raw response text:\n', text);
+  if (!text.trim()) {
+    throw new Error('Local model returned an empty response.');
+  }
+
   // Extract JSON robustly: find first { and last } to handle any preamble/postamble/fences
   const jsonStart = text.indexOf('{');
   const jsonEnd = text.lastIndexOf('}');
@@ -230,13 +234,13 @@ export async function generateCanvas(query: string): Promise<CanvasState> {
     parsed = JSON.parse(cleaned) as GenerateApiResponse;
     console.log('[Webs API] Fragment types returned:', parsed.clusters?.flatMap(c => c.fragments.map(f => f.type)));
   } catch (err) {
-    console.error('Failed to parse API response, falling back to mock:', err, '\nRaw text:', text);
-    return getMockCanvasState(query);
+    console.error('Failed to parse API response:', err, '\nRaw text:', text);
+    throw new Error('Local model response was not valid Webs JSON. Try again or switch to a stronger instruct model.');
   }
 
   if (!parsed.context || !Array.isArray(parsed.clusters) || !Array.isArray(parsed.edges)) {
-    console.error('API response missing required fields, falling back to mock');
-    return getMockCanvasState(query);
+    console.error('API response missing required fields');
+    throw new Error('Local model response was missing required Webs fields.');
   }
 
   return parseApiResponse(parsed, query);
