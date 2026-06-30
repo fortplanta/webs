@@ -17,7 +17,7 @@ import { CanvasState, Fragment, ProjectMeta, ExplorationConnectionState, Progres
 import { loadProgressState } from './connections/useConnectionSystem';
 import { generateCanvas } from './api/generate';
 import { createEmptyCanvasState } from './canvas/useCanvas';
-import Canvas from './canvas/Canvas';
+import Canvas from './canvas/CanvasRF';
 import TabStrip from './tabs/TabStrip';
 import { useTabs } from './tabs/useTabs';
 import { loadCanvasState, saveCanvasState, updateProjectMeta, loadProjectsIndex } from './storage/storage';
