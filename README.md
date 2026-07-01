@@ -16,11 +16,14 @@ npm install
 cp .env.example .env.local
 ollama pull qwen3:8b
 ollama serve
+npm run check:ollama
 npm run dev
 ```
 
 Set `VITE_LLM_PROVIDER=mock` to force mock data covering all fragment types and layouts.
 Set `VITE_LLM_PROVIDER=openai-compatible` to use a hosted or self-hosted OpenAI-compatible endpoint.
+
+For live-site local generation from `https://bulge.netlify.app`, Ollama must allow that browser origin. See `docs/local-llm-setup.md`.
 
 ## Docs
 
@@ -31,6 +34,7 @@ Set `VITE_LLM_PROVIDER=openai-compatible` to use a hosted or self-hosted OpenAI-
 - `ROADMAP.md` — implementation phases
 - `DECISIONS.md` — durable product/technical decisions
 - `docs/codex-workflow.md` — recommended Codex loops
+- `docs/local-llm-setup.md` — Ollama setup and live-site CORS checks
 - `docs/prompt-templates.md` — reusable prompts
 - `docs/verification-checklist.md` — done checklist
 - `PROGRESS.md` — work-in-progress tracker, session history

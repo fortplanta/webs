@@ -9,7 +9,8 @@ Goal: make exploration generation reliable enough that Webs can be used daily wi
 Deliverables:
 
 - Local Ollama provider works in local dev and from the approved live origin.
-- `.env.example` and README explain local Ollama setup, model selection, and live-site CORS.
+- `.env.example`, README, and `docs/local-llm-setup.md` explain local Ollama setup, model selection, diagnostics, and live-site CORS.
+- `npm run check:ollama` verifies reachability, installed model, live-site CORS, and Qwen `think:false` output.
 - Real LLM mode never silently falls back to mock data.
 - Generation errors are visible, retryable, and specific enough to diagnose.
 - Generated JSON is validated before rendering.
@@ -168,4 +169,3 @@ Future targets:
 - Cavalry-to-Blender and Blender-to-Cavalry rendered image/EXR sequences.
 - Local compression pipeline for video and large images.
 - More robust local broker process if browser-only APIs become too constrained.
-
