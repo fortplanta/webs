@@ -24,7 +24,15 @@ Set `VITE_LLM_PROVIDER=openai-compatible` to use a hosted or self-hosted OpenAI-
 
 ## Docs
 
+- `AGENTS.md` — Codex operating rules and guardrails
 - `CLAUDE.md` — architecture, component specs, token system, session protocol
+- `design.md` — visual and interaction direction for screenshot-driven work
+- `WEBs_BRIDGE_BRIEF.md` — bridge product direction
+- `ROADMAP.md` — implementation phases
+- `DECISIONS.md` — durable product/technical decisions
+- `docs/codex-workflow.md` — recommended Codex loops
+- `docs/prompt-templates.md` — reusable prompts
+- `docs/verification-checklist.md` — done checklist
 - `PROGRESS.md` — work-in-progress tracker, session history
 - `SESSION.md` — current session scope (gitignored, overwritten each session)
 
